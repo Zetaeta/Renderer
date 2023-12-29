@@ -1,4 +1,7 @@
 #pragma once
+#include <string>
+#include <vector>
+#include "maths.h"
 
 template <typename T, bool IsConst>
 struct ApplyConst
@@ -69,3 +72,20 @@ std::vector<T> Flatten(TContainer const& vecs)
 	}
 	return ret;
 }
+
+std::vector<std::string> Split(const std::string& s, char delim);
+
+template<typename T, size_t N>
+struct ArrayHasher
+{
+	std::size_t operator()(const std::array<T, N>& a) const
+	{
+		std::size_t h = 0;
+
+		for (auto e : a)
+		{
+			h ^= std::hash<T>{}(e) + 0x9e3779b9 + (h << 6) + (h >> 2);
+		}
+		return h;
+	}
+};

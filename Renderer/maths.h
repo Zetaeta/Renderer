@@ -47,7 +47,7 @@ constexpr inline vec4 rgbaToVec(u32 colour)
 
 constexpr inline u32 vecToRGBA(vec4 colour)
 {
-	return rgba(colour.r * 255.f, colour.g * 255.f, colour.b * 255.f, colour.a * 255.f);
+	return rgba(u8(colour.r * 255.f), u8(colour.g * 255.f), u8(colour.b * 255.f), u8(colour.a * 255.f));
 }
 
 template <typename TCont>

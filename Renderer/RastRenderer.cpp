@@ -300,37 +300,12 @@ void RastRenderer::DrawTri(mat4 const& fullTrans, std::array<ClipSpaceVertex, 3>
 	int mid = int(round(vs[is[1]].y));
 	int bot = int(round(vs[is[0]].y));
 
-	//x01.resize()
 
-//	constexpr static const std::array<std::pair<u32,u32>, 3> edgeInds = {{0,1}, {};
 	InterpolateToPix(vs[is[0]].y, vs[is[0]].x, vs[is[1]].y, vs[is[1]].x, 0, m_Height - 1, [this](int y, int x) {
 		x01.push_back(x);
-		//if (x >= 0 && x < m_Width && y >= 0 && y < m_Height)
-		//{
-		//	//m_Canvas[x + y * m_Width] = 0xff0000ff;
-		//	m_DepthBuffer[IND(x,y)] = std::numeric_limits<float>::max();
-		//}
-		//if (x >= 0 && x < m_Width && y >= 0 && y < m_Height)
-		//{
-		//	m_Canvas[x + y * m_Width] = 0xffffffff;
-		//	m_DepthBuffer[IND(x,y)] = std::numeric_limits<float>::max();
-		//}
-		//else if (x < 0)
-		//{
-		//	m_Canvas[y * m_Width] = 0xffffffff;
-		//}
 	});
 	InterpolateToPix(vs[is[0]].y, vs[is[0]].x, vs[is[2]].y, vs[is[2]].x, 0, m_Height - 1, [this](int y, int x) {
 		x02.push_back(x);
-		//if (x >= 0 && x < m_Width && y >= 0 && y < m_Height)
-		//{
-		//	m_Canvas[x + y * m_Width] = 0xffffffff;
-		//	m_DepthBuffer[IND(x,y)] = std::numeric_limits<float>::max();
-		//}
-		//else if (x < 0)
-		//{
-		//	m_Canvas[y * m_Width] = 0xffffffff;
-		//}
 	});
 	if (x02.empty())
 	{
@@ -338,11 +313,6 @@ void RastRenderer::DrawTri(mat4 const& fullTrans, std::array<ClipSpaceVertex, 3>
 	}
 	InterpolateToPix(vs[is[1]].y, vs[is[1]].x, vs[is[2]].y, vs[is[2]].x, 0, m_Height - 1, [this](int y, int x) {
 		x12.push_back(x);
-		if (x >= 0 && x < m_Width && y >= 0 && y < m_Height)
-		{
-			//m_Canvas[x + y * m_Width] = 0xffff0000;
-			//m_DepthBuffer[IND(x,y)] = std::numeric_limits<float>::max();
-		}
 	});
 
 	Interpolate<int, vec3>(Round(vs[is[0]].y), bary[is[0]], Round(vs[is[2]].y), bary[is[2]], 0, m_Height - 1, [](int y, vec3 b) {
@@ -360,8 +330,8 @@ void RastRenderer::DrawTri(mat4 const& fullTrans, std::array<ClipSpaceVertex, 3>
 	});
 	if (x01.size() + x12.size() != x02.size() + 1)
 	{
-		//printf("top %d, mid %d, bot %d\n", top, mid, bot);
-		//printf("Edge lengths %d, %d, %d\n", x01.size(), x02.size(), x12.size());
+		printf("top %d, mid %d, bot %d\n", top, mid, bot);
+		printf("Edge lengths %d, %d, %d\n", x01.size(), x02.size(), x12.size());
 	}
 	x012.resize(x02.size());
 	for (int i = 0; i < x01.size(); ++i)
@@ -414,7 +384,7 @@ void RastRenderer::DrawTri(mat4 const& fullTrans, std::array<ClipSpaceVertex, 3>
 					Material const& mat = m_Scene->m_Materials[matId];
 					float lighting = ComputeLighting(normal, glm::normalize(pos - m_Camera->position), mat.specularity);
 					Colour_t colour = mat.colour;
-					if (mat.albedo.IsValid())
+					if (mat.albedo->IsValid())
 					{
 						vec2 uvs = LinearCombo(b, array<vec2, 3>{ verts[0].uvs * inverseDepths[0], verts[1].uvs * inverseDepths[1], verts[2].uvs * inverseDepths[2] }) / idepth;
 						colour =  mat.albedo[uvs];

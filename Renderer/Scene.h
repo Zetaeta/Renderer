@@ -4,28 +4,10 @@
 #include "maths.h"
 #include "Transform.h"
 #include "Texture.h"
+#include "Material.h"
 
 using namespace glm;
 
-using Colour_t = vec4;
-struct Material
-{
-	Material(Colour_t col, int spec = -1, Texture albedo = {})
-		: colour(col), specularity(spec), albedo(std::move(albedo)) {}
-
-	Colour_t Colour() {
-		return colour;
-	}
-	int Specularity() {
-		return specularity;
-	}
-
-	Texture albedo;
-	Colour_t colour;
-	int specularity = -1;
-};
-
-using MaterialID = u32;
 
 struct Sphere
 {
@@ -58,16 +40,19 @@ using IndexedTri = std::array<u32, 3>;
 struct Mesh
 {
 	template <typename TVert = std::vector<Vertex>, typename TInd = std::vector<IndexedTri>>
-	Mesh(TVert&& verts, TInd&& tris, MaterialID mat = 0)
+	Mesh(TVert&& verts, TInd&& tris, std::string name = "", MaterialID mat = 0)
 		: vertices(std::forward<TVert>(verts))
 		, triangles(std::forward<TInd>(tris))
-		, material(mat) {}
+		, material(mat)
+		, name(name) {}
 
 	static Mesh MakeCube(vec3 origin, mat3 rotation, MaterialID mat);
 
 	std::vector<Vertex> vertices;
 	std::vector<IndexedTri> triangles;
 	MaterialID material;
+
+	std::string name;
 
 	static Mesh Cube(MaterialID m = 0);
 };

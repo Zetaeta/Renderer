@@ -24,30 +24,28 @@ public:
 		int x, y, comp;
 		unsigned char* data = stbi_load("content/Dirt.png", &x, &y, &comp, 4);
 		fprintf(stdout, "width: %d, height: %d, comp: %d\n", x, y, comp);
-		Texture dirt;
-		if (x > 0 && y > 0)
-		{
-			dirt = Texture(x,y,data);
-		}
+		TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x,y,data) : Texture::EMPTY;
 		stbi_image_free(data);
 		scene.m_Materials = {{{ 1.f, 0.f, 0.f, 1.f }, 10}, {{ 0.f, 1.f, 0.f, 1.f }, 500, dirt}, {vec4{ 1.f, 1.f, 0.f, 1.f }}};
 		scene.m_Spheres = { Sphere({ 0, 0, 2 }, .5f, 0), { { 0, 1, 2 }, .3f, 1 } };
 		scene.m_DirLights = { DirLight({ -1.f, -1.f,  1.f }, 0.5) };
 		vector<IndexedTri> inds = { IndexedTri({ 0, 1, 2 }) };
-		scene.m_Meshes = { Mesh(vector<Vertex>{ Vertex{vec3{ 2.f, 0.f, 3.f }}, Vertex{vec3{ -1.f, 1.f, 3.f }}, Vertex{vec3{ 1.f, -2.f, 3.f }} }, std::move(inds),
+		scene.m_Meshes = { Mesh(vector<Vertex>{ Vertex{ vec3{ 2.f, 0.f, 3.f } }, Vertex{ vec3{ -1.f, 1.f, 3.f } }, Vertex{ vec3{ 1.f, -2.f, 3.f } } }, std::move(inds), "tri",
 							   2),
 			Mesh::Cube(1) };
 		scene.m_MeshInstances = { { 0, Transform{} }, {0, Transform {{-1, 0, 0}, {1,2,1}, quat{}}} , {1, Transform { {0,0,2}, {1,1,1}, quat{} }}
 		};
 		m_Renderer = make_unique<RastRenderer>(&m_Camera, 0,0,nullptr);
+
+		ObjReader objReader {scene.m_Materials};
 		 
 		for (const auto& file : fs::directory_iterator("content"))
 		{
 			cout << file.path() << endl;
 			if (file.path().string().ends_with(".obj"))
 			{
-				scene.m_Meshes.push_back(ObjReader::Parse(file.path().string()));
-				scene.m_MeshInstances.push_back({ u32(scene.m_Meshes.size() - 1), Transform{{0,-2,3}} });
+				auto meshes = objReader.Parse(file.path().string());
+				scene.m_Meshes.insert(scene.m_Meshes.end(), meshes.begin(), meshes.end());
 			}
 		}
 	}
@@ -75,16 +73,25 @@ public:
 				ImGui::PushID(m);
 				ImGui::Text("Mesh %d", m);
 				auto& mesh = scene.m_Meshes[m];
-				for (auto& vert : mesh.vertices) {
-					ImGui::PushID(&vert);
-					ImGui::DragFloat3("vertex", &vert.pos.x, speed);
-					ImGui::DragFloat3("normal", &vert.normal.x, speed);
-					ImGui::PopID();
+				ImGui::Text(mesh.name.c_str());
+				if (ImGui::Button("Add to scene"))
+				{
+					scene.m_MeshInstances.emplace_back(m, Transform{{0,-2,3}});
 				}
-				for (auto& tri : mesh.triangles) {
-					ImGui::PushID(&tri);
-					ImGui::DragInt3("index", reinterpret_cast<int*>(&tri[0]), 1, 0, 2);
-					ImGui::PopID();
+				if (ImGui::TreeNode("Details"))
+				{
+					for (auto& vert : mesh.vertices) {
+						ImGui::PushID(&vert);
+						ImGui::DragFloat3("vertex", &vert.pos.x, speed);
+						ImGui::DragFloat3("normal", &vert.normal.x, speed);
+						ImGui::PopID();
+					}
+					for (auto& tri : mesh.triangles) {
+						ImGui::PushID(&tri);
+						ImGui::DragInt3("index", reinterpret_cast<int*>(&tri[0]), 1, 0, 2);
+						ImGui::PopID();
+					}
+					ImGui::TreePop();
 				}
 				ImGui::PopID();
 			}
@@ -94,9 +101,13 @@ public:
 		for (int m = 0; m < scene.m_MeshInstances.size(); ++m) {
 			ImGui::PushID(m);
 			ImGui::Text("Mesh inst %d", m);
+			if (ImGui::Button("Delete"))
+			{
+				scene.m_MeshInstances.erase(scene.m_MeshInstances.begin() + m);
+			}
 			auto& mi = scene.m_MeshInstances[m];
 			ImGui::DragInt("index", 
-			reinterpret_cast<int*>( & mi.mesh));
+				reinterpret_cast<int*>( & mi.mesh),1.f,0, scene.m_Meshes.size());
 			ImGui::DragFloat3("translation", &mi.trans.translation[0], speed);
 			ImGui::DragFloat3("scale", &mi.trans.scale[0], speed);
 			ImGui::PopID();

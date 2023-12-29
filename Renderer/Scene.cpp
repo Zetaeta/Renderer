@@ -77,5 +77,5 @@ Mesh Mesh::Cube(MaterialID m /*= 0*/)
 		SQ(16),
 		SQ(20),
 	};
-	return Mesh(std::move(verts), std::move(tris), m);
+	return Mesh(std::move(verts), std::move(tris), "cube", m);
 }
