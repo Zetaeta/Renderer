@@ -8,6 +8,10 @@ bin-int/
 *.vcxproj.user
 *.vcxproj.filters
 *.sln
+*.cso
+content/
+*.aps
+*.rc
 
 # Exclude
 !vendor/bin
