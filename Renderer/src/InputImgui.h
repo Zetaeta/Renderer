@@ -27,6 +27,10 @@ public:
 
 	bool IsKeyDown(Key key) override
 	{
+		if (ImGui::IsAnyItemHovered())
+		{
+			return false;
+		}
 		return ImGui::IsKeyDown(keys[(int)key]);
 	}
 

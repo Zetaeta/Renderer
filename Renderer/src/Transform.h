@@ -3,37 +3,10 @@
 #include "maths.h"
 #include "glm/gtx/euler_angles.hpp"
 #include <corecrt_math_defines.h>
+#include "TypeInfo.h"
+#include "Rotator.h"
 
 //const float MAX_ROT;
-
-struct Rotator
-{
-	float pitch = 0;
-	float yaw = 0;
-	float roll = 0;
-	inline float& operator[](u32 i)
-	{
-		return (&pitch)[i];
-	}
-
-	constexpr static float ToRad(float f)
-	{
-		return f * M_PI / 180.f;
-	}
-
-	inline operator quat() const
-	{
-		const vec3 X = {1.f,0,0};
-		const vec3 Y = {0,1.f,0};
-		const vec3 Z = {0,0,1.f};
-		return angleAxis (ToRad(roll), Z) * angleAxis(ToRad(pitch), X) * angleAxis(ToRad(yaw), Y);
-	}
-
-	void Normalize()
-	{
-		
-	}
-};
 
 inline mat4 ToMat4(Rotator const& rot) {
 	return eulerAngleYXZ(rot.ToRad(rot.yaw), rot.ToRad(rot.pitch), rot.ToRad(rot.roll));
@@ -52,6 +25,8 @@ inline mat4 ToMat4(quat const& q)
 template<typename TRot>
 struct TTransform
 {
+	DECLARE_STI_NOBASE(TTransform);
+
 	TTransform() = default;
 	TTransform(vec3 transl, vec3 scale = {1,1,1}, TRot rot = TRot{})
 		: translation(transl), scale(scale), rotation(rot)
@@ -60,7 +35,7 @@ struct TTransform
 
 	template<typename TOthRot>
 	TTransform(TTransform<TOthRot> const& other)
-		: translation(other.translation), scale(other.scale), rotation(static_cast<quat>(other.rotation))
+		: translation(other.translation), scale(other.scale), rotation(other.rotation)
 	{
 	}
 
@@ -105,6 +80,8 @@ public:
 	//bool dirty = true;
 };
 
+DECLARE_CLASS_TYPEINFO(TTransform<quat>);
+DECLARE_CLASS_TYPEINFO(TTransform<Rotator>);
 
 using Transform = TTransform<quat>;
 using QuatTransform = TTransform<quat>;

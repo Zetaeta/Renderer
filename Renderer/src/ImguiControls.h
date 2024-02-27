@@ -21,4 +21,6 @@ inline bool ImGuiControls(TTransform<Rotator>& trans)
 
 }
 
+bool ImGuiControls(ClassValuePtr cls, bool isConst);
+
 }

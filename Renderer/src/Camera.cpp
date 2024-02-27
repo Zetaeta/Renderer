@@ -34,7 +34,6 @@ void Camera::Tick(float deltaTime)
 	}
 
 	position += view * cameraMove * movespeed;
-	printf("det %f\n", determinant(view));
 
 	if (!m_Input->IsMouseDown(Input::MouseButton::RIGHT))
 	{

@@ -12,6 +12,7 @@ public:
 	void DrawUI() {
 		ImGui::Begin("Controls");
 		DrawFrameData();
+		ImGui::Checkbox("paused", &m_Paused);
 		SceneControls();
 		ImGui::End();
 
@@ -42,7 +43,10 @@ public:
 
 		m_ImgData.resize(m_ViewWidth * m_ViewHeight);
 		m_Renderer->Resize(m_ViewWidth, m_ViewHeight, &m_ImgData[0]);
-		m_Renderer->Render(scene);
+		if (!m_Paused)
+		{
+			m_Renderer->Render(scene);
+		}
 		OnRenderFinish();
 		m_FrameTime = m_Timer.ElapsedMillis();
 		m_Timer.Reset();
@@ -58,4 +62,5 @@ public:
 	Walnut::Timer m_Timer;
 
 	bool m_SizeChanged = true;
+	bool m_Paused = true;
 };

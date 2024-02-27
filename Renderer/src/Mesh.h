@@ -6,6 +6,7 @@
 #include "Material.h"
 #include "Transform.h"
 #include "Types.h"
+#include "Asset.h"
 
 struct TVertex
 {
@@ -20,11 +21,12 @@ using Vertex = TVertex;
 
 using IndexedTri = std::array<u16, 3>;
 
-struct Mesh
+struct Mesh : public Asset
 {
 	template <typename TVert = std::vector<Vertex>, typename TInd = std::vector<IndexedTri>>
-	Mesh(TVert&& verts, TInd&& tris, std::string name = "", MaterialID mat = 0)
-		: vertices(std::forward<TVert>(verts))
+	Mesh(AssetPath const& path, TVert&& verts, TInd&& tris, std::string name = "", MaterialID mat = 0)
+		: Asset(path)
+		, vertices(std::forward<TVert>(verts))
 		, triangles(std::forward<TInd>(tris))
 		, material(mat)
 		, name(name) {}

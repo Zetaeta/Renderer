@@ -29,6 +29,10 @@ public:
 	void SceneControls();
 
 protected:
+	void TypeSelector(ClassTypeInfo const& cls);
+
+	ClassTypeInfo const* m_SelectedSO = nullptr;
+
 	Camera m_Camera;
 	unique_ptr<IRenderer> m_Renderer;
 	Scene scene;

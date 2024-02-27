@@ -14,6 +14,8 @@
 #include "ImageRenderMgrDX11.h"
 #include "WinUtils.h"
 #include "../RenderManagerDX11.h"
+#include "Hash.h"
+#include "TypeInfoTest.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "D3DCompiler.lib")
@@ -128,6 +130,8 @@ int MainDX11(int argc, char** argv)
 	// Show the window
 	::ShowWindow(hwnd, SW_SHOWDEFAULT);
 	::UpdateWindow(hwnd);
+	
+	Testing();
 
 	// Setup Dear ImGui context
 	IMGUI_CHECKVERSION();

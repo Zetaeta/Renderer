@@ -9,7 +9,10 @@ bin-int/
 *.vcxproj.filters
 *.sln
 *.cso
+*.cap
 content/
+saves/
+*imgui.ini
 *.aps
 *.rc
 

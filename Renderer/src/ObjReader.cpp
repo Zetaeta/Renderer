@@ -54,7 +54,7 @@ CompoundMeshData ObjReader::Parse(string file)
 		{
 			return;
 		}
-		Mesh& mesh = cMesh.meshes.emplace_back(std::move(vertices), std::move(faces), getName(), max(matId,0 ));
+		Mesh& mesh = cMesh.meshes.emplace_back(file, std::move(vertices), std::move(faces), getName(), max(matId,0 ));
 		matId = -1;
 		ComputeNormals(mesh);
 		/* vertices.clear();

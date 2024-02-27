@@ -89,9 +89,9 @@ void Scene::InsertCompoundMesh(CompoundMesh const& cmesh)
 	//obj.root
 	for (auto& mesh : cmesh.components)
 	{
-		u32 ind = m_MeshInstances.size();
-		m_MeshInstances.emplace_back(mesh.instance, Transform{});
-		obj->root->AddChild<MeshComponent>("Child", ind).SetMesh(mesh.instance) ;
+		//m_MeshInstances.emplace_back(mesh.instance, Transform{});
+		auto& mc = obj->root->AddChild<MeshComponent>("Child") ;
+		mc.SetMesh(mesh.instance);
 	}
 }
 
@@ -102,3 +102,34 @@ MeshInstanceRef Scene::AddMesh(MeshRef mesh, Transform trans)
 	 mi.trans = trans;
 	 return m_MeshInstances.size() - 1;
 }
+
+void Scene::Initialize()
+{
+	 for (auto const& obj : m_Objects)
+	 {
+		obj->SetScene(this);
+		obj->Initialize();
+	 }
+}
+
+
+SceneObject* Scene::CreateObject(ClassTypeInfo const& type)
+{
+	auto& ptr = m_Objects.emplace_back();
+	auto const& ptrType = static_cast<PointerTypeInfo const&>(::GetTypeInfo(ptr));
+	ptrType.New(ValuePtr::From(ptr), type);
+	ptr->SetName(MakeName(type.GetName()));
+	ptr->SetScene(this);
+	ptr->Initialize();
+	return ptr.get();
+}
+
+
+DEFINE_CLASS_TYPEINFO(Scene)
+BEGIN_REFL_PROPS()
+//REFL_PROP(m_DirLights)
+//REFL_PROP(m_PointLights)
+//REFL_PROP(m_SpotLights)
+REFL_PROP(m_Objects)
+END_REFL_PROPS()
+END_CLASS_TYPEINFO()

@@ -16,6 +16,7 @@ public:
 	{
 		Super::DrawFrameData();
 		ImGui::Text("DX11 frame time: %f", m_HwFrame);
+		m_hardwareRenderer->DrawControls();
 	}
 
 	void OnRenderStart() override {

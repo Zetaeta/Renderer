@@ -358,8 +358,8 @@ void RastRenderer::DrawTri(mat4 const& fullTrans, mat4 const& model2World, std::
 					
 					vec3			normal = glm::normalize(LinearCombo(b, array<vec3,3>{ verts[0].normal, verts[1].normal, verts[2].normal }));
 					vec3 pos = (b[0] * verts[0].worldPos + b[1] * verts[1].worldPos + b[2] * verts[2].worldPos);
-					Material const& mat = m_Scene->m_Materials[matId];
-					float lighting = ComputeLighting(normal, glm::normalize(pos - m_Camera->position), mat);
+					Material const& mat = m_Scene->Materials()[matId];
+					col3 lighting = ComputeLighting(normal, glm::normalize(pos - m_Camera->position), mat);
 					Colour_t colour = mat.colour;
 					if (mat.albedo->IsValid())
 					{
@@ -371,7 +371,7 @@ void RastRenderer::DrawTri(mat4 const& fullTrans, mat4 const& model2World, std::
 					//m_Canvas[x + y * m_Width] = vecToRGBA(vec4(b*colourScale, 1));
 					//m_Canvas[x + y * m_Width] = vecToRGBA(vec4(max(normal, vec3(0)) * lighting, 1.f));
 //					m_Canvas[x + y * m_Width] = vecToRGBA(vec4(max(normalize(pos - m_Camera->position), vec3(0)), 1.f));
-					m_Canvas[x + y * m_Width] = vecToRGBA(max(colour, vec4(0)) * lighting);
+					m_Canvas[x + y * m_Width] = vecToRGBA(max(colour, vec4(0)) * vec4(lighting,1));
 					//m_Canvas[x + y * m_Width] = vecToRGBA(vec4(vec3(lighting), 1.f));
 //					m_Canvas[x + y * m_Width] = vecToRGBA(vec4((normal + vec3(1))/2.f, 1.f));
 				}
@@ -380,17 +380,17 @@ void RastRenderer::DrawTri(mat4 const& fullTrans, mat4 const& model2World, std::
 	}
 }
 
-float RastRenderer::ComputeLighting( const vec3& normal, const vec3& rayDir, Material const& mat)
+col3 RastRenderer::ComputeLighting( const vec3& normal, const vec3& rayDir, Material const& mat)
 {
-	float intensity = m_Scene->m_AmbientLight;
+	col3 intensity = m_Scene->m_AmbientLight;
 	for (auto dirLight : m_Scene->m_DirLights) {
-		intensity +=  max(dot(-dirLight.dir, normal),0.f) * dirLight.intensity * mat.diffuseness;
+		intensity +=  max(dot(-dirLight.dir, normal),0.f) * mat.diffuseness * dirLight.colour;
 		if (mat.specularExp > 0) {
 			float l = glm::length(dirLight.dir);
 			//assert(l < 1.1f);
 			vec3 outRay = normalize(dirLight.dir - 2 * dot(dirLight.dir, normal) * normal);
 			//assert(dot(outRay, -rayDir) < 1.0001f);
-			float specLight = pow(max(dot(outRay, -rayDir),0.00001f), mat.specularExp) * dirLight.intensity;// * mat.specularity;
+			col3 specLight = float(pow(max(dot(outRay, -rayDir),0.00001f), mat.specularExp)) * dirLight.colour;// * mat.specularity;
 			//return specLight;
 			intensity += specLight;
 		}
@@ -405,5 +405,5 @@ void RastRenderer::Resize(u32 width, u32 height, u32* canvas)
 	m_Canvas = canvas;
 	m_DepthBuffer.resize(width * height);
 	m_Dirty = true;
-	m_Scale = min(width, height);
+	m_Scale = float(min(width, height));
 }

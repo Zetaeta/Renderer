@@ -21,7 +21,7 @@ public:
 	void Render(const Scene& scene) override;
 	vec4 PerPixel(const Scene& scene, int x, int y);
 
-	float ComputeLighting(const Scene& scene, const vec3& point, const vec3& normal , const vec3& rayDir, int specularity);
+	col3 ComputeLighting(const Scene& scene, const vec3& point, const vec3& normal , const vec3& rayDir, int specularity);
 
 	void ComputeRayDirections();
 
@@ -36,9 +36,9 @@ public:
 		return mat.specularity;
 	}*/
 #define GetColour(mat) \
-	scene.m_Materials[mat].colour
+	scene.Materials()[mat].colour
 #define GetSpecularity(mat) \
-	scene.m_Materials[mat].specularity
+	scene.Materials()[mat].specularity
 
 private:
 

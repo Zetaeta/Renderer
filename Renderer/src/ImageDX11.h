@@ -7,6 +7,8 @@
 #include "Utils.h"
 #include "Texture.h"
 
+struct DX11Ctx;
+
 using Microsoft::WRL::ComPtr;
 
 class ImageDX11
@@ -45,4 +47,21 @@ public:
 private:
 	ComPtr<ID3D11ShaderResourceView> m_SRV = nullptr;
 	ID3D11Device* m_Device;
+};
+
+inline ID3D11ShaderResourceView* GetSRV(ImageDX11::Ref const& ref)
+{
+	return ref == nullptr ? nullptr : ref->GetSRV();
+}
+
+class DX11ShadowMap
+{
+public:
+	DX11ShadowMap(DX11Ctx const& ctx);
+	
+	ComPtr<ID3D11Texture2D> m_Texture;
+	ComPtr<ID3D11DepthStencilView> m_DepthView;
+	ComPtr<ID3D11ShaderResourceView> m_SRV;
+
+	mat4 m_World2LightProj;
 };

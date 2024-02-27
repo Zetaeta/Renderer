@@ -38,7 +38,7 @@ public:
 	void DrawLine(vec2 a, vec2 b);
 	void DrawTri(mat4 const& fullTrans, mat4 const& model2World, std::array<ClipSpaceVertex, 3> const& verts, MaterialID mat);
 
-	float ComputeLighting(const vec3& normal , const vec3& rayDir, Material const& mat);
+	col3 ComputeLighting(const vec3& normal , const vec3& rayDir, Material const& mat);
 
 //	template<u32 NumPlanes, typename TIt>
 //	void RecursiveClip(TIt const& planeBegin, TIt const& planeEnd, ClipSpaceTri const& verts);
@@ -66,9 +66,9 @@ public:
 		return mat.specularity;
 	}*/
 #define GetColour(mat) \
-	scene.m_Materials[mat].colour
+	scene.Materials()[mat].colour
 #define GetSpecularity(mat) \
-	scene.m_Materials[mat].specularity
+	scene.Materials()[mat].specularity
 
 private:
 

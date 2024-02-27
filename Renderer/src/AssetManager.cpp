@@ -52,7 +52,7 @@ bool AssetManager::LoadTexture(aiMaterial const* aimat, aiTextureType texType, T
 
 }
 
-MeshRef AssetManager::AddMesh(aiScene const* aiscene)
+MeshRef AssetManager::AddMesh(aiScene const* aiscene, AssetPath const& path)
 {
 	auto* root = aiscene->mRootNode;
 	auto& cmesh = m_CompoundMeshes.emplace_back(string(root->mName.C_Str()));
@@ -116,7 +116,7 @@ MeshRef AssetManager::AddMesh(aiScene const* aiscene)
 				u16(inds[2]) };
 		}
 		//mesh->
-		m_Meshes.emplace_back(verts, faces, string(mesh->mName.C_Str()), matsLoaded > 0 ? mesh->mMaterialIndex + matStart : 0);
+		m_Meshes.emplace_back(path, verts, faces, string(mesh->mName.C_Str()), matsLoaded > 0 ? mesh->mMaterialIndex + matStart : 0);
 		
 	}
 	printf("Added %d meshes\n", int(m_Meshes.size() - meshStart));
@@ -160,12 +160,27 @@ MeshRef AssetManager::LoadMesh(AssetPath path)
 	cout << path << endl;
 	if (aiscene != nullptr)
 	{
-		return AddMesh(aiscene);
+		return AddMesh(aiscene, path);
 	}
 	else
 	{
+		std::cerr << "Failed to load mesh " << path << endl;
 		return -1;
 	}
+}
+
+MeshRef AssetManager::GetMesh(AssetPath path)
+{
+	int i=0;
+	for (auto& mesh : m_Meshes)
+	{
+		if (mesh.m_Path == path)
+		{
+			return i;
+		}
+		++i;
+	}
+	return LoadMesh(path);
 }
 
 String AssetManager::GetFilePath(AssetPath path)

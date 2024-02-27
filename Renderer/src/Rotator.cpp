@@ -1,0 +1,8 @@
+#include "Rotator.h"
+
+//DEFINE_CLASS_TYPEINFO(Rotator)
+//BEGIN_REFL_PROPS()
+//REFL_PROP()
+//END_REFL_PROPS()
+//END_CLASS_TYPEINFO()
+

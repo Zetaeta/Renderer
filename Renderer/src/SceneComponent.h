@@ -14,13 +14,17 @@ class SceneComponent;
 
 //#define SC_CONSTRUCTORS()
 
-class SceneComponent
+class SceneComponent : public BaseObject
 {
+	DECLARE_RTTI(SceneComponent, BaseObject);
 public:
 	using Transform = RotTransform;
+	friend class SceneObject;
 
-//	SceneComponent()
-//	{}
+	RCOPY_PROTECT(SceneComponent);
+
+	SceneComponent()
+	{}
 
 	SceneComponent(SceneObject* parent, String const& name = "", RotTransform const& trans = RotTransform{})
 		: m_Object(parent), m_Name(name), m_Transform(trans)
@@ -35,6 +39,10 @@ public:
 	{
 		SceneComponent::OwningPtr& child = m_Children.emplace_back(std::make_unique<TComp>(this, std::forward<TArgs>(args)...));
 		child->SetName(name);
+		if (IsInitialized())
+		{
+			child->Initialize();
+		}
 		return static_cast<TComp&>(*child);
 	}
 
@@ -49,6 +57,7 @@ public:
 	void SetParent(SceneComponent* parent)
 	{
 		m_Parent = parent;
+		m_Object = parent->GetOwner();
 	}
 
 	using OwningPtr = std::unique_ptr<SceneComponent>;
@@ -65,7 +74,7 @@ public:
 		return m_WorldTransform;
 	}
 
-	bool ImGuiControls();
+	virtual bool ImGuiControls();
 
 	void Update(Scene& scene)
 	{
@@ -108,6 +117,11 @@ public:
 		MarkDirty();
 	}
 
+	bool IsInitialized() { return m_Initialized; }
+
+	void Initialize();
+	virtual void OnInitialize() {}
+
 protected:
 
 	void SetOwner(SceneObject* owner)
@@ -130,6 +144,7 @@ protected:
 
 	bool m_Dirty = true;
 	bool m_AnyDirty = true;
+	bool m_Initialized = false;
 
 	void MarkDirty()
 	{
@@ -157,6 +172,8 @@ protected:
 	}
 };
 
+DECLARE_CLASS_TYPEINFO(SceneComponent)
+
 inline bool IsValid(s32 ref)
 {
 	return ref >= 0;
@@ -164,7 +181,12 @@ inline bool IsValid(s32 ref)
 
 class MeshComponent : public SceneComponent
 {
+	DECLARE_RTTI(MeshComponent, SceneComponent);
 public:
+	MeshComponent() {}
+
+	MeshComponent(AssetPath const& path) :m_Mesh(path) {}
+	
 	template<typename TParent>
 	MeshComponent(TParent* parent)
 		:SceneComponent(parent), m_MeshInst(-1)
@@ -183,9 +205,15 @@ public:
 		GADGET = 1
 	};
 
+	void OnInitialize() override;
+
 	void SetMesh(MeshRef mesh);
+	void SetMesh(AssetPath path);
 
 	virtual void	OnUpdate(Scene& scene) override;
+
+
+	bool ImGuiControls() override;
 
 	void SetType(EType type)
 	{
@@ -195,23 +223,33 @@ public:
 
 protected:
 	EType m_Type = EType::VISIBLE;
-	MeshInstanceRef m_MeshInst;
-	MeshRef m_Mesh;
+	MeshInstanceRef m_MeshInst = -1;
+	MeshRef m_MeshRef = -1;
+	Name m_Mesh;
 };
+DECLARE_CLASS_TYPEINFO(MeshComponent)
 
-#define DECLARE_CLASS(cls, super) using Super = super;
 
 template<typename TLight>
 class LightComponent : public SceneComponent
 {
-	DECLARE_CLASS(LightComponent, SceneComponent);
+	DECLARE_RTTI(LightComponent, SceneComponent);
 
 public:
+	LightComponent() {}
+	
 	template<typename TParent>
 	LightComponent(TParent* parent)
 		: SceneComponent(parent)
 	{
+	}
+
+	void OnInitialize()
+	{
+		RASSERT(!IsInitialized());
+		m_LightData.comp = this;
 		m_Light = GetScene().AddLight<TLight>();
+		OnUpdate(GetScene());
 	}
 
 	void Begin() override
@@ -225,24 +263,29 @@ public:
 		Super::OnUpdate(scene);
 		if constexpr (TLight::HAS_POSITION)
 		{
-			GetScene().GetLight<TLight>(m_Light).SetPosition(GetWorldTransform().translation);
+			m_LightData.SetPosition(GetWorldTransform().translation);
 		}
 
 		if constexpr (TLight::HAS_DIRECTION)
 		{
-			GetScene().GetLight<TLight>(m_Light).SetDirection(GetWorldTransform() * TLight::GetDefaultDir());
+			m_LightData.SetDirection(GetWorldTransform().GetRotation() * TLight::GetDefaultDir());
 		}
+		GetScene().GetLight<TLight>(m_Light) = m_LightData;
 		
 		if constexpr (std::is_same_v<TLight, SpotLight>)
 		{
 			auto transf = GetWorldTransform();
 			transf.SetScale(vec3(1));
-			GetScene().GetLight<TLight>(m_Light).trans = transf;
+			//GetScene().GetLight<TLight>(m_Light).trans = transf;
 		}
 	}
 
 	TLight::Ref m_Light;
+
+	TLight m_LightData;
 };
+template<typename TLight>
+DECLARE_CLASS_TYPEINFO_TEMPLATE(LightComponent<TLight>);
 
 
 //template<typename T>
@@ -255,26 +298,44 @@ template<typename T>
 class LightObject : public SceneObject
 {
 public:
+	DECLARE_RTTI(LightObject, SceneObject);
+
+	LightObject() {}
+
 	LightObject(Scene* scene, RotTransform trans = RotTransform{}, String const& name = "")
 		: SceneObject(scene, name)
 	{
-		if (m_Name == "")
+		if (m_Name.empty())
 		{
 			m_Name = scene->MakeName(
 			GetTypeName<T>()
 			);
 		}
+		SetupDefaults();
+	}
 
+	void OnPreInitialize()
+	{
+		if (root == nullptr)
+		{
+			SetupDefaults();
+		}
+	}
+
+	void SetupDefaults()
+	{
 		SetRoot<LightComponent<T>>();
 		auto& ind = GetRoot()->AddChild<MeshComponent>("Indicator");
 		ind.SetType(MeshComponent::EType::GADGET);
 		String mesh = T::GADGET;
-		ind.SetMesh(GetScene().GetAssetManager()->LoadMesh(mesh));
+		ind.SetMesh(mesh);
 		ind.SetTransform(T::GADGET_TRANS);
-		ind.SetScale(vec3(0.1));
-
+		ind.SetScale(vec3(0.1f));
 	}
 };
+
+template<typename TLight>
+DECLARE_CLASS_TYPEINFO_TEMPLATE(LightObject<TLight>);
 
 //using PointLightComponent = LightComponent<PointLight>;
 //using SpotLightComponent = LightComponent<SpotLight>;

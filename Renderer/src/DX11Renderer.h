@@ -17,6 +17,13 @@ struct DX11Mesh
 	ComPtr<ID3D11Buffer> iBuff;
 };
 
+struct PerInstanceVSData
+{
+	mat4 fullTransform;
+	mat4 model2ShadeSpace;
+	mat4 model2ShadeDual;
+};
+
 
 class DX11Renderer : public IRenderer
 {
@@ -27,24 +34,32 @@ public:
 		Setup();
 		m_Ctx.pDevice = pDevice;
 		m_Ctx.pContext = pContext;
+		memset(m_LayersEnabled, 1, Denum(EShadingLayer::COUNT));
 	}
+
+	void DrawControls();
+
 	void Setup();
 
 	void Render(const Scene& scene) override;
+	void Render(const Scene& scene, EShadingLayer layer, int index=-1);
+
+	void LoadShaders();
 
 	void PrepareBG();
 	void DrawBG();
 
 	template<typename T>
-	void CreateConstantBuffer(ComPtr<ID3D11Buffer>& buffer, T initialData = T {});
+	void CreateConstantBuffer(ComPtr<ID3D11Buffer>& buffer, T const& initialData = T {}, u32 size = sizeof(T));
 
 	template<typename T>
 	void WriteCBuffer(ComPtr<ID3D11Buffer>& buffer, T const& data);
 
 	void PrepareShadowMaps();
 	void RenderShadowMap();
+	void RenderDepthOnly();
 
-	void DrawMesh(MeshRef meshId, bool shadow = false);
+	void DrawMesh(MeshRef meshId, EShadingLayer layer);
 
 	void PrepareMesh(Mesh const& mesh, DX11Mesh& meshData);
 
@@ -71,7 +86,8 @@ private:
 
 protected:
 
-	void CreateMatType(u32 index, LPCWSTR vertFilePath, LPCWSTR pixFilePath, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize);
+	void CreateMatType(u32 index, char const*  vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize);
+	void CreateMatTypeUnshaded(u32 index, char const*  vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize);
 
 	Camera* m_Camera;
 	//Scene* m_Scene;
@@ -107,11 +123,15 @@ protected:
 	ComPtr<ID3D11InputLayout> m_InputLayout;
 
 	ComPtr<ID3D11SamplerState> m_Sampler;
+	ComPtr<ID3D11BlendState> m_BlendState;
+	ComPtr<ID3D11DepthStencilState> m_LightsDSState;
 
-	ComPtr<ID3D11Texture2D> m_ShadowMap;
-	ComPtr<ID3D11DepthStencilView> m_ShadowDepthView;
-	ComPtr<ID3D11ShaderResourceView> m_ShadowSRV;
+	//ComPtr<ID3D11Texture2D> m_ShadowMap;
+	//ComPtr<ID3D11DepthStencilView> m_ShadowDepthView;
+	//ComPtr<ID3D11ShaderResourceView> m_ShadowSRV;
 	ComPtr<ID3D11SamplerState> m_ShadowSampler;
+
+	Vector<OwningPtr<DX11ShadowMap>> m_SpotLightShadows;
 
 	ComPtr<ID3D11RenderTargetView> m_MainRenderTarget;
 	ComPtr<ID3D11DepthStencilView> m_MainDepthStencil;
@@ -120,6 +140,9 @@ protected:
 	CubemapDX11 m_BG;
 	ComPtr<ID3D11Buffer> m_BGVBuff;
 
+	Vector<PerInstanceVSData> m_PIVS;
+
+	//Vector<ComPtr<ID3D11
 
 	float m_Scale;
 	u32 m_Width;
@@ -131,8 +154,9 @@ protected:
 	float xoffset;
 	float yoffset;
 	mat4 m_Projection;
-	mat4 m_World2LightProj;
 
 	Scene const* m_Scene;
+
+	bool m_LayersEnabled[Denum(EShadingLayer::COUNT)];
 };
 

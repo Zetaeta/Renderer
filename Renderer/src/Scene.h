@@ -53,10 +53,11 @@ class DirLightComponent : SceneComponent
 };*/ 
 
 
-struct Scene
+struct Scene// : public BaseObject
 {
+	DECLARE_STI_NOBASE(Scene);
 	Scene(AssetManager* assMan)
-		: m_AssetManager(assMan), m_Materials(assMan->m_Materials), m_Meshes(assMan->m_Meshes), m_CompoundMeshes(assMan->m_CompoundMeshes)
+		: m_AssetManager(assMan)
 	{}
 
 	Name MakeName(String base);
@@ -65,7 +66,13 @@ struct Scene
 
 	MeshInstanceRef AddMesh(MeshRef mesh, Transform trans = Transform{});
 
+	RCOPY_PROTECT(Scene);
+
+	Scene& operator=(Scene&& other) = default;
+
 	void InsertCompoundMesh(CompoundMesh const& cmesh);
+
+	void Initialize();
 
 	AssetManager* GetAssetManager()
 	{
@@ -79,17 +86,19 @@ struct Scene
 
 	inline Mesh& GetMesh(MeshRef mr)
 	{
-		return m_Meshes[mr];
+		return Meshes()[mr];
 	}
 	inline Mesh const& GetMesh(MeshRef mr) const
 	{
-		return m_Meshes[mr];
+		return Meshes()[mr];
 	}
+
+	SceneObject * CreateObject(ClassTypeInfo const& type);
 	
 	AssetManager* m_AssetManager;
-	std::vector<Material>& m_Materials;
-	std::vector<CompoundMesh>& m_CompoundMeshes;
-	std::vector<MeshInstance> m_MeshInstances;
+	std::vector<Material>&	   Materials() const { return m_AssetManager->m_Materials; }
+	std::vector<CompoundMesh>& CompoundMeshes() const { return m_AssetManager->m_CompoundMeshes; }
+	std::vector<MeshInstance>  m_MeshInstances;
 
 	MeshInstance* GetMeshInstance(MeshInstanceRef ref)
 	{
@@ -139,8 +148,9 @@ struct Scene
 		 return lights.size() - 1;
 	}
 
-	float				  m_AmbientLight = 0.2f;
+	col3				  m_AmbientLight = col3(0.2f);
 private:
-	std::vector<Mesh>& m_Meshes;
+	std::vector<Mesh>& Meshes() const { return m_AssetManager->m_Meshes; }
 };
 
+DECLARE_CLASS_TYPEINFO(Scene);

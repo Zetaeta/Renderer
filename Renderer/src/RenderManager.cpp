@@ -1,6 +1,10 @@
 #include "RenderManager.h"
 #include "ImguiControls.h"
 #include "SceneComponent.h"
+#include "misc/cpp/imgui_stdlib.h"
+#include "JsonSerializer.h"
+#include "JsonDeserializer.h"
+#include <nfd.h>
 
 using std::string;
 using namespace rnd;
@@ -23,22 +27,28 @@ inline vec2 Vec2(aiVector3D const& v)
 	fprintf(stdout, "width: %d, height: %d, comp: %d\n", x, y, comp);
 	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, data) : Texture::EMPTY;
 	stbi_image_free(data);
-	scene.m_Materials = { { { 1.f, 0.f, 0.f, 1.f }, 1.0, 10 }, { { 0.f, 1.f, 0.f, 1.f }, 1.0, 500, 1.f, dirt }, { vec4{ 1.f, 1.f, 0.f, 1.f } } };
+	scene.Materials() = { { { 1.f, 0.f, 0.f, 1.f }, 1.0, 10 }, { { 0.f, 1.f, 0.f, 1.f }, 1.0, 500, 1.f, dirt }, { vec4{ 1.f, 1.f, 0.f, 1.f } } };
 	scene.m_Spheres = { Sphere({ 0, 0, 2 }, .5f, 0), { { 0, 1, 2 }, .3f, 1 } };
 	scene.m_DirLights = { DirLight({ -1.f, -1.f, 1.f }, 0.5) };
 	scene.m_PointLights.emplace_back(vec3(1), vec3(1),1.f);
 //	scene.m_SpotLights.emplace_back(vec3(1), vec3{ 0, 0, 1 }, vec3(1), 1.f, 1.f);
 	vector<IndexedTri> inds = { IndexedTri({ 0, 1, 2 }) };
 	scene.m_Objects.emplace_back(make_unique<LightObject<SpotLight>>(&scene));
-	scene.m_MeshInstances.emplace_back(MeshInstance{ m_AssMan.AddMesh(Mesh::Cube(1)), Transform{ { 0, 0, 2 }, { 1, 1, 1 } } } );
+	auto cube = m_AssMan.AddMesh(Mesh::Cube(1));
+	MeshComponent& cubeMC = scene.m_Objects.emplace_back(make_unique<SceneObject>(&scene, "cube"))->SetRoot<MeshComponent>();
+	cubeMC.SetMesh(cube);
+	cubeMC.SetTransform(RotTransform{ { 0, 0, 2 }, { 1, 1, 1 } } );
+		//	scene.m_MeshInstances.emplace_back(MeshInstance{ m_AssMan.AddMesh(Mesh::Cube(1)),  );
 	ComputeNormals(scene.GetMesh(0));
 	m_Renderer = make_unique<RastRenderer>(&m_Camera, 0, 0, nullptr);
 
-	ObjReader objReader{ scene.m_Materials };
+	ObjReader objReader{ scene.Materials() };
+
+	scene.Initialize();
 
 	for (const auto& file : fs::directory_iterator("content"))
 	{
-		m_AssMan.LoadAssetUntyped(file);
+		//m_AssMan.LoadAssetUntyped(file);
 		/*
 		Assimp::Importer importer;
 		const aiScene*	 aiscene = importer.ReadFile(file.path().string(),
@@ -66,15 +76,20 @@ inline vec2 Vec2(aiVector3D const& v)
 	}
 }
 
+	string savefile;
 void RenderManager::SceneControls()
 {
 	int			i = 0;
 	const float speed = 0.1f;
+	if (m_Renderer)
+	{
+		m_Renderer->DrawControls();
+	}
 	ImGui::Text("Camera pos: (%.2f, %.2f, %.2f)", m_Camera.position.x, m_Camera.position.y, m_Camera.position.z);
 	ImGui::Text("Materials");
-	for (int m = 0; m < scene.m_Materials.size(); ++m)
+	for (int m = 0; m < scene.Materials().size(); ++m)
 	{
-		auto& mat = scene.m_Materials[m];
+		auto& mat = scene.Materials()[m];
 		ImGui::PushID(&mat);
 		ImGui::Text("Material %d", m);
 		if (ImGui::TreeNode("Details"))
@@ -85,6 +100,53 @@ void RenderManager::SceneControls()
 			ImGui::TreePop();
 		}
 		ImGui::PopID();
+	}
+	ImGui::InputText("Save file", &savefile);
+	if (ImGui::Button("Save"))
+	{
+		std::filesystem::create_directory("saves");
+		JsonSerializer::Dump(ConstValuePtr::From(scene), "saves/" + savefile);
+	}
+	if (ImGui::Button("Load"))
+	{
+		Scene newScene(&m_AssMan);
+		if (JsonDeserializer::Read(ValuePtr::From(newScene), "saves/" + savefile))
+		{
+			scene = std::move(newScene);
+			scene.Initialize();
+		}
+	}
+	
+	if (ImGui::TreeNode("Add Object"))
+	{
+		auto const& soType = GetClassTypeInfo<SceneObject>();
+		TypeSelector(soType);
+		if (ImGui::Button("Create"))
+		{
+			scene.CreateObject(*m_SelectedSO);
+		}
+		ImGui::TreePop();
+	}
+
+	if (ImGui::Button("Import mesh"))
+	{
+		nfdchar_t *outPath;
+		
+		auto contentDir = (std::filesystem::current_path() / "content");
+		printf("Opening file dialog at %s\n", contentDir.string().c_str());
+		nfdresult_t result = NFD_OpenDialog(NULL, contentDir.string().c_str(), &outPath);
+		if (result == NFD_OKAY)
+		{
+			std::filesystem::path asset(outPath);
+			auto relPath = asset.lexically_relative(contentDir).string();
+			printf("Loading mesh %s\n", relPath.c_str());
+			m_AssMan.LoadMesh(relPath);
+			free(outPath);
+		}
+		else if (result == NFD_ERROR)
+		{
+			printf("Error: %s\n", NFD_GetError());
+		}
 	}
 
 	ImGui::Text("Meshes");
@@ -101,7 +163,7 @@ void RenderManager::SceneControls()
 			{
 				scene.m_MeshInstances.emplace_back(m, Transform{ { 0, -2, 3 } });
 			}
-			ImGui::DragInt("MaterialID", &mesh.material, 1, 0, scene.m_Materials.size() - 1);
+			ImGui::DragInt("MaterialID", &mesh.material, 1, 0, scene.Materials().size() - 1);
 			if (ImGui::TreeNode("Vertices"))
 			{
 				for (auto& vert : mesh.vertices)
@@ -130,10 +192,10 @@ void RenderManager::SceneControls()
 	}
 	if (ImGui::TreeNode("Compound Meshes"))
 	{
-		for (int m = 0; m < scene.m_CompoundMeshes.size(); ++m)
+		for (int m = 0; m < scene.CompoundMeshes().size(); ++m)
 		{
 			ImGui::PushID(m);
-			auto const& cmesh = scene.m_CompoundMeshes[m];
+			auto const& cmesh = scene.CompoundMeshes()[m];
 			ImGui::Text(cmesh.name.c_str());
 			ImGui::Text("%d parts", cmesh.components.size());
 			if (ImGui::Button("Add to scene"))
@@ -174,16 +236,20 @@ void RenderManager::SceneControls()
 	{
 		auto& so = *scene.m_Objects[o];
 		ImGui::PushID(&so);
-		rnd::ImGuiControls(so);
-		if (ImGui::Button("Delete"))
+		if (ImGui::TreeNode(so.GetName().c_str()))
 		{
-			scene.m_Objects.erase(scene.m_Objects.begin() + o);
+			rnd::ImGuiControls(so);
+			if (ImGui::Button("Delete"))
+			{
+				scene.m_Objects.erase(scene.m_Objects.begin() + o);
+			}
+			ImGui::TreePop();
 		}
 		ImGui::PopID();
 	}
 
 	ImGui::Text("Lights");
-	ImGui::DragFloat("Ambient", &scene.m_AmbientLight, 0.01f, 0.f, 1.f);
+	ImGui::DragFloat3("Ambient", &scene.m_AmbientLight.x, 0.01f, 0.f, 1.f);
 	for (int l = 0; l < scene.m_DirLights.size(); ++l)
 	{
 		ImGui::PushID(l);
@@ -193,7 +259,7 @@ void RenderManager::SceneControls()
 		{
 			dir = glm::normalize(scene.m_DirLights[l].dir);
 		}
-		ImGui::DragFloat("intensity", &scene.m_DirLights[l].intensity, 0.01f, 0.f, 1.f);
+		ImGui::DragFloat3("intensity", &scene.m_DirLights[l].colour.x, 0.01f, 0.f, 1.f);
 		ImGui::PopID();
 	}
 	for (int l = 0; l < scene.m_SpotLights.size(); ++l)
@@ -220,7 +286,7 @@ void RenderManager::SceneControls()
 		vec3& pos = scene.m_PointLights[l].pos;
 		ImGui::DragFloat3("position", &pos.x, speed);
 		ImGui::DragFloat("radius", &scene.m_PointLights[l].radius, 0.02f);
-		ImGui::DragFloat3("intensity", &scene.m_PointLights[l].intensity[0], 0.01f);
+		ImGui::DragFloat3("intensity", &scene.m_PointLights[l].colour[0], 0.01f);
 		ImGui::DragFloat("falloff", &scene.m_PointLights[l].falloff, 0.02f);
 		ImGui::PopID();
 	}
@@ -237,6 +303,28 @@ void RenderManager::SceneControls()
 	}
 	for (auto& so : scene.m_Objects)
 	{
-		so->GetRoot()->Update(scene);
+		so->Update();
+	}
+}
+
+void RenderManager::TypeSelector(ClassTypeInfo const& cls)
+{
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+	if (m_SelectedSO == &cls)
+	{
+		flags |= ImGuiTreeNodeFlags_Selected;
+	}
+	bool expanded = ImGui::TreeNodeEx(&cls, flags, cls.GetName().c_str());
+	if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+	{
+		m_SelectedSO = &cls;
+	}
+	if (expanded)
+	{
+		for (auto child : cls.GetImmediateChildren())
+		{
+			TypeSelector(*child);
+		}
+		ImGui::TreePop();
 	}
 }

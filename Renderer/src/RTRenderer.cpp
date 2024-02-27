@@ -90,13 +90,13 @@ glm::vec4 RTRenderer::PerPixel(const Scene& scene, int x, int y)
 	if (hitMesh != -1) {
 		const Mesh& mesh = scene.GetMesh(scene.m_MeshInstances[hitMesh].mesh);
 		colour = GetColour(mesh.material);
-		spec = GetSpecularity(mesh.material);
+		spec = int(GetSpecularity(mesh.material));
 		hitNormal = normalize(hitNormal);
 	}
 	else if (hitSphere != -1) {
 		const Sphere& sphere = scene.m_Spheres[hitSphere];
 		hitNormal = glm::normalize(start + t * dir - sphere.origin);
-		spec = GetSpecularity(sphere.material);
+		spec = int(GetSpecularity(sphere.material));
 		colour = GetColour(sphere.material);
 	}
 	else
@@ -104,24 +104,24 @@ glm::vec4 RTRenderer::PerPixel(const Scene& scene, int x, int y)
 		return vec4(0);
 	}
 //	return vec4(max(hitNormal,vec3(0)), 1);
-	colour *= ComputeLighting(scene, start + t * dir, hitNormal, dir, spec);
+	colour *= vec4(ComputeLighting(scene, start + t * dir, hitNormal, dir, spec),1);
 	colour = glm:://clamp(colour, vec4(0), vec4{ 1 });
 	min(colour, vec4{1});
 	
 	return colour; //scene.m_Spheres[hitSphere].colour;
 }
 
-float RTRenderer::ComputeLighting(const Scene& scene, const vec3& point, const vec3& normal, const vec3& rayDir, int specularity)
+col3 RTRenderer::ComputeLighting(const Scene& scene, const vec3& point, const vec3& normal, const vec3& rayDir, int specularity)
 {
-	float intensity = scene.m_AmbientLight;
+	col3 intensity = scene.m_AmbientLight;
 	for (auto dirLight : scene.m_DirLights) {
-		intensity +=  max(dot(-dirLight.dir, normal),0.f) * dirLight.intensity;
+		intensity +=  max(dot(-dirLight.dir, normal),0.f) * dirLight.colour;
 		if (specularity >= 0) {
 			float l = glm::length(dirLight.dir);
 			//assert(l < 1.1f);
 			vec3 outRay = dirLight.dir - 2 * dot(dirLight.dir, normal) * normal;
 			//assert(dot(outRay, -rayDir) < 1.0001f);
-			float specLight = pow(max(dot(outRay, -rayDir),0.f), specularity) * dirLight.intensity;
+			col3 specLight = float(pow(max(dot(outRay, -rayDir),0.f), specularity)) * dirLight.colour;
 			//return specLight;
 			intensity += specLight;
 		}

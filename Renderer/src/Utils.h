@@ -5,11 +5,19 @@
 
 #define Zero(x) ZeroMemory(&x, sizeof(x))
 
-#define RCOPY_PROTECT(ClassName) ClassName(ClassName const& other) = delete;
-#define RMOVE_PROTECT(ClassName) ClassName(ClassName&& other) = delete;
+#define RCOPY_PROTECT(ClassName) ClassName(ClassName const& other) = delete;\
+								ClassName& operator=(ClassName const& other) = delete;
+#define RMOVE_PROTECT(ClassName) ClassName(ClassName&& other) = delete;\
+								ClassName& operator=(ClassName&& other) = delete;
 #define RCOPY_MOVE_PROTECT(ClassName) RCOPY_PROTECT(ClassName) RMOVE_PROTECT(ClassName)
 
 #define RASSERT(expr, ...) assert(expr)
+
+template<typename TEnum>
+constexpr auto Denum(TEnum e)
+{
+	return static_cast<std::underlying_type_t<TEnum>>(e);
+}
 
 template<typename TInt>
 class range
@@ -151,9 +159,15 @@ constexpr auto Addr(T const& t)
 }
 
 template<typename T>
+constexpr auto Addr(T const* t)
+{
+	return t;
+}
+
+template<typename T>
 constexpr auto Addr(std::vector<T> const& v)
 {
-	return &v[0];
+	return v.empty() ? nullptr : &v[0];
 }
 
 template<typename T>
@@ -216,3 +230,90 @@ TTo Convert(TFrom const& in)
 	return Convert(in, out);
 }
 
+template <unsigned N>
+struct StaticString
+{
+	constexpr StaticString() {}
+	constexpr StaticString(char (&other)[N])
+	{
+		for (int i=0; i<N; ++i)
+		{
+			str[i] = other[i];
+		}
+	}
+
+	char str[N];
+};
+
+
+template<unsigned N>
+constexpr auto Static(char const (&str)[N])
+{
+	StaticString <N> result;
+	for (int i=0; i<N; ++i)
+	{
+		result.str[i] = str[i];
+	}
+	return result;
+}
+
+
+//template<char... cs>
+//constexpr auto operator ""_static() -> StaticString < sizeof...(cs) + 1>
+//{
+//
+//	result.str[sizeof...(cs)] = '\0';
+//	char* dst = result.str;
+//	for (char c : {cs...})
+//	{
+//		*dst++ = c;
+//	}
+//	return result;
+//}
+
+template <unsigned... Len>
+constexpr auto concat(const char (&... strings)[Len])
+{
+	constexpr unsigned N = (... + Len) - sizeof...(Len);
+	StaticString<N + 1>	   result = {};
+	result.str[N] = '\0';
+
+	char* dst = result.str;
+	for (const char* src : { strings... })
+	{
+		for (; *src != '\0'; src++, dst++)
+		{
+			*dst = *src;
+		}
+	}
+	return result;
+}
+
+// https://stackoverflow.com/questions/23999573/convert-a-number-to-a-string-literal-with-constexpr
+namespace detail
+{
+	template <unsigned... digits>
+	struct to_chars
+	{
+		constexpr static const char value[] = { ('0' + digits)..., 0 };
+	};
+
+	template <unsigned rem, unsigned... digits>
+	struct explode : explode<rem / 10, rem % 10, digits...>
+	{
+	};
+
+	template <unsigned... digits>
+	struct explode<0, digits...> : to_chars<digits...>
+	{
+	};
+} // namespace detail
+
+template <unsigned num>
+struct U32ToStr : ::detail::explode<num>
+{
+};
+
+
+template <unsigned num>
+using U32ToStr_v = U32ToStr<num>::value;

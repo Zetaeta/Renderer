@@ -14,8 +14,8 @@ using s64 = i64;
 using s16 = i16;
 using s8 = i8;
 
-template<typename TVec>
-constexpr auto operator,(const TVec& v1, const TVec& v2)
+template<typename T, int N, qualifier Q>
+constexpr auto operator,(const vec<N,T,Q>& v1, const vec<N,T,Q>& v2)
 {
 	return glm::dot(v1,v2);
 }

@@ -3,16 +3,9 @@
 //#include "Scene.h"
 #include <assimp/scene.h>		// Output data structure
 #include "Mesh.h"
+#include "Asset.h"
 
-using AssetPath = String;
 namespace std { namespace filesystem { class directory_entry; } }
-
-class Asset : public BaseObject
-{
-public:
-	 using Ref = s32;
-	 AssetPath file;
-};
 
 enum class EAssetType : u8
 {
@@ -28,7 +21,6 @@ struct AssetRef
 
 struct Scene;
 struct MeshPart;
-
 
 class AssetManager : public BaseObject
 {
@@ -54,6 +46,15 @@ public:
 		return m_Meshes;
 	}
 
+	Mesh& GetMesh(MeshRef ref)
+	{
+		return m_Meshes[ref];
+	}
+
+	MeshRef GetMesh(AssetPath path);
+
+	AssetPath GetMeshPath(MeshRef); 
+
 
 	template <typename TAsset>
 	TAsset::Ref LoadAsset(AssetPath path)
@@ -64,7 +65,7 @@ public:
 	String GetFilePath(AssetPath path);
 
 private:
-	MeshRef AddMesh(aiScene const* aiscene);
+	MeshRef AddMesh(aiScene const* aiscene, AssetPath const& path);
 	void AddNode(std::vector<MeshPart>& components, aiNode const* node, aiMatrix4x4 transform, u32 meshOffset);
 	bool LoadTexture(aiMaterial const* aimat, aiTextureType texType, TextureRef& outTexture);
 

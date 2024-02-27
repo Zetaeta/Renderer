@@ -5,17 +5,27 @@
 #include "ImageDX11.h"
 #include "DX11Ctx.h"
 
+enum class EShadingLayer : u8
+{
+	BASE = 0,
+	DIRLIGHT,
+	POINTLIGHT,
+	SPOTLIGHT,
+	SHADING_COUNT,
+	NONE = SHADING_COUNT,
+	COUNT
+};
+
 struct DX11MaterialType
 {
-	ComPtr<ID3D11PixelShader> m_PixelShader;
+	ComPtr<ID3D11PixelShader>  m_PixelShader[Denum(EShadingLayer::COUNT)];
 	ComPtr<ID3D11VertexShader> m_VertexShader;
 	ComPtr<ID3D11InputLayout> m_InputLayout;
 	
 	using Ref = DX11MaterialType*;
-	virtual void Bind(DX11Ctx& ctx)
+	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer)
 	{
-		
-		ctx.pContext->PSSetShader(m_PixelShader.Get(), nullptr, 0);
+		ctx.pContext->PSSetShader(m_PixelShader[Denum(layer)].Get(), nullptr, 0);
 		ctx.pContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
 		ctx.pContext->IASetInputLayout(m_InputLayout.Get());
 	}
@@ -31,10 +41,7 @@ public:
 
 	DX11MaterialType::Ref m_MatType;
 
-	virtual void Bind(DX11Ctx& ctx)
-	{
-		m_MatType->Bind(ctx);
-	}
+	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer);
 
 	virtual void UnBind(DX11Ctx& ctx)
 	{
@@ -49,7 +56,7 @@ public:
 		: DX11Material(matType), m_Albedo(albedo) {}
 
 	
-	virtual void Bind(DX11Ctx& ctx) override;
+	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer) override;
 	void		 UnBind(DX11Ctx& ctx) override;
 
 	std::shared_ptr<ImageDX11> m_Albedo;

@@ -1,16 +1,21 @@
 
-#define POINT_LIGHT
-#define DIR_LIGHT
-#define SPOTLIGHT
+
+//#define POINT_LIGHT
+//#define DIR_LIGHT
+//#define SPOTLIGHT
 
 cbuffer PerFramePSData : register(b0) {
+#ifdef BASE_LAYER
 	float3 ambient;
-#ifdef POINT_LIGHT
+#endif
+#ifdef DIR_LIGHT
+#define USE_NORMAL
 	float3 dirLightCol;
 	float3 dirLightDir;
 #endif
 
 #ifdef POINT_LIGHT
+#define USE_NORMAL
 	float3 pointLightPos;
 	float pointLightRad;
 	float3 pointLightCol;
@@ -18,11 +23,13 @@ cbuffer PerFramePSData : register(b0) {
 #endif
 
 #ifdef SPOTLIGHT
+#define USE_NORMAL
 	float3 spotLightPos;
 	float spotLightTan;
 	float3 spotLightDir;
 	float spotLightFalloff;
 	float3 spotLightCol;
+	Matrix world2Light;
 #endif
 };
 
@@ -33,13 +40,16 @@ cbuffer PerInstancePSData : register(b1) {
 	bool useNormalMap;
 };
 
+Texture2D diffuse;// : register(t0);
+#ifndef BASE_LAYER
+Texture2D normalMap;// : register(t1);
+#else
+Texture2D emissiveMap;// : register(t2);
+#endif
+
 #ifdef SPOTLIGHT
 Texture2D spotShadowMap;
 #endif
-
-Texture2D diffuse;// : register(t0);
-Texture2D normalMap;
-Texture2D emissiveMap;
 
 SamplerState splr;
 
@@ -62,10 +72,16 @@ float3 ComputeLighting(float3 normal, float3 diffuseCol, float3 lightCol, float3
 	return diffuseCol * (lightCol * diffInt) + lightCol * specInt;
 }
 
-float4 main(float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : Colour, float2 uv: TexCoord, float4 lightPos: LightPos) : SV_TARGET
+float4 main(float2 uv: TexCoord, float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : Colour//, float4 lightPos: LightPos
+) : SV_TARGET
 {
-	normal = normalize(normal);
 	float4 texColour = diffuse.Sample(splr, float2(uv.x, uv.y));
+	float3 colour = float3(0,0,0);
+#ifdef BASE_LAYER
+	colour += emissiveMap.Sample(splr, float2(uv.x, uv.y));
+	colour += (ambient * ambdiffspec.x) * texColour;
+#else 
+	normal = normalize(normal);
 	if (useNormalMap)
 	{
 		float3 texNorm = 2 * normalMap.Sample(splr, float2(uv.x, uv.y)) - float3(1,1,1);
@@ -74,10 +90,9 @@ float4 main(float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: Vie
 		texNorm.z * normal;
 		normal = newnormal;
 	}
-	float3 emission = emissiveMap.Sample(splr, float2(uv.x, uv.y));
-	float3 colour = emission + (ambient * ambdiffspec.x) * texColour;
-
 	viewDir = normalize(viewDir);
+#endif
+
 
 #ifdef POINT_LIGHT
 	{
@@ -101,6 +116,7 @@ float4 main(float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: Vie
 		float d2 = dot(lightDist, lightDist) / square(spotLightFalloff) ;
 		float3 lightCol = spotLightCol / (d2);
 
+		float4 lightPos = mul(world2Light, float4(shadeSpacePos, 1));
 		float3 straightDist = dot(lightDist, spotLightDir) * spotLightDir;
 		float tangleSq = squareLen(lightDist - straightDist) / squareLen(straightDist);
 
@@ -109,14 +125,14 @@ float4 main(float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: Vie
 		//return float4((lightPos.x+1)/2, (lightPos.y+1)/2, lightPos.z, 1);
 //		return float4((lightPos.x / lightPos.w + 1)/2, (lightPos.y / lightPos.w+1)/2, lightPos.z / lightPos.w, 1)
 float bias = 0.001;
-		bool lit = false;
-		if (lightCoord.x <= 1 && lightCoord.x >= 0 && lightCoord.y <= 1 && lightCoord.y >= 0 && !lit) {
+		bool shadowed = false;
+		if (lightCoord.x <= 1 && lightCoord.x >= 0 && lightCoord.y <= 1 && lightCoord.y >= 0) {
 		 //	return float4(shadowSpl, shadowSpl, shadowSpl, 1)
 		//		+ float4(colour * 0.01, 0);
-			lit =  shadowSpl + bias >= lightPos.z / lightPos.w;
+			shadowed = !( shadowSpl + bias >= lightPos.z / lightPos.w);
 		}
 
-		colour += lit * (tangleSq < square(spotLightTan) && dot(spotLightDir, lightDir) > 0) * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, specularExp, viewDir);
+		colour += (!shadowed) * ((tangleSq < square(spotLightTan) && (dot(spotLightDir, lightDir) > 0))) * ComputeLighting(normal, texColour , lightCol, lightDir, specularExp, viewDir);
 	}
 #endif
 //	float3 lightDir = dirLightDir;

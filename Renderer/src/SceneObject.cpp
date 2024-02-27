@@ -13,6 +13,10 @@
 	*this = std::move(other);
 }
 
+ SceneObject::SceneObject()
+{
+}
+
 SceneObject& SceneObject::operator=(SceneObject&& other)
 {
 	m_Scene = (other.m_Scene);
@@ -25,6 +29,17 @@ SceneObject::~SceneObject()
 {
 }
 
+void SceneObject::Initialize()
+{
+	OnPreInitialize();
+	if (root)
+	{
+		root->SetOwner(this);
+		root->Initialize();
+	}
+	OnInitialize();
+}
+
 void SceneObject::Begin()
 {
 	root->Begin();
@@ -33,5 +48,33 @@ void SceneObject::Begin()
 bool SceneObject::ImGuiControls()
 {
 	ImGui::Text(m_Name.c_str());
-	return root->ImGuiControls();
+	if (root)
+	{
+		return root->ImGuiControls();
+	}
+	else
+	{
+		return false;
+	}
 }
+
+void SceneObject::Update()
+{
+	if (root != nullptr)
+	{
+		root->Update(*m_Scene);
+	}
+}
+
+void SceneObject::OnSetRoot()
+{
+	root->SetOwner(this);
+}
+
+DEFINE_CLASS_TYPEINFO(SceneObject)
+BEGIN_REFL_PROPS()
+REFL_PROP(m_Name)
+REFL_PROP(root)
+END_REFL_PROPS()
+END_CLASS_TYPEINFO()
+
