@@ -16,6 +16,11 @@ public:
 		SceneControls();
 		ImGui::End();
 
+		ImGui::Begin("Assets");
+		m_AssMan.DrawControls();
+		ImGui::End();
+
+
 		ImGui::Begin("Viewport");
 		u32 width = static_cast<int>(ImGui::GetContentRegionAvail().x);
 		u32 height = static_cast<int>(ImGui::GetContentRegionAvail().y);
@@ -35,11 +40,12 @@ public:
 	}
 
 	void Render() {
+
+		OnRenderStart();
+
 		if (m_ViewHeight * m_ViewHeight == 0) {
 			return;
 		}
-
-		OnRenderStart();
 
 		m_ImgData.resize(m_ViewWidth * m_ViewHeight);
 		m_Renderer->Resize(m_ViewWidth, m_ViewHeight, &m_ImgData[0]);

@@ -29,11 +29,13 @@ inline vec2 Vec2(aiVector3D const& v)
 	stbi_image_free(data);
 	scene.Materials() = { { { 1.f, 0.f, 0.f, 1.f }, 1.0, 10 }, { { 0.f, 1.f, 0.f, 1.f }, 1.0, 500, 1.f, dirt }, { vec4{ 1.f, 1.f, 0.f, 1.f } } };
 	scene.m_Spheres = { Sphere({ 0, 0, 2 }, .5f, 0), { { 0, 1, 2 }, .3f, 1 } };
-	scene.m_DirLights = { DirLight({ -1.f, -1.f, 1.f }, 0.5) };
-	scene.m_PointLights.emplace_back(vec3(1), vec3(1),1.f);
+	//scene.m_DirLights = { DirLight({ -1.f, -1.f, 1.f }, 0.5) };
+	//scene.m_PointLights.emplace_back(vec3(1), vec3(1),1.f);
 //	scene.m_SpotLights.emplace_back(vec3(1), vec3{ 0, 0, 1 }, vec3(1), 1.f, 1.f);
 	vector<IndexedTri> inds = { IndexedTri({ 0, 1, 2 }) };
 	scene.m_Objects.emplace_back(make_unique<LightObject<SpotLight>>(&scene));
+	scene.m_Objects.emplace_back(make_unique<LightObject<PointLight>>(&scene));
+	scene.m_Objects.emplace_back(make_unique<LightObject<DirLight>>(&scene));
 	auto cube = m_AssMan.AddMesh(Mesh::Cube(1));
 	MeshComponent& cubeMC = scene.m_Objects.emplace_back(make_unique<SceneObject>(&scene, "cube"))->SetRoot<MeshComponent>();
 	cubeMC.SetMesh(cube);
@@ -81,25 +83,24 @@ void RenderManager::SceneControls()
 {
 	int			i = 0;
 	const float speed = 0.1f;
-	if (m_Renderer)
-	{
-		m_Renderer->DrawControls();
-	}
 	ImGui::Text("Camera pos: (%.2f, %.2f, %.2f)", m_Camera.position.x, m_Camera.position.y, m_Camera.position.z);
-	ImGui::Text("Materials");
-	for (int m = 0; m < scene.Materials().size(); ++m)
+	if (ImGui::TreeNode("Materials"))
 	{
-		auto& mat = scene.Materials()[m];
-		ImGui::PushID(&mat);
-		ImGui::Text("Material %d", m);
-		if (ImGui::TreeNode("Details"))
+		for (int m = 0; m < scene.Materials().size(); ++m)
 		{
-			ImGui::DragFloat4("Colour", &mat.colour[0]);
-			ImGui::DragFloat("Specularity", &mat.specularity);
-			ImGui::DragInt("SpecExp", &mat.specularExp);
-			ImGui::TreePop();
+			auto& mat = scene.Materials()[m];
+			ImGui::PushID(&mat);
+			ImGui::Text("Material %d", m);
+			if (ImGui::TreeNode("Details"))
+			{
+				ImGui::DragFloat4("Colour", &mat.colour[0]);
+				ImGui::DragFloat("Specularity", &mat.specularity);
+				ImGui::DragInt("SpecExp", &mat.specularExp);
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
 		}
-		ImGui::PopID();
+		ImGui::TreePop();
 	}
 	ImGui::InputText("Save file", &savefile);
 	if (ImGui::Button("Save"))
@@ -126,27 +127,6 @@ void RenderManager::SceneControls()
 			scene.CreateObject(*m_SelectedSO);
 		}
 		ImGui::TreePop();
-	}
-
-	if (ImGui::Button("Import mesh"))
-	{
-		nfdchar_t *outPath;
-		
-		auto contentDir = (std::filesystem::current_path() / "content");
-		printf("Opening file dialog at %s\n", contentDir.string().c_str());
-		nfdresult_t result = NFD_OpenDialog(NULL, contentDir.string().c_str(), &outPath);
-		if (result == NFD_OKAY)
-		{
-			std::filesystem::path asset(outPath);
-			auto relPath = asset.lexically_relative(contentDir).string();
-			printf("Loading mesh %s\n", relPath.c_str());
-			m_AssMan.LoadMesh(relPath);
-			free(outPath);
-		}
-		else if (result == NFD_ERROR)
-		{
-			printf("Error: %s\n", NFD_GetError());
-		}
 	}
 
 	ImGui::Text("Meshes");
@@ -204,6 +184,33 @@ void RenderManager::SceneControls()
 				for (auto mesh : cmesh.components)
 				{
 					//scene.m_MeshInstances.emplace_back(mesh.instance, Transform{ { 0, -2, 3 } });
+				}
+			}
+			ImGui::PopID();
+		}
+		ImGui::TreePop();
+	}
+	if (ImGui::TreeNode("Mesh files"))
+	{
+		if (ImGui::Button("Refresh"))
+		{
+			m_AssMan.RefreshMeshList();
+		}
+		for (int m = 0; m < m_AssMan.MeshList().size(); ++m)
+		{
+			auto const& mesh = m_AssMan.MeshList()[m];
+			ImGui::PushID(m);
+
+			ImGui::Text(mesh.path.c_str());
+			if (mesh.loaded)
+			{
+				ImGui::Text("Loaded");
+			}
+			else
+			{
+				if (ImGui::Button("Load"))
+				{
+					m_AssMan.LoadMesh(mesh.path);
 				}
 			}
 			ImGui::PopID();

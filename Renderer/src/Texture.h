@@ -3,6 +3,7 @@
 #include <memory>
 #include "maths.h"
 #include "Utils.h"
+#include "DeviceTexture.h"
 
 #define IND(x, y) (x + y * width)
 
@@ -66,6 +67,8 @@ public:
 	size_type const width;
 	size_type const height;
 
+	DeviceTextureRef const& GetDeviceTexture() const { return m_DeviceTex; }
+	void SetDeviceTexture(DeviceTextureRef const& dt) const { m_DeviceTex = dt; }
 
 private:
 
@@ -75,6 +78,7 @@ private:
 	Texture(Texture const& other) = default;
 
 	std::vector<u32> m_Data;
+	mutable DeviceTextureRef m_DeviceTex = INVALID_DEV_TEX;
 };
 
 class TextureRef

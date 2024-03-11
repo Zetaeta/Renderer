@@ -117,7 +117,7 @@ bool ImGuiControls(char const* name, ValuePtr val, bool isConst)
 			ContainerTypeInfo const& ctr = static_cast<ContainerTypeInfo const&>(val.GetType());
 			TypeInfo const&			 contained = ctr.GetContainedType();
 			auto					 acc = ctr.CreateAccessor(val);
-			if (!ctr.HasFlag(ContainerTypeInfo::RESIZABLE) && contained.GetTypeCategory() == ETypeCategory::BASIC)
+			if (!ctr.HasFlag(ContainerTypeInfo::RESIZABLE) && contained.GetTypeCategory() == ETypeCategory::BASIC && contained != GetTypeInfo<String>())
 			{
 				ImGuiDataType imTyp = GetImGuiType(contained);
 				float		  speed = GetSpeed(contained);
@@ -131,7 +131,7 @@ bool ImGuiControls(char const* name, ValuePtr val, bool isConst)
 				{
 					auto idx = std::format("[{}]", i);
 					ImGui::PushID(i);
-					edited |= ImGuiControls(idx.c_str(), acc->GetAt(0), areConst);
+					edited |= ImGuiControls(idx.c_str(), acc->GetAt(i), areConst);
 					ImGui::PopID();
 				}
 				ImGui::TreePop();

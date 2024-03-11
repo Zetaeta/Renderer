@@ -174,11 +174,6 @@ protected:
 
 DECLARE_CLASS_TYPEINFO(SceneComponent)
 
-inline bool IsValid(s32 ref)
-{
-	return ref >= 0;
-}
-
 class MeshComponent : public SceneComponent
 {
 	DECLARE_RTTI(MeshComponent, SceneComponent);
@@ -224,7 +219,7 @@ public:
 protected:
 	EType m_Type = EType::VISIBLE;
 	MeshInstanceRef m_MeshInst = -1;
-	MeshRef m_MeshRef = -1;
+	MeshRef m_MeshRef = INVALID_MESH_REF;
 	Name m_Mesh;
 };
 DECLARE_CLASS_TYPEINFO(MeshComponent)
@@ -236,12 +231,22 @@ class LightComponent : public SceneComponent
 	DECLARE_RTTI(LightComponent, SceneComponent);
 
 public:
-	LightComponent() {}
+	LightComponent() {
+	
+		if constexpr (TLight::HAS_DIRECTION)
+		{
+			SetTransform(TLight::GetDefaultTrans());
+		}
+	}
 	
 	template<typename TParent>
 	LightComponent(TParent* parent)
 		: SceneComponent(parent)
 	{
+		if constexpr (TLight::HAS_DIRECTION)
+		{
+			SetTransform(TLight::GetDefaultTrans());
+		}
 	}
 
 	void OnInitialize()

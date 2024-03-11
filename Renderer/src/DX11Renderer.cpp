@@ -10,9 +10,10 @@
 #include <d3d11.h>
 #include "WinUtils.h"
 #include <d3dcompiler.h>
-#include "CubemapDX11.h"
+#include "DX11Cubemap.h"
 #include "SceneComponent.h"
 #include "imgui.h"
+#include "glm/gtx/transform.hpp"
 
 using std::swap;
 using std::vector;
@@ -31,6 +32,26 @@ using DX11Bool = int;
 
 using col = vec3; 
 
+struct BGVert
+{
+	vec3 pos;
+	vec2 uv;
+};
+
+
+__declspec(align(16))
+struct VS2DCBuff
+{
+	float2 pos;
+	float2 size;
+};
+
+__declspec(align(16))
+struct PS2DCBuff
+{
+	float exponent = 1.f;
+	DX11Bool isDepth = false;
+};
 
 __declspec(align(16))
 struct PerFramePSData
@@ -46,6 +67,7 @@ struct PFPSDirLight// : PerFramePSData
 	float _pad2;
 	vec3 directionalDir;
 	float _pad3;
+	mat4 world2Light;
 };
 
 __declspec(align(16))
@@ -55,6 +77,7 @@ struct PFPSPointLight// : PerFramePSData
 	float pointLightRad;
 	vec3 pointLightCol;
 	float pointLightFalloff;
+	mat4 world2Light;
 };
 
 //__declspec(align(16))
@@ -145,32 +168,6 @@ void DX11Renderer::WriteCBuffer(ComPtr<ID3D11Buffer>& buffer, T const& data)
 
 void DX11Renderer::PrepareShadowMaps()
 {
-	//D3D11_TEXTURE2D_DESC shadowMapDesc;
-	//ZeroMemory(&shadowMapDesc, sizeof(D3D11_TEXTURE2D_DESC));
-	//shadowMapDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-	//shadowMapDesc.MipLevels = 1;
-	//shadowMapDesc.ArraySize = 1;
-	//shadowMapDesc.SampleDesc.Count = 1;
-	//shadowMapDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-	//shadowMapDesc.Width = 1024;
-	//shadowMapDesc.Height = 1024;
-
-	//HR_ERR_CHECK(pDevice->CreateTexture2D(&shadowMapDesc, nullptr, &m_ShadowMap));
-
-	//D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-	//ZeroMemory(&depthStencilViewDesc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
-	//depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	//depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	//depthStencilViewDesc.Texture2D.MipSlice = 0;
-
-	//D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
-	//ZeroMemory(&shaderResourceViewDesc, sizeof(D3D11_SHADER_RESOURCE_VIEW_DESC));
-	//shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	//shaderResourceViewDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	//shaderResourceViewDesc.Texture2D.MipLevels = 1;
-
-	//HR_ERR_CHECK(pDevice->CreateDepthStencilView(m_ShadowMap.Get(), &depthStencilViewDesc, &m_ShadowDepthView));
-	//HR_ERR_CHECK(pDevice->CreateShaderResourceView(m_ShadowMap.Get(), &shaderResourceViewDesc, &m_ShadowSRV));
 
 	D3D11_SAMPLER_DESC comparisonSamplerDesc;
 	ZeroMemory(&comparisonSamplerDesc, sizeof(D3D11_SAMPLER_DESC));
@@ -202,47 +199,155 @@ void DX11Renderer::PrepareShadowMaps()
 
 void DX11Renderer::RenderShadowMap()
 {
+	m_Ctx.psTextures.UnBind(m_Ctx);
+	// Spotlights
 	m_SpotLightShadows.resize(m_Scene->m_SpotLights.size());
 	for (int i = 0; i < m_SpotLightShadows.size(); ++i)
 	{
 		auto& shadowMap = m_SpotLightShadows[i];
-		if (shadowMap == nullptr)
+		if (!shadowMap)
 		{
-			shadowMap = std::make_unique<DX11ShadowMap>(m_Ctx);
+			shadowMap.Init(m_Ctx, 1024);
 		}
-		pContext->PSSetShaderResources(0,0, nullptr);
-		pContext->OMSetRenderTargets(0, nullptr, shadowMap->m_DepthView.Get());
-		pContext->ClearDepthStencilView(shadowMap->m_DepthView.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
-
-		D3D11_VIEWPORT viewport = {
-			.TopLeftX = 0,
-			.TopLeftY = 0,
-			.Width = 1024,
-			.Height = 1024,
-			.MinDepth = 0,
-			.MaxDepth = 1,
-		};
-		pContext->RSSetViewports(1, &viewport);
 
 		auto const& light = m_Scene->m_SpotLights[i];
 
 		float const FAR_PLANE = 1000;
 		float const NEAR_PLANE = .1f;
-		m_Projection =
+		mat4 projection =
 		{ 
 			{ 1/ light.tangle, 0, 0, 0 },
 			{0,	1/ light.tangle, 0,0},
 			{ 0, 0, (FAR_PLANE) / (FAR_PLANE - NEAR_PLANE), -FAR_PLANE * NEAR_PLANE  / (FAR_PLANE - NEAR_PLANE)},
 			{0,			0,		1,0},
 		};
-		m_Projection = glm::transpose(m_Projection);
+		projection = glm::transpose(projection);
 		QuatTransform w2ltrans;
 		if (light.comp)
 			w2ltrans = m_Scene->m_SpotLights[i].comp->GetWorldTransform();
 		w2ltrans.SetScale(vec3(1));
-		mat4 light2World = w2ltrans;
-		mat4 projWorld = m_Projection * inverse(light2World);
-		shadowMap->m_World2LightProj = projWorld; 
+		RenderDepthOnly(shadowMap.GetDSV(), 1024, 1024, glm::inverse(mat4(w2ltrans)), projection, nullptr, &shadowMap.m_World2LightProj);
+	}
+
+	// Directional
+	m_DirLightShadows.resize(m_Scene->m_DirLights.size());
+	for (int i = 0; i < m_DirLightShadows.size(); ++i)
+	{
+		auto& shadowMap = m_DirLightShadows[i];
+		if (!shadowMap)
+		{
+			shadowMap.Init(m_Ctx, 1024);
+		}
+
+		auto const& light = m_Scene->m_DirLights[i];
+
+		float const FAR_PLANE = 1000;
+		float const NEAR_PLANE = .1f;
+		mat4 projection =
+		{ 
+			{ 1.f/m_DirShadowSize, 0, 0, 0 },
+			{0,	1.f/m_DirShadowSize, 0,0},
+			{ 0, 0, 1 / (FAR_PLANE - NEAR_PLANE), -NEAR_PLANE  / (FAR_PLANE - NEAR_PLANE)},
+			{0,			0,		0,1},
+		};
+
+		projection = glm::transpose(projection);
+		QuatTransform w2ltrans;
+		if (light.comp)
+			w2ltrans = light.comp->GetWorldTransform();
+		w2ltrans.SetScale(vec3(1));
+		w2ltrans.SetTranslation(w2ltrans.GetTranslation() - light.dir * 100.f);
+		RenderDepthOnly(shadowMap.GetDSV(), 1024, 1024, glm::inverse(mat4(w2ltrans)), projection, nullptr, &shadowMap.m_World2LightProj);
+	}
+
+	// Point lights
+	m_PointLightShadows.resize(m_Scene->m_PointLights.size());
+	for (int i = 0; i < m_PointLightShadows.size(); ++i)
+	{
+		auto& shadowMap = m_PointLightShadows[i];
+		if (!shadowMap)
+		{
+			shadowMap.Init(m_Ctx, 1024);
+		}
+
+		auto const& light = m_Scene->m_PointLights[i];
+
+		float const FAR_PLANE = 1000;
+		float const NEAR_PLANE = .1f;
+		mat4 projection =
+		{ 
+			{ 1, 0, 0, 0 },
+			{0,	1, 0,0},
+			{ 0, 0, (FAR_PLANE) / (FAR_PLANE - NEAR_PLANE), -FAR_PLANE * NEAR_PLANE  / (FAR_PLANE - NEAR_PLANE)},
+			{0,			0,		1,0},
+		};
+		projection = glm::transpose(projection);
+		//glm::rotat
+		QuatTransform w2ltrans;
+		if (light.comp)
+			w2ltrans = m_Scene->m_PointLights[i].comp->GetWorldTransform();
+		w2ltrans.SetScale(vec3(1));
+
+		mat4 l2w = glm::inverse(mat4(w2ltrans));
+		shadowMap.m_World2Light = w2ltrans;
+
+		constexpr float ROTVAL = M_PI/2;
+		static mat4 rots[] = {
+			glm::rotate(ROTVAL,vec3{0,-1,0}), // +Z -> +X
+			glm::rotate(ROTVAL,vec3{0,1,0}), // +Z -> -X
+			glm::rotate(ROTVAL,vec3{1,0,0}), // +Z -> +Y
+			glm::rotate(ROTVAL,vec3{-1,0,0}), // +Z -> +Y
+			glm::identity<mat4>(),			   // +Z -> +Z
+			glm::rotate(ROTVAL * 2.f,vec3{0,1,0}), // +Z -> -Z
+		};
+
+		PerFrameVertexData PFVD;
+		PFVD.cameraPos = m_Camera->position;
+		PFVD.screen2World = l2w;
+		WriteCBuffer(m_VSPerFrameBuff, PFVD);
+		//float maxDepth = FAR_PLANE
+		WriteCBuffer(m_PSPerFrameBuff, FAR_PLANE);
+		//pContext->PSSetConstantBuffers(0, 1, m_PSPerFrameBuff.GetAddressOf());
+
+
+		for (u32 i=0; i<6; ++i)
+		{
+			mat4 myProj= projection * rots[i];
+			RenderDepthOnly(shadowMap.GetDSV(i), 1024, 1024, l2w,
+				myProj, &m_MatTypes[MAT_POINT_SHADOW_DEPTH], nullptr);
+		}
+	}
+}
+
+void DX11Renderer::RenderDepthOnly(ID3D11DepthStencilView *dsv, u32 width, u32 height,
+	mat4 const& transform, mat4 const& projection, DX11MaterialType* material, mat4* outFullTrans)
+{
+		pContext->PSSetShaderResources(0,0, nullptr);
+		pContext->OMSetRenderTargets(0, nullptr, dsv);
+		pContext->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH, 1.f, 0);
+
+		D3D11_VIEWPORT viewport = {
+			.TopLeftX = 0,
+			.TopLeftY = 0,
+			.Width = float(width),
+			.Height = float(height),
+			.MinDepth = 0,
+			.MaxDepth = 1,
+		};
+		pContext->RSSetViewports(1, &viewport);
+
+
+		float const FAR_PLANE = 1000;
+		float const NEAR_PLANE = .1f;
+		mat4 projWorld = projection * transform;
+		if (outFullTrans)
+		{
+			*outFullTrans = projWorld; 
+		}
+		if (material != nullptr)
+		{
+			material->Bind(m_Ctx, EShadingLayer::BASE);
+		}
 
 		for (auto const& mi : m_Scene->m_MeshInstances)
 		{
@@ -263,9 +368,8 @@ void DX11Renderer::RenderShadowMap()
 
 			ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
 			pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
-			DrawMesh(mi.mesh, EShadingLayer::NONE);
+			DrawMesh(mi.mesh, EShadingLayer::NONE, material == nullptr);
 		}
-	}
 }
 
 __declspec(align(16))
@@ -280,6 +384,7 @@ struct PerInstancePSData
 
 void DX11Renderer::DrawControls()
 {
+	ImGui::Begin("Renderer");
 	static const char* layers[] = { "base",
 		"dirlight",
 		"pointlight",
@@ -293,10 +398,56 @@ void DX11Renderer::DrawControls()
 	{
 		LoadShaders();
 	}
+	if (ImGui::Button("Full recompile shaders"))
+	{
+		LoadShaders(true);
+	}
+
+	ImGui::DragFloat("Dir shadowmap scale", &m_DirShadowSize);
+	ImGui::DragFloat("Point shadow factor", &m_PointShadowFactor, 0.1f);
+
+	{
+		if (ImGui::BeginCombo("Texture viewer", m_ViewerTex == nullptr ? "None" : std::format("{}##{}", m_ViewerTex->IsDepthStencil() ? "Depth" : "Texture", reinterpret_cast<u64> (m_ViewerTex)).c_str()))
+		{
+			{
+				bool selected = m_ViewerTex == nullptr;
+				if (ImGui::Selectable("None##1", selected))
+				{
+					m_ViewerTex = nullptr;
+				}
+				if (selected)
+                    ImGui::SetItemDefaultFocus();
+			}
+			for (auto tex : m_TextureRegistry)
+			{
+				String name = std::format("{}##{}", tex->IsDepthStencil() ? "Depth" : "Texture", reinterpret_cast<u64> (tex));
+				bool selected = m_ViewerTex == tex;
+				if (ImGui::Selectable(name.c_str(), selected))
+				{
+					m_ViewerTex = tex;
+				}
+				if (selected)
+                    ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::DragFloat("Exponent", &m_TexViewExp, 0.01, 0.01, 10);
+
+		if (m_ViewerTex != nullptr)
+		{
+			ImGui::Image(m_ViewerTex->GetSRV(), {500, 500}, {0,1}, {1,0});
+		}
+	}
+
+	//ImGui::Selectable()
+
+	ImGui::End();
 }
 
 void DX11Renderer::Setup()
 {
+
+
 	//Setup matrix constant buffer
 	CreateConstantBuffer<PerInstanceVSData>(m_VSPerInstanceBuff);
 	CreateConstantBuffer<PerFrameVertexData>(m_VSPerFrameBuff);
@@ -311,7 +462,7 @@ void DX11Renderer::Setup()
 	//CreateMatType(MAT_TEX, "TexVertexShader","TexPixelShader",ied,Size(ied));
 
 	u32 const empty = 0x00000000;
-	m_EmptyTexture = ImageDX11::Create(pDevice, 1, 1, &empty);
+	m_EmptyTexture = DX11Texture::Create(&m_Ctx, 1, 1, &empty);
 
 	D3D11_SAMPLER_DESC sDesc;
 	Zero(sDesc);
@@ -319,6 +470,7 @@ void DX11Renderer::Setup()
 	sDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	sDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	sDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	sDesc.MaxLOD = D3D11_FLOAT32_MAX;
 	HR_ERR_CHECK(pDevice->CreateSamplerState(&sDesc, &m_Sampler));
 	pContext->PSSetSamplers(0, 1, m_Sampler.GetAddressOf());
 
@@ -348,13 +500,38 @@ void DX11Renderer::Setup()
 		pDevice->CreateDepthStencilState(&dsDesc, &m_LightsDSState);
 	}
 
-}
-struct BGVert
-{
-	vec3 pos;
-	vec2 uv;
-};
+	// 2D
+	{
+		
 
+		float const Z = -0.f;
+		BGVert const verts[] = {
+			{ {-1,-1.f, Z}, {0,1} },
+			{ {-1,1.f, Z}, {0,0} },
+			{ {1,-1.f, Z}, {1,1} },
+			{ {1,-1.f, Z}, {1,1} },
+			{ {-1,1.f, Z}, {0,0} },
+			{ {1,1.f, Z}, {1,0} },
+		};
+		const UINT stride = Sizeof(verts[0]);
+		{
+			D3D11_BUFFER_DESC bd = {};
+			Zero(bd);
+			bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			bd.Usage = D3D11_USAGE_DEFAULT;
+			bd.ByteWidth = Sizeof(verts);
+			bd.StructureByteStride = stride;
+			D3D11_SUBRESOURCE_DATA sd;
+			Zero(sd);
+			sd.pSysMem = Addr(verts);
+
+			HR_ERR_CHECK(pDevice->CreateBuffer(&bd, &sd, &m_2DVBuff));
+		}
+		CreateConstantBuffer<VS2DCBuff>(m_VS2DCBuff);
+		CreateConstantBuffer<PS2DCBuff>(m_PS2DCBuff);
+	}
+
+}
 void DX11Renderer::PrepareBG()
 {
 	float const Z = 0.9999f;
@@ -378,15 +555,8 @@ void DX11Renderer::PrepareBG()
 		HR_ERR_CHECK(pDevice->CreateBuffer(&bd, &sd, &m_BGVBuff));
 	}
 	TextureRef tex = Texture::LoadFrom("content/canyon2.jpg");
-	m_Background = ImageDX11::CreateFrom(tex, pDevice);
-	const D3D11_INPUT_ELEMENT_DESC ied[] =
-	{
-		{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(BGVert, uv), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
-	
-	CreateMatTypeUnshaded(MAT_BG, "BGVertexShader", "BGPixelShader", ied, Size(ied));
-	m_BG = CubemapDX11::FoldUp(pDevice, tex);
+	m_Background = DX11Texture::CreateFrom(tex, &m_Ctx);
+	m_BG = std::make_unique<DX11Cubemap>(DX11Cubemap::FoldUp(m_Ctx, tex));
 }
 
 void DX11Renderer::Render(const Scene& scene)
@@ -492,6 +662,12 @@ void DX11Renderer::Render(const Scene& scene)
 	pContext->OMSetDepthStencilState(nullptr, 1);
 	DrawBG();
 
+	pContext->ClearDepthStencilView(m_MainDepthStencil.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
+	if (m_ViewerTex != nullptr)
+	{
+		DrawTexture(m_ViewerTex);
+	}
+
 	pContext->PSSetShader(nullptr, nullptr, 0);
 	pContext->VSSetShader(nullptr, nullptr, 0);
 
@@ -517,10 +693,11 @@ void DX11Renderer::Render(const Scene& scene, EShadingLayer layer, int index)
 		Zero(perFrameData);
 		perFrameData.directionalCol = vec3(scene.m_DirLights[index].colour);
 		perFrameData.directionalDir = scene.m_DirLights[index].dir;
+		perFrameData.world2Light = m_DirLightShadows[index].m_World2LightProj;
 		WriteCBuffer(m_PSPerFrameBuff, perFrameData);
+		m_Ctx.psTextures.SetTexture(E_TS_SHADOWMAP, m_DirLightShadows[index].GetSRV());
 		break;
 	}
-		break;
 	case EShadingLayer::SPOTLIGHT:
 	{
 		auto const& light = scene.m_SpotLights[index];
@@ -531,11 +708,11 @@ void DX11Renderer::Render(const Scene& scene, EShadingLayer layer, int index)
 		perFrameData.spotLightPos = light.pos;
 		perFrameData.spotLightTan = light.tangle;
 		perFrameData.spotLightFalloff = light.falloff;
-		perFrameData.world2Light = m_SpotLightShadows[index]->m_World2LightProj;
+		perFrameData.world2Light = m_SpotLightShadows[index].m_World2LightProj;
 
 		WriteCBuffer(m_PSPerFrameBuff, perFrameData);
 
-		m_Ctx.psTextures.SetTexture(E_TS_SHADOWMAP, m_SpotLightShadows[index]->m_SRV.Get());
+		m_Ctx.psTextures.SetTexture(E_TS_SHADOWMAP, m_SpotLightShadows[index].GetSRV());
 		break;
 	}
 	case EShadingLayer::POINTLIGHT:
@@ -547,7 +724,10 @@ void DX11Renderer::Render(const Scene& scene, EShadingLayer layer, int index)
 		perFrameData.pointLightCol = light.colour;
 		perFrameData.pointLightRad = light.radius;
 		perFrameData.pointLightFalloff = light.falloff;
+		perFrameData.world2Light = m_PointLightShadows[index].m_World2Light;
 		WriteCBuffer(m_PSPerFrameBuff, perFrameData);
+
+		m_Ctx.psTextures.SetTexture(E_TS_SHADOWMAP, m_PointLightShadows[index].GetSRV());
 		break;
 	}
 	default:
@@ -570,18 +750,32 @@ void DX11Renderer::Render(const Scene& scene, EShadingLayer layer, int index)
 	}
 }
 
-void DX11Renderer::LoadShaders()
+void DX11Renderer::LoadShaders(bool reload)
 {
-	const D3D11_INPUT_ELEMENT_DESC ied[] =
 	{
-		{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "Normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "Tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(Vertex, uvs), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-	};
+		const D3D11_INPUT_ELEMENT_DESC ied[] =
+		{
+			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "Normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "Tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(Vertex, uvs), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		};
 
-	CreateMatType(MAT_PLAIN, "PlainVertexShader","PlainPixelShader",ied,Size(ied));
-	CreateMatType(MAT_TEX, "TexVertexShader","TexPixelShader",ied,Size(ied));
+		CreateMatType(MAT_PLAIN, "PlainVertexShader","PlainPixelShader",ied,Size(ied), reload);
+		CreateMatType(MAT_TEX, "TexVertexShader","TexPixelShader",ied,Size(ied), reload);
+		CreateMatTypeUnshaded(MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied,Size(ied), reload);
+	}
+
+	{
+		const D3D11_INPUT_ELEMENT_DESC ied[] =
+		{
+			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(BGVert, uv), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		};
+		CreateMatTypeUnshaded(MAT_2D, "2D_VS", "2D_PS", ied, Size(ied), reload);
+		CreateMatTypeUnshaded(MAT_BG, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload);
+	
+	}
 }
 
 void DX11Renderer::DrawBG()
@@ -595,10 +789,49 @@ void DX11Renderer::DrawBG()
 	//WriteCBuffer(m_VSPerFrameBuff)
 
 //	ID3D11ShaderResourceView* srv = m_Background->GetSRV();
-	pContext->PSSetShaderResources(0, 1, m_BG.srv.GetAddressOf());
+	pContext->PSSetShaderResources(0, 1, m_BG->srv.GetAddressOf());
+	if (false && m_PointLightShadows.size() > 0 && m_PointLightShadows[0])
+	{
+		auto srv = m_PointLightShadows[0].GetSRV();
+		pContext->PSSetShaderResources(0, 1, &srv);
+	}
 
 	pContext->Draw(3,0);
 }
+
+void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
+{
+	VS2DCBuff cbuff;
+	vec2 texturePos = vec2(pos) / vec2 {m_Width, m_Height};
+	cbuff.pos = texturePos;// vec2(texturePos.x * 2 - 1, 1 - 2 * texturePos.y);
+	if (size.x <= 0)
+		size.x = 500;
+	if (size.y <= 0)
+		size.y = 500;
+	cbuff.size = vec2(size) / vec2 {m_Width, m_Height};
+
+	WriteCBuffer(m_VS2DCBuff, cbuff);
+
+	PS2DCBuff pbuff;
+	pbuff.isDepth = tex->IsDepthStencil();
+	pbuff.exponent = m_TexViewExp;
+	WriteCBuffer(m_PS2DCBuff, pbuff);
+
+	const UINT stride = sizeof(BGVert);
+	const UINT offset = 0;
+
+	pContext->VSSetConstantBuffers(0, 1, m_VS2DCBuff.GetAddressOf());
+	pContext->PSSetConstantBuffers(0, 1, m_PS2DCBuff.GetAddressOf());
+
+	pContext->IASetVertexBuffers(0, 1, m_2DVBuff.GetAddressOf(), &stride, &offset);
+	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_MatTypes[MAT_2D].Bind(m_Ctx, EShadingLayer::BASE);
+
+	auto* srv = tex->GetSRV();
+	pContext->PSSetShaderResources(0,1, &srv);
+	pContext->Draw(6, 0);
+}
+
 
 inline int Round(int x) {
 	return x;
@@ -608,7 +841,7 @@ inline int Round(float x) {
 	return int(round(x));
 }
 
-void DX11Renderer::DrawMesh(MeshRef meshId, EShadingLayer layer)
+void DX11Renderer::DrawMesh(MeshRef meshId, EShadingLayer layer, bool useMaterial)
 {
 	auto& meshData = m_MeshData[meshId];
 	Mesh const& mesh = m_Scene->GetMesh(meshId);
@@ -623,7 +856,10 @@ void DX11Renderer::DrawMesh(MeshRef meshId, EShadingLayer layer)
 		PrepareMaterial(mesh.material);
 	}
 
-	m_Materials[mesh.material]->Bind(m_Ctx, layer);
+	if (useMaterial)
+	{
+		m_Materials[mesh.material]->Bind(m_Ctx, layer);
+	}
 
 
 
@@ -650,7 +886,7 @@ void DX11Renderer::DrawMesh(MeshRef meshId, EShadingLayer layer)
 
 void DX11Renderer::PrepareMesh(Mesh const& mesh, DX11Mesh& meshData)
 {
-	printf("Creating buffers for mesh %s ", mesh.name.c_str());
+	printf("Creating buffers for mesh %s\n", mesh.name.c_str());
 	const UINT stride = Sizeof(mesh.vertices[0]);
 	{
 		D3D11_BUFFER_DESC bd = {};
@@ -687,7 +923,7 @@ void DX11Renderer::PrepareMesh(Mesh const& mesh, DX11Mesh& meshData)
 void DX11Renderer::PrepareMaterial(MaterialID mid)
 {
 	std::unique_ptr<DX11Material>& result = m_Materials[mid];
-	Material const&					  mat = m_Scene->Materials()[mid];
+	Material&					  mat = m_Scene->Materials()[mid];
 	if (mat.albedo->IsValid())
 	{
 		auto  texResource = PrepareTexture(*mat.albedo, true);
@@ -703,6 +939,14 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 		else
 		{
 			texMat->m_Emissive = m_EmptyTexture;
+		}
+		if (mat.roughnessMap->IsValid())
+		{
+			texMat->m_Roughness = PrepareTexture(*mat.roughnessMap);
+		}
+		else
+		{
+			texMat->m_Roughness = m_EmptyTexture;
 		}
 		result = std::move(texMat);
 	}
@@ -720,9 +964,15 @@ void DX11Renderer::Resize(u32 width, u32 height, u32* canvas)
 	m_Scale = float(min(width, height));
 }
 
-ImageDX11::Ref DX11Renderer::PrepareTexture(Texture const& tex, bool sRGB)
+DX11Texture::Ref DX11Renderer::PrepareTexture(Texture const& tex, bool sRGB /*= false*/)
 {
-	return ImageDX11::Create(pDevice, tex.width, tex.height, tex.GetData(), sRGB);
+	if (IsValid(tex.GetDeviceTexture()))
+	{
+		return std::static_pointer_cast<DX11Texture>(tex.GetDeviceTexture());
+	}
+	auto result = DX11Texture::Create(&m_Ctx, tex.width, tex.height, tex.GetData(), sRGB ? TF_SRGB : TF_NONE);
+	tex.SetDeviceTexture(result);
+	return result;
 }
 
 struct ShaderVariant
@@ -735,7 +985,7 @@ struct ShaderVariant
 	bool m_Dirty = false;
 };
 
-int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 numVars, char const* shaderType)
+int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 numVars, char const* shaderType, bool reload = false)
 {
 	static fs::path const srcDir{ "src\\shaders" };
 	static fs::path const outDir{ "generated\\shaders" };
@@ -753,7 +1003,7 @@ int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 num
 		ShaderVariant& var = variants[i];
 		auto csoName = std::format("{}_{}.cso", name, var.m_Name);
 		fs::path cso = outDir / csoName;
-		if (var.m_Dirty || !fs::exists(cso) || fs::last_write_time(cso) < lastWrite)
+		if (reload || var.m_Dirty || !fs::exists(cso) || fs::last_write_time(cso) < lastWrite)
 		{
 			printf("Compiling shader in file %s\n", src.string().c_str());
 			ID3DBlob* output;
@@ -785,7 +1035,7 @@ int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 num
 	return numVars;
 }
 
-void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize)
+void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload)
 {
 	ShaderVariant variants[] = {
 		{ "base", {
@@ -806,7 +1056,7 @@ void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psNa
 		}},
 	};
 
-	if (GetCompiledShaderVariants(vsName, variants, Size(variants), "vs_5_0") > 0)
+	if (GetCompiledShaderVariants(vsName, variants, Size(variants), "vs_5_0", reload) > 0)
 	{
 		auto const& vertBlob = variants[0].m_Blob;
 		HR_ERR_CHECK(pDevice->CreateVertexShader(vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), nullptr, &m_MatTypes[index].m_VertexShader));
@@ -818,7 +1068,7 @@ void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psNa
 	}
 	//ComPtr<ID3DBlob> pixBlob;
 	//HR_ERR_CHECK(D3DReadFileToBlob(psName, &pixBlob));
-	int count = GetCompiledShaderVariants(psName, variants, Size(variants), "ps_5_0");
+	int count = GetCompiledShaderVariants(psName, variants, Size(variants), "ps_5_0", reload);
 	for (int i=0; i<count; ++i )
 	{
 		auto const& pixBlob = variants[i].m_Blob;
@@ -827,7 +1077,7 @@ void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psNa
 
 }
 
-void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize)
+void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload)
 {
 	ShaderVariant variants[] = {
 		{ "base", {
@@ -836,7 +1086,7 @@ void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char con
 		}},
 	};
 
-	if (GetCompiledShaderVariants(vsName, variants, Size(variants), "vs_5_0") > 0)
+	if (GetCompiledShaderVariants(vsName, variants, Size(variants), "vs_5_0", reload) > 0)
 	{
 		auto const& vertBlob = variants[0].m_Blob;
 		HR_ERR_CHECK(pDevice->CreateVertexShader(vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), nullptr, &m_MatTypes[index].m_VertexShader));
@@ -848,7 +1098,7 @@ void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char con
 	}
 	//ComPtr<ID3DBlob> pixBlob;
 	//HR_ERR_CHECK(D3DReadFileToBlob(psName, &pixBlob));
-	int count = GetCompiledShaderVariants(psName, variants, Size(variants), "ps_5_0");
+	int count = GetCompiledShaderVariants(psName, variants, Size(variants), "ps_5_0", reload);
 	for (int i=0; i<count; ++i )
 	{
 		auto const& pixBlob = variants[i].m_Blob;

@@ -8,11 +8,13 @@
 #include "Types.h"
 
 struct DX11Ctx;
+class DX11Renderer;
 
 enum ETextureSlot : u8
 {
 	E_TS_DIFFUSE = 0,
 	E_TS_NORMAL,
+	E_TS_ROUGHNESS,
 	E_TS_EMISSIVE,
 	E_TS_SHADOWMAP,
 	E_TS_ENVIRONMENT,
@@ -24,6 +26,7 @@ using TextureSlotFlags = u64;
 constexpr TextureSlotFlags 
 	F_TS_DIFFUSE = 1 << E_TS_DIFFUSE,
 	F_TS_NORMAL = 1 << E_TS_NORMAL,
+	F_TS_ROUGHNESS = 1 << E_TS_ROUGHNESS,
 	F_TS_EMISSIVE = 1 << E_TS_EMISSIVE,
 	F_TS_SHADOWMAP = 1 << E_TS_SHADOWMAP,
 	F_TS_ENVIRONMENT = 1 << E_TS_ENVIRONMENT;
@@ -83,4 +86,6 @@ struct DX11Ctx
 {
 	ID3D11Device*		 pDevice;
 	ID3D11DeviceContext* pContext;
-	RenderTextureManager psTextures; };
+	RenderTextureManager psTextures;
+	DX11Renderer* m_Renderer;		
+};

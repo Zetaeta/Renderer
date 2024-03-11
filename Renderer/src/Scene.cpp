@@ -92,6 +92,7 @@ void Scene::InsertCompoundMesh(CompoundMesh const& cmesh)
 		//m_MeshInstances.emplace_back(mesh.instance, Transform{});
 		auto& mc = obj->root->AddChild<MeshComponent>("Child") ;
 		mc.SetMesh(mesh.instance);
+		mc.SetTransform(mesh.trans);
 	}
 }
 

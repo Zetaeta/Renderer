@@ -43,6 +43,7 @@ struct Mesh : public Asset
 };
 
 using MeshRef = s32;
+constexpr MeshRef INVALID_MESH_REF = -1;
 
 
 struct MeshInstance
@@ -55,14 +56,26 @@ using MeshInstanceRef = s32;
 
 struct MeshPart
 {
-	u32 instance;
+	MeshInstanceRef instance;
 	String name;
-};
+	RotTransform trans;
 
+};
 
 struct CompoundMesh
 {
 	String name;
 	std::vector<MeshPart> components;
+};
+
+struct SceneletPart
+{
+	CompoundMesh mesh;
+	RotTransform trans;
+};
+
+struct Scenelet
+{
+	Vector<SceneletPart> parts;
 };
 

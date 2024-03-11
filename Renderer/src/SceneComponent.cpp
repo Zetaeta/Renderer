@@ -69,7 +69,7 @@ void MeshComponent::SetMesh(MeshRef mesh)
 	if (IsValid(mesh) && !IsValid(m_MeshInst))
 	{
 		m_Mesh = GetScene().GetAssetManager()->GetMesh(mesh).GetPath();
-		printf("Set mesh with path %s\n", m_Mesh.c_str());
+		printf("Set mesh %d with path %s\n", mesh, m_Mesh.c_str());
 		m_MeshInst = GetScene().AddMesh(mesh);
 	}
 

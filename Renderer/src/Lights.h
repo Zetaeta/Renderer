@@ -8,7 +8,7 @@ class SceneComponent;
 struct DirLight
 {
 	DECLARE_STI_NOBASE(DirLight);
-	DirLight() {}
+	DirLight() : colour(.5f) {}
 	DirLight(const vec3& dir,float intensity = 1.f)
 		: dir(glm::normalize(dir)), colour(intensity) {}
 
@@ -23,7 +23,12 @@ struct DirLight
 
 	constexpr static vec3 GetDefaultDir()
 	{
-		return vec3 {-1,-1,-1};
+		return vec3 {0,0,1};
+	}
+
+	static RotTransform GetDefaultTrans()
+	{
+		return RotTransform(vec3(0, 0, 0), vec3(1, 1, 1), Rotator{45.f, -45.f, 0});
 	}
 
 	vec3 dir;
@@ -35,7 +40,7 @@ struct DirLight
 	constexpr static bool const HAS_DIRECTION = true;
 	constexpr static bool const HAS_POSITION = false;
 
-	inline static String const GADGET = "dirlight";
+	inline static String const GADGET = "meshes/dirlight";
 	inline static RotTransform const GADGET_TRANS = {  };
 	
 };
@@ -60,8 +65,8 @@ struct PointLight
 	constexpr static bool const HAS_DIRECTION = false;
 	constexpr static bool const HAS_POSITION = true;
 
-	inline static String const GADGET = "pointlight";
-	inline static RotTransform const GADGET_TRANS = {  };
+	inline static String const GADGET = "meshes/pointlight";
+	inline static RotTransform const GADGET_TRANS = { vec3(0), vec3(0.2f) };
 
 	using Ref = u32;
 };
@@ -94,12 +99,17 @@ struct SpotLight
 		return vec3 {0,0,1};
 	}
 
+	static RotTransform GetDefaultTrans()
+	{
+		return RotTransform(vec3(0, -1, 0), vec3(1, 1, 1), Rotator{0, 0, 0});
+	}
+
 	using Ref = u32;
 
 	constexpr static bool const HAS_DIRECTION = true;
 	constexpr static bool const HAS_POSITION = true;
 
-	inline static String const GADGET = "spotlight.glb";
+	inline static String const GADGET = "meshes/spotlight";
 	inline static RotTransform const GADGET_TRANS = { vec3(0), vec3(1), Rotator {90.f,0,0} };
 };
 

@@ -19,10 +19,13 @@ struct Material
 	TextureRef albedo;
 	TextureRef normal;
 	TextureRef emissive;
+	TextureRef roughnessMap;
 	Colour_t colour;
 	int specularExp = -1;
 	float specularity = 0;
 	float diffuseness = 1;
+	bool translucent = false;
+	float roughness = 0.5;
 };
 
 using MaterialID = int;

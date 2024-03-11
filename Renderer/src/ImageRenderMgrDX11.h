@@ -2,7 +2,7 @@
 
 #include "InputImgui.h"
 #include "ImageRenderer.h"
-#include "ImageDX11.h"
+#include "DX11Texture.h"
 
 class ImageRenderMgrDX11 : public ImageRenderMgr
 {
@@ -18,11 +18,11 @@ public:
 
 	void OnRenderFinish() override
 	{
-		m_Img = std::make_unique<ImageDX11>(m_Device);
-		m_Img->Init(m_ViewWidth, m_ViewHeight, &m_ImgData[0], false);
+//		m_Img = std::make_unique<DX11Texture>(m_Device);
+		m_Img->Init(m_ViewWidth, m_ViewHeight, &m_ImgData[0], TF_NONE);
 		ImGui::Image(m_Img->GetHandle(), { static_cast<float>(m_ViewWidth), static_cast<float>(m_ViewHeight) }, { 0, 1 }, { 1, 0 });
 	}
-	std::unique_ptr<ImageDX11> m_Img;
+	std::unique_ptr<DX11Texture> m_Img;
 	ID3D11Device* m_Device;
 
 

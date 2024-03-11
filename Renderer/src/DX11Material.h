@@ -2,7 +2,7 @@
 
 #include "WinUtils.h"
 #include <d3d11.h>
-#include "ImageDX11.h"
+#include "DX11Texture.h"
 #include "DX11Ctx.h"
 
 enum class EShadingLayer : u8
@@ -52,15 +52,16 @@ class DX11TexturedMaterial : public DX11Material
 {
 public:
 
-	DX11TexturedMaterial(DX11MaterialType::Ref matType, std::shared_ptr<ImageDX11> const& albedo)
+	DX11TexturedMaterial(DX11MaterialType::Ref matType, std::shared_ptr<DX11Texture> const& albedo)
 		: DX11Material(matType), m_Albedo(albedo) {}
 
 	
 	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer) override;
 	void		 UnBind(DX11Ctx& ctx) override;
 
-	std::shared_ptr<ImageDX11> m_Albedo;
-	std::shared_ptr<ImageDX11> m_Normal;
-	std::shared_ptr<ImageDX11> m_Emissive;
+	std::shared_ptr<DX11Texture> m_Albedo;
+	std::shared_ptr<DX11Texture> m_Normal;
+	std::shared_ptr<DX11Texture> m_Emissive;
+	std::shared_ptr<DX11Texture> m_Roughness;
 };
 

@@ -11,6 +11,7 @@ bin-int/
 *.cso
 *.cap
 content/
+assets/
 saves/
 *imgui.ini
 *.aps

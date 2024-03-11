@@ -71,7 +71,7 @@ public:
 		if (mm == Input::CursorMode::LOCKED)
 		{
 			GetCursorPosition(&m_CursorX, &m_CursorY);
-			printf("Saved cursor pos at %i, %i\n", m_CursorX, m_CursorY);
+			//printf("Saved cursor pos at %i, %i\n", m_CursorX, m_CursorY);
 			// ImGui::SetMouseCursor(ImGuiMouseCursor_None);
 			SetCursor(NULL);
 			// SetCursorPos(m_RenderMgr->m_ViewWidth/2, m_RenderMgr->m_ViewHeight/2);
@@ -79,7 +79,7 @@ public:
 		}
 		else
 		{
-			printf("Resetting cursor pos to %i, %i\n", m_CursorX, m_CursorY);
+			//printf("Resetting cursor pos to %i, %i\n", m_CursorX, m_CursorY);
 			// ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow);
 			SetCursor(LoadCursorW(NULL, IDC_ARROW));
 			SetCursorPos(m_CursorX, m_CursorY);

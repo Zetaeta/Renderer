@@ -22,7 +22,7 @@
 //#pragma comment(lib, "d3dx11.lib")
 
 // Data
-static ID3D11Device*		   g_pd3dDevice = nullptr;
+static ComPtr<ID3D11Device>		   g_pd3dDevice = nullptr;
 static ID3D11DeviceContext*	   g_pContext = nullptr;
 static IDXGISwapChain*		   g_pSwapChain = nullptr;
 static UINT					   g_ResizeWidth = 0, g_ResizeHeight = 0;
@@ -163,7 +163,7 @@ int MainDX11(int argc, char** argv)
 
 	// Setup Platform/Renderer backends
 	ImGui_ImplWin32_Init(hwnd);
-	ImGui_ImplDX11_Init(g_pd3dDevice, g_pContext);
+	ImGui_ImplDX11_Init(g_pd3dDevice.Get(), g_pContext);
 
 	// Load Fonts
 	// - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -185,7 +185,7 @@ int MainDX11(int argc, char** argv)
 	bool   show_demo_window = true;
 	bool   show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-	RenderManagerDX11 renderMgr(g_pd3dDevice, g_pContext);
+	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext);
 
 	// Main loop
 	bool done = false;
@@ -242,12 +242,12 @@ int MainDX11(int argc, char** argv)
 
 			// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
 			// because it would be confusing to have two docking targets within each others.
-			/**/ ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking;
+			/**/ ImGuiWindowFlags window_flags = 0;//ImGuiWindowFlags_NoDocking;
 			//if (m_MenubarCallback)
 			//	window_flags |= ImGuiWindowFlags_MenuBar;
 
 			const ImGuiViewport* viewport = ImGui::GetMainViewport();
-			/* ImGui::SetNextWindowPos(viewport->WorkPos);
+			 ImGui::SetNextWindowPos(viewport->WorkPos);
 			ImGui::SetNextWindowSize(viewport->WorkSize);
 			ImGui::SetNextWindowViewport(viewport->ID);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -269,7 +269,7 @@ int MainDX11(int argc, char** argv)
 			ImGui::Begin("DockSpace Demo", nullptr, window_flags);
 			ImGui::PopStyleVar();
 
-			ImGui::PopStyleVar(2);*/
+			ImGui::PopStyleVar(2);
 
 			// Submit the DockSpace
 			ImGuiIO& io = ImGui::GetIO();
@@ -290,7 +290,7 @@ int MainDX11(int argc, char** argv)
 
 			renderMgr.DrawUI();
 
-			//ImGui::End();
+			ImGui::End();
 			static float f = 0.0f;
 			static int	 counter = 0;
 
@@ -307,6 +307,7 @@ int MainDX11(int argc, char** argv)
 			ImGui::End();
 		}
 
+		g_pContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
 		// Rendering
 		ImGui::Render();
 		//DrawTri({ 0, 0, 0,1 }, { .5, 1, 0,1 }, {1,0,0,1});
@@ -368,6 +369,23 @@ bool CreateDeviceD3D(HWND hWnd)
 	if (res != S_OK)
 		return false;
 
+	ComPtr<ID3D11Debug> debug;
+	if (SUCCEEDED(g_pd3dDevice.As(&debug)))
+	{
+		ComPtr<ID3D11InfoQueue> d3dInfoQueue;
+		if (SUCCEEDED(debug.As(&d3dInfoQueue)))
+		{
+			D3D11_MESSAGE_ID hide[] = {
+				D3D11_MESSAGE_ID_DEVICE_DRAW_RENDERTARGETVIEW_NOT_SET
+			};
+			D3D11_INFO_QUEUE_FILTER filter;
+			Zero(filter);
+			filter.DenyList.NumIDs = std::size(hide);
+			filter.DenyList.pIDList = hide;
+			d3dInfoQueue->AddStorageFilterEntries(&filter);
+		}
+	}
+
 	CreateRenderTarget();
 	return true;
 }
@@ -387,7 +405,6 @@ void CleanupDeviceD3D()
 	}
 	if (g_pd3dDevice)
 	{
-		g_pd3dDevice->Release();
 		g_pd3dDevice = nullptr;
 	}
 }

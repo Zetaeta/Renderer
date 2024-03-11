@@ -317,3 +317,17 @@ struct U32ToStr : ::detail::explode<num>
 
 template <unsigned num>
 using U32ToStr_v = U32ToStr<num>::value;
+
+inline bool IsValid(s32 ref)
+{
+	return ref >= 0;
+}
+
+template<typename TPtr>
+	requires requires(TPtr p) { *p; }
+inline bool IsValid(TPtr const& ptr)
+{
+	return ptr != nullptr;
+}
+
+

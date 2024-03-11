@@ -2,6 +2,7 @@
 
 #include "maths.h"
 #include "glm/gtx/euler_angles.hpp"
+#include "glm/gtx/transform.hpp"
 #include <corecrt_math_defines.h>
 #include "TypeInfo.h"
 #include "Rotator.h"
@@ -49,7 +50,9 @@ struct TTransform
 	operator mat4() const {
 		mat4 rotmat = ToMat4(rotation);
 		mat4 result {rotmat * mat4{diagonal3x3(scale)}};
-		result[3] = vec4(translation, 1);
+//		result[3] = vec4(translation, 1);
+//		result = glm::translate(result, translation);// * result;
+		result = glm::translate(translation) * result;
 		return result;
 	}
 	/* mat3 GetMatrix()
