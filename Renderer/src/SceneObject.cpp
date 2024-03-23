@@ -74,7 +74,7 @@ void SceneObject::OnSetRoot()
 DEFINE_CLASS_TYPEINFO(SceneObject)
 BEGIN_REFL_PROPS()
 REFL_PROP(m_Name)
-REFL_PROP(root)
+REFL_PROP(root, META(AutoExpand))
 END_REFL_PROPS()
 END_CLASS_TYPEINFO()
 

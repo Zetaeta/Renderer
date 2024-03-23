@@ -7,8 +7,12 @@
 #include <filesystem>
 #include <queue>
 #include <condition_variable>
+#include <variant>
 
-namespace std { namespace filesystem { class directory_entry; } }
+
+namespace std {
+class thread;
+namespace filesystem { class directory_entry; } }
 
 enum class EAssetType : u8
 {
@@ -33,6 +37,23 @@ inline std::string ToString(std::filesystem::path const& path)
 }
 
 template<typename T>
+struct Locked
+{
+	template<typename TFunc>
+	void Access(TFunc&& func)
+	{
+		std::lock_guard l {m_Mutex};
+		func(m_Object);
+	}
+
+	std::pair<T&,std::unique_lock<std::mutex>> Acquire() { return {m_Object, std::unique_lock(m_Mutex)}; }
+
+private:
+	T m_Object;
+	std::mutex m_Mutex;
+};
+
+template<typename T>
 class MessageQueue
 {
 public:
@@ -54,6 +75,12 @@ public:
 		m_Queue.pop();
 		return t;
 	}
+
+	bool IsEmpty()
+	{
+		std::lock_guard lock {m_Mutex};
+		return m_Queue.empty();
+	}
 		
 private:
 	std::mutex m_Mutex;
@@ -67,6 +94,7 @@ class AssetManager : public BaseObject
 {
 public:
 	AssetManager() { RefreshMeshList(); }
+	~AssetManager();
 	using Meshes = std::vector<Mesh>;
 	
 	friend struct Scene;
@@ -74,13 +102,13 @@ public:
 
 	Asset::Ref LoadAssetUntyped(std::filesystem::directory_entry const& file);
 
-	MeshRef ImportMesh(String const& path, bool loadTextures = true);
-	void ImportMeshAsync(String const& path, bool loadTextures = true, AssetLoadCallback callback = nullptr);
+	Scenelet::Ref ImportScenelet(String const& path, bool loadTextures = true, bool async = false);
+	void ImportSceneletAsync(String const& path, bool loadTextures = true, AssetLoadCallback callback = nullptr);
 
-	MeshRef LoadMesh(AssetPath const& path, bool loadTextures = true);
-	void LoadMeshAsync(AssetPath const& path, bool loadTextures = true, AssetLoadCallback callback = nullptr);
+	Scenelet::Ref LoadScenelet(AssetPath const& path, bool loadTextures = true, bool async = false);
+	void LoadSceneletAsync(AssetPath const& path, bool loadTextures = true, AssetLoadCallback callback = nullptr);
 
-	MeshRef AddMesh(Mesh&& mesh);
+	CompoundMesh::Ref AddMesh(CompoundMesh&& mesh);
 	
 	Meshes const& GetMeshes() const
 	{
@@ -97,7 +125,10 @@ public:
 		return m_Meshes[ref];
 	}
 
-	MeshRef GetMesh(AssetPath path);
+	Vector<Scenelet>& GetScenelets() { return m_Scenelets; }
+
+	CompoundMesh::Ref GetMesh(AssetPath path);
+	CompoundMesh&	  GetMesh(CompoundMesh::Ref mesh) { return *mesh; }
 
 	AssetPath GetMeshPath(MeshRef); 
 
@@ -108,6 +139,9 @@ public:
 	{
 		
 	}
+
+	Material& GetMaterial(MaterialID const& mid) { return *m_Materials[mid]; }
+	Material& GetMaterial(Material::Ref const& ref) { return *ref; }
 
 	void RefreshMeshList();
 
@@ -123,31 +157,72 @@ public:
 
 	void DrawControls();
 
+	// Async
+	void Start();
+	void Finish();
+	void Synchronize();
+	void Work();
+
+	void Tick();
 
 private:
 	
-	struct LoadingJob
+	struct SceneletLoadingJob
 	{
-		EAssetType m_Type;
 		String path;
 		bool isImport;
 		bool loadTextures = true;
-		AssetLoadCallback cb;
+		AssetLoadCallback cb = nullptr;
 	};
+
+	struct FinishJob
+	{
+	};
+
+	struct MatLoadingJob
+	{
+		Material::Ref m_Mat = nullptr;
+		String m_Albedo;
+		String m_Normal;
+		String m_Emissive;
+		String m_Roughness;
+		bool m_Import = false;
+		String m_MeshPath;
+		AssetLoadCallback cb = nullptr;
+	};
+
+	using LoadingJob = std::variant<SceneletLoadingJob, MatLoadingJob, FinishJob>;
 
 	MessageQueue<LoadingJob> m_LoadingJobs;
 
-	MeshRef AddMesh(aiScene const* aiscene, AssetPath const& path, bool isImport, bool loadTextures = true);
-	void AddNode(std::vector<MeshPart>& components, aiNode const* node, aiMatrix4x4 transform, u32 meshOffset);
-	bool LoadMatTexture(aiMaterial* aimat, aiTextureType texType, TextureRef& outTexture, AssetPath const& meshPath, bool isImport);
+	struct SceneletLoadCtx
+	{
+		Scenelet m_Scenelet;
+		Vector<CompoundMesh::Ref> m_Meshes; 
+	};
 
-	std::vector<Material> m_Materials;
+	void Perform(MatLoadingJob& job);
+
+	void FinishLoad(SceneletLoadCtx& ctx);
+
+	MessageQueue<SceneletLoadCtx> m_LoadedScenelets;
+		
+	Scenelet::Ref AddScenelet(aiScene const* aiscene, AssetPath const& path, bool isImport, String const& importPath, bool loadTextures, bool async);
+	void AddNode(SceneletLoadCtx& ctx, SceneletPart& parent, Vector<MeshPart> const& meshParts, aiNode const* node, aiMatrix4x4 transform);
+	bool LoadMatTexture(String const& path, TextureRef& outTexture, AssetPath const& meshPath, bool isImport);
+
+	s32 FindScenelet(AssetPath const& path);
+
+	std::vector<Material::Ref> m_Materials;
 	std::vector<Mesh> m_Meshes;
-	std::vector<CompoundMesh> m_CompoundMeshes;
+	std::vector<CompoundMesh::Ref> m_CompoundMeshes;
+
+	std::vector<Scenelet> m_Scenelets;
 
 	std::vector<AssetData> m_AllMeshes;
 
-	std::unordered_map<AssetPath, TextureRef> m_LoadedTextures;
+	Locked<std::unordered_map<AssetPath, TextureRef>> m_LoadedTextures;
 
 	bool m_PreTransform = true;
+	OwningPtr<std::thread> m_WorkerThread;
 };

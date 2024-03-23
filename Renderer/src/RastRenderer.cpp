@@ -358,9 +358,9 @@ void RastRenderer::DrawTri(mat4 const& fullTrans, mat4 const& model2World, std::
 					
 					vec3			normal = glm::normalize(LinearCombo(b, array<vec3,3>{ verts[0].normal, verts[1].normal, verts[2].normal }));
 					vec3 pos = (b[0] * verts[0].worldPos + b[1] * verts[1].worldPos + b[2] * verts[2].worldPos);
-					Material const& mat = m_Scene->Materials()[matId];
+					Material const& mat = m_Scene->GetMaterial(matId);
 					col3 lighting = ComputeLighting(normal, glm::normalize(pos - m_Camera->position), mat);
-					Colour_t colour = mat.colour;
+					col4 colour = mat.colour;
 					if (mat.albedo->IsValid())
 					{
 						vec2 uvs = LinearCombo(b, array<vec2, 3>{ verts[0].uvs * inverseDepths[0], verts[1].uvs * inverseDepths[1], verts[2].uvs * inverseDepths[2] }) / idepth;

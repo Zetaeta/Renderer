@@ -66,9 +66,9 @@ public:
 		return mat.specularity;
 	}*/
 #define GetColour(mat) \
-	scene.Materials()[mat].colour
+	scene.GetMaterial(mat).colour
 #define GetSpecularity(mat) \
-	scene.Materials()[mat].specularity
+	scene.GetMaterial(mat).specularity
 
 private:
 

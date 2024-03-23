@@ -42,11 +42,15 @@ cbuffer PerFramePSData : register(b0) {
 };
 
 cbuffer PerInstancePSData : register(b1) {
-	float3 matColour;
+	float4 matColour;
 	float3 ambdiffspec;
-	int specularExp;
+	float roughness;
+	float3 emissiveColour;
+	float alphaMask;
 #if TEXTURED
 	bool useNormalMap;
+	bool useEmissiveMap;
+	bool useRoughnessMap;
 #endif
 };
 
@@ -68,7 +72,8 @@ Texture2D spotShadowMap;
 TextureCube pointShadowMap;
 #endif
 
-SamplerState splr;
+SamplerState splr : register(s0);
+SamplerComparisonState shadowSampler : register(s1);
 
 float square(float f)
 {
@@ -98,7 +103,7 @@ float3 ComputeLighting(float3 normal, float3 diffuseCol, float3 lightCol, float3
 	float3 outRay = normalize(lightDir - 2 * dot(lightDir, normal) * normal);
 	float f = max(dot(viewDir,-outRay), 0.00001f);
 	#endif
-	float specInt = (specularExp + 2)/(4*PI * (2-exp(1-1/alphasq))) * pow(f, specularExp) * (specularExp > 0);// * ambdiffspec.z; 
+	float specInt = (1-roughness)*(specularExp+8)/(8*PI) * pow(f, specularExp) * (specularExp > 0);// * ambdiffspec.z; 
 	//return diffuseCol * (lightCol * diffInt) + lightCol * specInt;
 	return diffuseCol * (lightCol * diffInt) + lightCol * specInt;
 }
@@ -110,19 +115,29 @@ float4 main(
 	float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : Colour//, float4 lightPos: LightPos
 	) : SV_TARGET
 {
-	float4 texColour = float4(matColour, 1);
+	float4 texColour = matColour;
 	#if TEXTURED
 	texColour = diffuse.Sample(splr, float2(uv.x, uv.y));
 	#endif
+	float alpha = texColour.w;
+	if (alphaMask < 1.f && alpha < alphaMask)
+	{
+		discard;
+	}
 	float3 colour = float3(0,0,0);
+	float3 emiss = emissiveColour;
 #ifdef BASE_LAYER
 #if TEXTURED
-	colour += emissiveMap.Sample(splr, float2(uv.x, uv.y));
+	if (useEmissiveMap)
+	{
+		emiss = emissiveMap.Sample(splr, float2(uv.x, uv.y)).xyz;
+	}
+	colour += emiss;
 #endif
 	colour += (ambient * ambdiffspec.x) * texColour;
 #else // BASE_LAYER
 	normal = normalize(normal);
-	float roughness = 1;
+	float rough = roughness;
 #if TEXTURED
 	if (useNormalMap)
 	{
@@ -132,8 +147,11 @@ float4 main(
 		texNorm.z * normal;
 		normal = normalize(newnormal);
 	}
-	float3 fullRough = roughnessMap.Sample(splr, uv);
-	roughness = fullRough.g;
+	if (useRoughnessMap)
+	{
+		float3 fullRough = roughnessMap.Sample(splr, uv);
+		rough = fullRough.g;
+	}
 	
 #endif // TEXTURED
 	viewDir = normalize(viewDir);
@@ -141,8 +159,8 @@ float4 main(
 
 
 
-	bool shadowed = false;
-	const float bias = 0.0001;
+	float unshadowed = 0.;
+	const float bias = 0.0005;
 #ifdef SHADOWMAP_2D
 	{
 
@@ -151,8 +169,11 @@ float4 main(
 		float shadowSpl = spotShadowMap.Sample(splr, lightCoord);
 		//return shadowSpl + 0.1 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, dirLightCol, dirLightDir, specularExp, viewDir),1);;
 		if (lightCoord.x <= 1 && lightCoord.x >= 0 && lightCoord.y <= 1 && lightCoord.y >= 0) {
-			shadowed = !( shadowSpl + bias >= lightPos.z / lightPos.w);
+			float depth = lightPos.z / lightPos.w;
+//			shadowed = !( shadowSpl + bias >= depth);
+			unshadowed = spotShadowMap.SampleCmp(shadowSampler, lightCoord, depth - bias );
 		}
+
 //		return mul(world2Light, float4(1,1,1,1))* 100;
 //		return lightPos;
 //		return float4(shadowSpl, shadowSpl, lightPos.z / lightPos.w, 1);
@@ -172,7 +193,7 @@ float4 main(
 		float r = pointLightRad;
 		float3 lightCol = pointLightCol / (d2 + r*r);
 
-		float4 dummy = 0.001 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, roughness, viewDir),1);
+		float4 dummy = 0.001 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, rough, viewDir),1);
 
 //		return float4(shadeSpacePos, 1);
 		float4 lightPos = mul(world2Light, float4(shadeSpacePos, 1));
@@ -181,23 +202,24 @@ float4 main(
 		//return lightPos;
 		//return lightPos + 0.01 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, specularExp, viewDir),1);
 		//return float4(lightDist + 0.01 * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, specularExp, viewDir),1);
-		float shadowSpl = pointShadowMap.Sample(splr, lightDist);
+		//float shadowSpl = pointShadowMap.Sample(splr, lightDist);
 		float depth = length(lightDist.xyz) / 100;
 		//shadowSpl = abs(-shadowSpl + depth) > 0.005;
 	//	shadowSpl = depth;
 //shadowSpl = pow(shadowSpl, 1);
 		//return float4(shadowSpl, shadowSpl, shadowSpl,1)/1 + 0.001 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, specularExp, viewDir),1);
-		shadowed = shadowSpl + bias < depth;
+//		unshadowed = !(shadowSpl + bias < depth);
+		unshadowed = pointShadowMap.SampleCmp(shadowSampler, lightDist, depth - bias );
 
 
 		//colour += float4(fullRough,1) + 0.001* (!shadowed) * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, roughness, viewDir);
-		colour += (!shadowed) * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, roughness, viewDir);
+		colour += unshadowed * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, rough, viewDir);
 	}
 #endif
 
 #ifdef DIR_LIGHT
 	{
-		colour += (!shadowed) * ComputeLighting(normal, texColour * ambdiffspec.y, dirLightCol, dirLightDir, roughness, viewDir);
+		colour += (unshadowed) * ComputeLighting(normal, texColour * ambdiffspec.y, dirLightCol, dirLightDir, rough, viewDir);
 	}
 #endif
 #ifdef SPOTLIGHT
@@ -210,7 +232,7 @@ float4 main(
 		float3 straightDist = dot(lightDist, spotLightDir) * spotLightDir;
 		float tangleSq = squareLen(lightDist - straightDist) / squareLen(straightDist);
 
-		colour += (!shadowed) * ((tangleSq < square(spotLightTan) && (dot(spotLightDir, lightDir) > 0))) * ComputeLighting(normal, texColour , lightCol, lightDir, roughness, viewDir);
+		colour += (unshadowed) * ((tangleSq < square(spotLightTan) && (dot(spotLightDir, lightDir) > 0))) * ComputeLighting(normal, texColour , lightCol, lightDir, rough, viewDir);
 	}
 #endif
 //	float3 lightDir = dirLightDir;
@@ -222,7 +244,7 @@ float4 main(
 //	float x = specularExp / 500.0;//specularExp  > 0 ? 1 : 0;
 
 
-	return float4(colour, 1);
+	return float4(colour, alpha);
 
 	//return float4(texColour * (ambient * ambdiffspec.x + lightCol * diffInt) + lightCol * specInt + shadeSpacePos * 0.f + emission, 1.0f);
 }

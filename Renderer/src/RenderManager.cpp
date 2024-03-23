@@ -5,8 +5,10 @@
 #include "JsonSerializer.h"
 #include "JsonDeserializer.h"
 #include <nfd.h>
+#include "LightObject.h"
 
 using std::string;
+using std::make_shared;
 using namespace rnd;
 
 inline vec3 Vec3(aiVector3D const& v)
@@ -25,9 +27,9 @@ inline vec2 Vec2(aiVector3D const& v)
 	int			   x, y, comp;
 	unsigned char* data = stbi_load("content/Dirt.png", &x, &y, &comp, 4);
 	fprintf(stdout, "width: %d, height: %d, comp: %d\n", x, y, comp);
-	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, data) : Texture::EMPTY;
+	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, "dirt", data) : Texture::EMPTY;
 	stbi_image_free(data);
-	scene.Materials() = { { { 1.f, 0.f, 0.f, 1.f }, 1.0, 10 }, { { 0.f, 1.f, 0.f, 1.f }, 1.0, 500, 1.f, dirt }, { vec4{ 1.f, 1.f, 0.f, 1.f } } };
+	scene.Materials() = { make_shared<Material>( vec4{ 1.f, 0.f, 0.f, 1.f }, 1.f, 10 ), make_shared<Material>( vec4{ 0.f, 1.f, 0.f, 1.f }, 1.f, 500, 1.f, dirt ), make_shared<Material>( vec4{ 1.f, 1.f, 0.f, 1.f } ) };
 	scene.m_Spheres = { Sphere({ 0, 0, 2 }, .5f, 0), { { 0, 1, 2 }, .3f, 1 } };
 	//scene.m_DirLights = { DirLight({ -1.f, -1.f, 1.f }, 0.5) };
 	//scene.m_PointLights.emplace_back(vec3(1), vec3(1),1.f);
@@ -36,12 +38,13 @@ inline vec2 Vec2(aiVector3D const& v)
 	scene.m_Objects.emplace_back(make_unique<LightObject<SpotLight>>(&scene));
 	scene.m_Objects.emplace_back(make_unique<LightObject<PointLight>>(&scene));
 	scene.m_Objects.emplace_back(make_unique<LightObject<DirLight>>(&scene));
-	auto cube = m_AssMan.AddMesh(Mesh::Cube(1));
-	MeshComponent& cubeMC = scene.m_Objects.emplace_back(make_unique<SceneObject>(&scene, "cube"))->SetRoot<MeshComponent>();
+	auto mesh = MeshPart::Cube(1);
+	ComputeNormals(mesh);
+	auto		   cube = m_AssMan.AddMesh({ "cube", "cube", std::move(mesh) });
+	StaticMeshComponent& cubeMC = scene.m_Objects.emplace_back(make_unique<SceneObject>(&scene, "cube"))->SetRoot<StaticMeshComponent>();
 	cubeMC.SetMesh(cube);
 	cubeMC.SetTransform(RotTransform{ { 0, 0, 2 }, { 1, 1, 1 } } );
 		//	scene.m_MeshInstances.emplace_back(MeshInstance{ m_AssMan.AddMesh(Mesh::Cube(1)),  );
-	ComputeNormals(scene.GetMesh(0));
 	m_Renderer = make_unique<RastRenderer>(&m_Camera, 0, 0, nullptr);
 
 	ObjReader objReader{ scene.Materials() };
@@ -76,6 +79,7 @@ inline vec2 Vec2(aiVector3D const& v)
 			}
 		}*/
 	}
+	m_AssMan.Start();
 }
 
 	string savefile;
@@ -88,12 +92,23 @@ void RenderManager::SceneControls()
 	{
 		for (int m = 0; m < scene.Materials().size(); ++m)
 		{
-			auto& mat = scene.Materials()[m];
+			auto& mat = scene.GetMaterial(m);
 			ImGui::PushID(&mat);
 			ImGui::Text("Material %d", m);
 			if (ImGui::TreeNode("Details"))
 			{
-				ImGui::DragFloat4("Colour", &mat.colour[0]);
+				bool modified = false;
+				modified |= ImGui::DragFloat4("Colour", &mat.colour[0], 0.01f, 0.f, 1.f);
+				modified |= ImGui::DragFloat("Roughness", &mat.roughness, 0.01f, 0.f, 1.f);
+				modified |= ImGui::DragFloat3("Emissive", &mat.emissiveColour[0], 0.01f, 0.f, 1.f);
+				if (mat.albedo.IsValid())
+				{
+					ImGui::Text("Albedo: %s", mat.albedo->GetName());
+				}
+				if (modified)
+				{
+					mat.OnPropertyUpdate();
+				}
 				ImGui::DragFloat("Specularity", &mat.specularity);
 				ImGui::DragInt("SpecExp", &mat.specularExp);
 				ImGui::TreePop();
@@ -170,21 +185,37 @@ void RenderManager::SceneControls()
 		}
 		ImGui::TreePop();
 	}
+	if (ImGui::TreeNode("Scenelets"))
+	{
+		auto& scenelets = m_AssMan.GetScenelets();
+		for (int m = 0; m < scenelets.size(); ++m)
+		{
+			ImGui::PushID(m);
+			auto const& scenelet = scenelets[m];
+			ImGui::Text("%s (%s)", scenelet.m_Name.c_str(), scenelet.GetPath().c_str());
+			if (ImGui::Button("Add to scene"))
+			{
+				scene.AddScenelet(scenelet);
+			}
+			ImGui::PopID();
+		}
+		ImGui::TreePop();
+	}
 	if (ImGui::TreeNode("Compound Meshes"))
 	{
 		for (int m = 0; m < scene.CompoundMeshes().size(); ++m)
 		{
 			ImGui::PushID(m);
 			auto const& cmesh = scene.CompoundMeshes()[m];
-			ImGui::Text(cmesh.name.c_str());
-			ImGui::Text("%d parts", cmesh.components.size());
+			ImGui::Text(cmesh->name.c_str());
+			ImGui::Text("%d parts", cmesh->components.size());
 			if (ImGui::Button("Add to scene"))
 			{
 				scene.InsertCompoundMesh(cmesh);
-				for (auto mesh : cmesh.components)
-				{
-					//scene.m_MeshInstances.emplace_back(mesh.instance, Transform{ { 0, -2, 3 } });
-				}
+				//for (auto mesh : cmesh->components)
+				//{
+				//	//scene.m_MeshInstances.emplace_back(mesh.instance, Transform{ { 0, -2, 3 } });
+				//}
 			}
 			ImGui::PopID();
 		}
@@ -210,7 +241,7 @@ void RenderManager::SceneControls()
 			{
 				if (ImGui::Button("Load"))
 				{
-					m_AssMan.LoadMesh(mesh.path);
+					m_AssMan.LoadSceneletAsync(mesh.path);
 				}
 			}
 			ImGui::PopID();
@@ -312,6 +343,42 @@ void RenderManager::SceneControls()
 	{
 		so->Update();
 	}
+}
+
+void RenderManager::DrawUI()
+{
+	ImGui::Begin("Controls");
+	DrawFrameData();
+	SceneControls();
+	ImGui::End();
+
+	if (Renderer())
+	{
+		Renderer()->DrawControls();
+	}
+
+	ImGui::Begin("Assets");
+	m_AssMan.DrawControls();
+	ImGui::End();
+
+	Render();
+}
+
+void RenderManager::DrawFrameData()
+{
+	ImGui::Text("Frame time: %.3fms", m_FrameTime);
+}
+
+void RenderManager::Render()
+{
+	m_AssMan.Tick();
+	OnRenderStart();
+
+	// m_Renderer->Render(scene);
+
+	OnRenderFinish();
+	m_FrameTime = m_Timer.ElapsedMillis();
+	m_Timer.Reset();
 }
 
 void RenderManager::TypeSelector(ClassTypeInfo const& cls)

@@ -48,7 +48,7 @@ public:
 		return std::make_shared <Texture>(std::forward<Args>(args)...);
 	}
 
-	Texture(size_type width, size_type height, u8 const* data = nullptr)
+	Texture(size_type width, size_type height, std::string const& name = "(unnamed)", u8 const* data = nullptr)
 	: width(width), height(height), m_Data(width * height)
 	{
 		if (data != nullptr)
@@ -70,6 +70,8 @@ public:
 	DeviceTextureRef const& GetDeviceTexture() const { return m_DeviceTex; }
 	void SetDeviceTexture(DeviceTextureRef const& dt) const { m_DeviceTex = dt; }
 
+	char const* GetName() const { return m_Name.c_str(); }
+
 private:
 
 	Texture()
@@ -78,6 +80,7 @@ private:
 	Texture(Texture const& other) = default;
 
 	std::vector<u32> m_Data;
+	std::string m_Name;
 	mutable DeviceTextureRef m_DeviceTex = INVALID_DEV_TEX;
 };
 
@@ -106,6 +109,11 @@ public:
 
 	Texture const* operator->() const {
 		return &*m_Tex;
+	}
+
+	void Clear()
+	{
+		m_Tex = Texture::EMPTY;
 	}
 
 	bool IsValid()

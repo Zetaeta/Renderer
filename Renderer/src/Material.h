@@ -2,36 +2,51 @@
 
 #include "maths.h"
 #include "Texture.h"
+#include <atomic>
+#include <mutex>
 
-using Colour_t = vec4;
+using col4 = vec4;
 struct Material
 {
-	Material(Colour_t col, float specularity = 1, int spec = -1, float diffuseness = 1, TextureRef albedo = {})
+	RCOPY_PROTECT(Material);
+
+	Material(Material&& other) noexcept;
+	Material(col4 col, float specularity = 1, int spec = -1, float diffuseness = 1, TextureRef albedo = {})
 		: colour(col), specularExp(spec), albedo(albedo) {}
 
-	Colour_t Colour() {
+	col4 Colour() {
 		return colour;
 	}
 	int Specularity() {
 		return specularExp;
 	}
 
+	using Ref = std::shared_ptr<Material>;
+
+	bool NeedsUpdate() const;
+	void MarkUpdated();
+	void MarkUpdateDone();
+
+	std::mutex& GetUpdateMutex() { return m_UpdateMutex; }
+
+	void OnPropertyUpdate();
+
 	TextureRef albedo;
 	TextureRef normal;
-	TextureRef emissive;
+	TextureRef emissiveMap;
 	TextureRef roughnessMap;
-	Colour_t colour;
+	col4 colour;
+	col3 emissiveColour = col3(0);
 	int specularExp = -1;
-	float specularity = 0;
+	float specularity = 1;
 	float diffuseness = 1;
 	bool translucent = false;
+	float mask = 1.f;
 	float roughness = 0.5;
+private:
+	std::atomic<bool> m_Updated = false;
+	std::mutex m_UpdateMutex;
 };
 
 using MaterialID = int;
 
-
-class MaterialManager
-{
-	 
-};

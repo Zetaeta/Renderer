@@ -17,7 +17,7 @@
 using std::vector;
 
 
-void ComputeNormals(Mesh& mesh)
+void ComputeNormals(MeshPart& mesh)
 {
 	vector<Vertex>& vertices = mesh.vertices;
 	for (u32 i = 0; i < mesh.vertices.size(); ++i)
@@ -83,18 +83,40 @@ bool Scene::IsObjNameTaken(Name name)
 	return false;
 }
 
-void Scene::InsertCompoundMesh(CompoundMesh const& cmesh)
+void Scene::InsertCompoundMesh(CompoundMesh::Ref cmesh)
 {
-	auto& obj = m_Objects.emplace_back(make_unique<SceneObject>(this,cmesh.name));
+	auto& obj = m_Objects.emplace_back(make_unique<SceneObject>(this,cmesh->name));
+	auto& smc = obj->SetRoot<StaticMeshComponent>();
+	smc.SetMesh(cmesh);
 	//obj.root
-	for (auto& mesh : cmesh.components)
+	//for (auto& mesh : cmesh.components)
+	//{
+	//	//m_MeshInstances.emplace_back(mesh.instance, Transform{});
+	//	auto& mc = obj->root->AddChild<StaticMeshComponent>("Child") ;
+	//	//mc.SetMesh(mesh.instance);
+	//	//mc.SetTransform(mesh.trans);
+	//}
+}
+
+void Scene::AddScenelet(Scenelet const& scenelet)
+{
+	auto& obj = m_Objects.emplace_back(make_unique<SceneObject>(this,scenelet.m_Path));
+	auto& root = obj->SetRoot<StaticMeshComponent>();
+	AddSceneletPart(root, scenelet.m_Root);
+}
+
+void Scene::AddSceneletPart(StaticMeshComponent& component, SceneletPart const& part)
+{
+	component.SetMesh(part.mesh);
+	component.SetName(part.mesh->name);
+	component.SetTransform(part.trans);
+	for (auto const& child : part.children)
 	{
-		//m_MeshInstances.emplace_back(mesh.instance, Transform{});
-		auto& mc = obj->root->AddChild<MeshComponent>("Child") ;
-		mc.SetMesh(mesh.instance);
-		mc.SetTransform(mesh.trans);
+		auto& childComp = component.AddChild<StaticMeshComponent>(child.mesh->name);
+		AddSceneletPart(childComp, child);
 	}
 }
+
 
 MeshInstanceRef Scene::AddMesh(MeshRef mesh, Transform trans)
 {
@@ -125,6 +147,39 @@ SceneObject* Scene::CreateObject(ClassTypeInfo const& type)
 	return ptr.get();
 }
 
+template<typename TFunc>
+void ForEachCompRecursive(SceneComponent& comp, TFunc&& func)
+{
+	func(comp);
+	for (auto& child : comp.GetChildren())
+	{
+		if (IsValid(child))
+		{
+			ForEachCompRecursive(*child, func);
+		}
+	}
+}
+void Scene::ForEachComponent(std::function<void(SceneComponent&)> const& func)
+{
+	for (auto& obj : m_Objects)
+	{
+		if (IsValid(obj->GetRoot()))
+		{
+			ForEachCompRecursive(*obj->GetRoot(), func);
+		}
+	}
+}
+
+void Scene::ForEachComponent(std::function<void(SceneComponent const&)> const& func) const
+{
+	for (auto& obj : m_Objects)
+	{
+		if (IsValid(obj->GetRoot()))
+		{
+			ForEachCompRecursive(*obj->GetRoot(), func);
+		}
+	}
+}
 
 DEFINE_CLASS_TYPEINFO(Scene)
 BEGIN_REFL_PROPS()

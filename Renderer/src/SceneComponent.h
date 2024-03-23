@@ -6,10 +6,10 @@
 #include "Transform.h"
 #include "SceneObject.h"
 #include "Lights.h"
-#include "Scene.h"
+//#include "Scene.h"
 #include "TypeInfo.h"
 
-//struct Scene;
+struct Scene;
 class SceneComponent;
 
 //#define SC_CONSTRUCTORS()
@@ -37,7 +37,7 @@ public:
 	template <typename TComp, typename... TArgs>
 	TComp& AddChild(String name, TArgs&&... args)
 	{
-		SceneComponent::OwningPtr& child = m_Children.emplace_back(std::make_unique<TComp>(this, std::forward<TArgs>(args)...));
+		auto& child = m_Children.emplace_back(std::make_unique<TComp>(this, std::forward<TArgs>(args)...));
 		child->SetName(name);
 		if (IsInitialized())
 		{
@@ -49,10 +49,13 @@ public:
 	template<typename TComp>
 	TComp& AddChild(Name name)
 	{
-		SceneComponent::OwningPtr& child = m_Children.emplace_back(std::make_unique<TComp>(this));
+		auto& child = m_Children.emplace_back(std::make_unique<TComp>(this));
 		child->SetName(name);
 		return static_cast<TComp&>(*child);
 	}
+
+	using Owner = std::unique_ptr<SceneComponent>;
+	Vector<Owner> const& GetChildren();
 
 	void SetParent(SceneComponent* parent)
 	{
@@ -60,7 +63,6 @@ public:
 		m_Object = parent->GetOwner();
 	}
 
-	using OwningPtr = std::unique_ptr<SceneComponent>;
 
 	SceneObject* GetOwner()
 	{
@@ -69,7 +71,7 @@ public:
 
 	using WorldTransform = TTransform<quat>;
 
-	WorldTransform GetWorldTransform()
+	WorldTransform const& GetWorldTransform() const
 	{
 		return m_WorldTransform;
 	}
@@ -131,7 +133,7 @@ protected:
 
 	std::string			   m_Name;
 	RotTransform			   m_Transform;
-	std::vector<OwningPtr> m_Children;
+	std::vector<Owner> m_Children;
 	SceneComponent*		   m_Parent = nullptr;
 	SceneObject*		   m_Object = nullptr;
 
@@ -163,36 +165,30 @@ protected:
 		m_Parent->MarkAnyDirty();
 	}
 
-	virtual void OnUpdate(Scene& scene)
-	{
-		
-		m_WorldTransform = static_cast<WorldTransform>(m_Transform);
-		if (m_Parent != nullptr)
-			m_WorldTransform =  m_Parent->GetWorldTransform() * m_WorldTransform;
-	}
+	virtual void OnUpdate(Scene& scene);
 };
 
 DECLARE_CLASS_TYPEINFO(SceneComponent)
 
-class MeshComponent : public SceneComponent
+class StaticMeshComponent : public SceneComponent
 {
-	DECLARE_RTTI(MeshComponent, SceneComponent);
+	DECLARE_RTTI(StaticMeshComponent, SceneComponent);
 public:
-	MeshComponent() {}
+	StaticMeshComponent() {}
 
-	MeshComponent(AssetPath const& path) :m_Mesh(path) {}
+	StaticMeshComponent(AssetPath const& path) :m_Mesh(path) {}
 	
 	template<typename TParent>
-	MeshComponent(TParent* parent)
-		:SceneComponent(parent), m_MeshInst(-1)
+	StaticMeshComponent(TParent* parent)
+		:SceneComponent(parent)//, m_MeshInst(-1)
 	{}
-	MeshComponent(SceneObject* parent, MeshInstanceRef minst, String const& name = "", Transform const& trans = Transform{})
-		: SceneComponent(parent, name, trans), m_MeshInst(minst)
-	{}
+	//StaticMeshComponent(SceneObject* parent, MeshInstanceRef minst, String const& name = "", Transform const& trans = Transform{})
+	//	: SceneComponent(parent, name, trans), m_MeshInst(minst)
+	//{}
 
-	MeshComponent(SceneComponent* parent, MeshInstanceRef minst, String const& name = "", Transform const& trans = Transform{})
-		: SceneComponent(parent, name, trans), m_MeshInst(minst)
-	{}
+	//StaticMeshComponent(SceneComponent* parent, MeshInstanceRef minst, String const& name = "", Transform const& trans = Transform{})
+	//	: SceneComponent(parent, name, trans), m_MeshInst(minst)
+	//{}
 
 	enum class EType : u8
 	{
@@ -202,11 +198,12 @@ public:
 
 	void OnInitialize() override;
 
-	void SetMesh(MeshRef mesh);
+	void SetMesh(CompoundMesh::Ref mesh);
 	void SetMesh(AssetPath path);
 
 	virtual void	OnUpdate(Scene& scene) override;
 
+	CompoundMesh* GetMesh() const { return m_MeshRef.get(); }
 
 	bool ImGuiControls() override;
 
@@ -218,79 +215,12 @@ public:
 
 protected:
 	EType m_Type = EType::VISIBLE;
-	MeshInstanceRef m_MeshInst = -1;
-	MeshRef m_MeshRef = INVALID_MESH_REF;
+//	MeshInstanceRef m_MeshInst = -1;
+	CompoundMesh::Ref m_MeshRef = CompoundMesh::INVALID_REF;
 	Name m_Mesh;
 };
-DECLARE_CLASS_TYPEINFO(MeshComponent)
+DECLARE_CLASS_TYPEINFO(StaticMeshComponent)
 
-
-template<typename TLight>
-class LightComponent : public SceneComponent
-{
-	DECLARE_RTTI(LightComponent, SceneComponent);
-
-public:
-	LightComponent() {
-	
-		if constexpr (TLight::HAS_DIRECTION)
-		{
-			SetTransform(TLight::GetDefaultTrans());
-		}
-	}
-	
-	template<typename TParent>
-	LightComponent(TParent* parent)
-		: SceneComponent(parent)
-	{
-		if constexpr (TLight::HAS_DIRECTION)
-		{
-			SetTransform(TLight::GetDefaultTrans());
-		}
-	}
-
-	void OnInitialize()
-	{
-		RASSERT(!IsInitialized());
-		m_LightData.comp = this;
-		m_Light = GetScene().AddLight<TLight>();
-		OnUpdate(GetScene());
-	}
-
-	void Begin() override
-	{
-		Super::Begin();
-		OnUpdate(GetScene());
-	}
-
-	void OnUpdate(Scene& scene) override
-	{
-		Super::OnUpdate(scene);
-		if constexpr (TLight::HAS_POSITION)
-		{
-			m_LightData.SetPosition(GetWorldTransform().translation);
-		}
-
-		if constexpr (TLight::HAS_DIRECTION)
-		{
-			m_LightData.SetDirection(GetWorldTransform().GetRotation() * TLight::GetDefaultDir());
-		}
-		GetScene().GetLight<TLight>(m_Light) = m_LightData;
-		
-		if constexpr (std::is_same_v<TLight, SpotLight>)
-		{
-			auto transf = GetWorldTransform();
-			transf.SetScale(vec3(1));
-			//GetScene().GetLight<TLight>(m_Light).trans = transf;
-		}
-	}
-
-	TLight::Ref m_Light;
-
-	TLight m_LightData;
-};
-template<typename TLight>
-DECLARE_CLASS_TYPEINFO_TEMPLATE(LightComponent<TLight>);
 
 
 //template<typename T>
@@ -299,48 +229,6 @@ DECLARE_CLASS_TYPEINFO_TEMPLATE(LightComponent<TLight>);
 //};
 
 
-template<typename T>
-class LightObject : public SceneObject
-{
-public:
-	DECLARE_RTTI(LightObject, SceneObject);
-
-	LightObject() {}
-
-	LightObject(Scene* scene, RotTransform trans = RotTransform{}, String const& name = "")
-		: SceneObject(scene, name)
-	{
-		if (m_Name.empty())
-		{
-			m_Name = scene->MakeName(
-			GetTypeName<T>()
-			);
-		}
-		SetupDefaults();
-	}
-
-	void OnPreInitialize()
-	{
-		if (root == nullptr)
-		{
-			SetupDefaults();
-		}
-	}
-
-	void SetupDefaults()
-	{
-		SetRoot<LightComponent<T>>();
-		auto& ind = GetRoot()->AddChild<MeshComponent>("Indicator");
-		ind.SetType(MeshComponent::EType::GADGET);
-		String mesh = T::GADGET;
-		ind.SetMesh(mesh);
-		ind.SetTransform(T::GADGET_TRANS);
-		ind.SetScale(vec3(0.1f));
-	}
-};
-
-template<typename TLight>
-DECLARE_CLASS_TYPEINFO_TEMPLATE(LightObject<TLight>);
 
 //using PointLightComponent = LightComponent<PointLight>;
 //using SpotLightComponent = LightComponent<SpotLight>;

@@ -11,6 +11,9 @@
 #include "AssetManager.h"
 #include "Lights.h"
 #include "SceneObject.h"
+#include "SceneComponent.h"
+
+class StaticMeshComponent;
 
 using namespace glm;
 
@@ -33,7 +36,7 @@ struct Sphere
 };*/
 
 
-void ComputeNormals(Mesh& mesh);
+void ComputeNormals(MeshPart& mesh);
 
 
 
@@ -70,7 +73,36 @@ struct Scene// : public BaseObject
 
 	Scene& operator=(Scene&& other) = default;
 
-	void InsertCompoundMesh(CompoundMesh const& cmesh);
+	void InsertCompoundMesh(CompoundMesh::Ref cmesh);
+	void AddScenelet(Scenelet const& scenelet);
+	void AddSceneletPart(StaticMeshComponent& component, SceneletPart const& part);
+
+	void ForEachComponent(std::function<void(SceneComponent&)> const& func );
+	void ForEachComponent(std::function<void(SceneComponent const&)> const& func ) const;
+
+	template<typename TComponent>
+	void ForEach(std::function<void(TComponent&)> const& func)
+	{
+		ForEachComponent([&func](SceneComponent& sc)
+		{
+			if (sc.GetTypeInfo() == TComponent::GetStaticTypeInfo())
+			{
+				func(static_cast<TComponent&>(sc));
+			}
+		});
+	}
+
+	template<typename TComponent>
+	void ForEach(std::function<void(TComponent const&)> const& func) const
+	{
+		ForEachComponent([&func](SceneComponent const& sc)
+		{
+			if (sc.GetTypeInfo() == TComponent::GetStaticTypeInfo())
+			{
+				func(static_cast<TComponent const&>(sc));
+			}
+		});
+	}
 
 	void Initialize();
 
@@ -96,8 +128,10 @@ struct Scene// : public BaseObject
 	SceneObject * CreateObject(ClassTypeInfo const& type);
 	
 	AssetManager* m_AssetManager;
-	std::vector<Material>&	   Materials() const { return m_AssetManager->m_Materials; }
-	std::vector<CompoundMesh>& CompoundMeshes() const { return m_AssetManager->m_CompoundMeshes; }
+	Material const&			   GetMaterial(MaterialID matId) const { return m_AssetManager->GetMaterial(matId); }
+	Material&			   GetMaterial(MaterialID matId) { return m_AssetManager->GetMaterial(matId); }
+	std::vector<Material::Ref>&	   Materials() const { return m_AssetManager->m_Materials; }
+	auto& CompoundMeshes() const { return m_AssetManager->m_CompoundMeshes; }
 	std::vector<MeshInstance>  m_MeshInstances;
 
 	MeshInstance* GetMeshInstance(MeshInstanceRef ref)

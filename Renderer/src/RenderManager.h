@@ -46,40 +46,11 @@ public:
 
 	void SceneControls();
 
-	void DrawUI() {
-		ImGui::Begin("Controls");
-		DrawFrameData();
-		SceneControls();
-		ImGui::End();
+	void DrawUI();
 
-		if (Renderer())
-		{
-			Renderer()->DrawControls();
-		}
+	virtual void DrawFrameData();
 
-		ImGui::Begin("Assets");
-		m_AssMan.DrawControls();
-		ImGui::End();
-
-
-		Render();
-	}
-
-	virtual void DrawFrameData()
-	{
-		ImGui::Text("Frame time: %.3fms", m_FrameTime);
-	}
-
-	void Render() {
-
-		OnRenderStart();
-
-		//m_Renderer->Render(scene);
-
-		OnRenderFinish();
-		m_FrameTime = m_Timer.ElapsedMillis();
-		m_Timer.Reset();
-	}
+	void Render();
 
 	virtual void OnRenderStart() {}
 	virtual void OnRenderFinish() {}

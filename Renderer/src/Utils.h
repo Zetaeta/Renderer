@@ -11,6 +11,12 @@
 								ClassName& operator=(ClassName&& other) = delete;
 #define RCOPY_MOVE_PROTECT(ClassName) RCOPY_PROTECT(ClassName) RMOVE_PROTECT(ClassName)
 
+#define RCOPY_DEFAULT(ClassName) ClassName(ClassName const& other) = default;\
+								ClassName& operator=(ClassName const& other) = default;
+
+#define RMOVE_DEFAULT(ClassName) ClassName(ClassName&& other) noexcept = default;\
+								ClassName& operator=(ClassName&& other) noexcept = default;
+
 #define RASSERT(expr, ...) assert(expr)
 
 template<typename TEnum>

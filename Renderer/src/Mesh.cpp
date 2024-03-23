@@ -31,7 +31,7 @@ inline vector<Vertex> Square(vec3 start, vec3 localx, vec3 localy, vec3 normal)
 	return Square(start, localx, localy, normal, { 0, 0 }, { 1, 0 }, {0,1});
 }
 
-Mesh Mesh::Cube(MaterialID m /*= 0*/)
+MeshPart MeshPart::Cube(MaterialID m /*= 0*/)
 {
 	// std::vector<Vertex> verts = {
 	//	Vertex{vec3{ -.5, -.5, -.5 }},
@@ -64,5 +64,45 @@ Mesh Mesh::Cube(MaterialID m /*= 0*/)
 		SQ(16),
 		SQ(20),
 	};
-	return Mesh("cube", std::move(verts), std::move(tris), "cube", m);
+	return MeshPart(std::move(verts), std::move(tris), m);
+}
+
+CompoundMesh::Ref Scenelet::FindMesh(String const& name)
+{
+	auto result = m_Root.FindMesh(name);
+	if (IsValid(result))
+	{
+		return result;
+	}
+
+	return CompoundMesh::INVALID_REF;
+}
+
+CompoundMesh::Ref SceneletPart::FindMesh(String const& name)
+{
+	if (IsValid(mesh) && mesh->name == name || name.empty())
+	{
+		return mesh;
+	}
+
+	for (auto part : children)
+	{
+		auto result = part.FindMesh(name);
+		if (IsValid(result))
+		{
+			return result;
+		}
+	}
+	return CompoundMesh::INVALID_REF;
+}
+
+CompoundMesh::CompoundMesh(AssetPath const& path, Name const& name)
+	: Asset(path), name(name)
+{
+}
+
+CompoundMesh::CompoundMesh(AssetPath const& path, Name const& name, MeshPart&& mesh)
+	: Asset(path), name(name)
+{
+	components.emplace_back(std::move(mesh));
 }

@@ -38,12 +38,14 @@ public:
 		memset(m_LayersEnabled, 1, Denum(EShadingLayer::COUNT));
 	}
 
+	~DX11Renderer();
+
 	void DrawControls();
 
 	void Setup();
 
 	void Render(const Scene& scene) override;
-	void Render(const Scene& scene, EShadingLayer layer, int index=-1);
+	void Render(const Scene& scene, EShadingLayer layer, int index=-1, bool translucent = false);
 
 	void LoadShaders(bool reload = false);
 
@@ -60,11 +62,12 @@ public:
 	void RenderShadowMap();
 	void RenderDepthOnly(ID3D11DepthStencilView* dsv, u32 width, u32 height, mat4 const& transform, mat4 const& projection, DX11MaterialType* material = nullptr, mat4* outFullTrans = nullptr);
 
-	void DrawMesh(MeshRef meshId, EShadingLayer layer, bool useMaterial = true);
+	void DrawMesh(MeshPart const& meshPart, EShadingLayer layer, bool useMaterial = true);
+
 	
 	void DrawTexture(DX11Texture* tex, ivec2 pos = ivec2(0), ivec2 size = ivec2(-1));
 
-	void PrepareMesh(Mesh const& mesh, DX11Mesh& meshData);
+	void PrepareMesh(MeshPart const& mesh, DX11Mesh& meshData);
 
 	void PrepareMaterial(MaterialID mid);
 
@@ -82,10 +85,12 @@ public:
 	}
 	void UnregisterTexture(DX11Texture* tex)
 	{
-		std::erase(m_TextureRegistry, tex);
+		std::erase_if(m_TextureRegistry, [tex] (DX11Texture* other) {return other == tex;});
 	}
 
 private:
+	template<typename TFunc>
+	void ForEachMesh(TFunc&& func);
 	DX11Texture::Ref PrepareTexture(Texture const& tex, bool sRGB = false);
 
 /* inline static Colour_t GetColour(MaterialID mat)
@@ -109,7 +114,8 @@ protected:
 
 	DX11Ctx m_Ctx;
 
-	std::vector<DX11Mesh> m_MeshData;
+//	std::vector<DX11Mesh> m_MeshData;
+	std::unordered_map<MeshPart const*, DX11Mesh> m_MeshData;
 	std::vector<std::unique_ptr<DX11Material>> m_Materials;
 
 	DX11Texture::Ref m_EmptyTexture;
@@ -138,7 +144,10 @@ protected:
 
 	ComPtr<ID3D11SamplerState> m_Sampler;
 	ComPtr<ID3D11BlendState> m_BlendState;
+	ComPtr<ID3D11BlendState> m_AlphaBlendState;
+	ComPtr<ID3D11BlendState> m_AlphaLitBlendState;
 	ComPtr<ID3D11DepthStencilState> m_LightsDSState;
+	ComPtr<ID3D11DepthStencilState> m_AlphaDSState;
 
 	//ComPtr<ID3D11Texture2D> m_ShadowMap;
 	//ComPtr<ID3D11DepthStencilView> m_ShadowDepthView;
@@ -162,7 +171,7 @@ protected:
 	ComPtr<ID3D11Buffer> m_VS2DCBuff;
 	ComPtr<ID3D11Buffer> m_PS2DCBuff;
 
-	Vector<PerInstanceVSData> m_PIVS;
+	std::unordered_map<MeshPart const*, PerInstanceVSData> m_PIVS;
 
 	DX11Texture* m_ViewerTex = nullptr;
 
@@ -179,7 +188,7 @@ protected:
 	float yoffset;
 	mat4 m_Projection;
 
-	Scene const* m_Scene;
+	Scene* m_Scene;
 
 	bool m_LayersEnabled[Denum(EShadingLayer::COUNT)];
 

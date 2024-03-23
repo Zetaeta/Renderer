@@ -19,7 +19,53 @@ bool rnd::ImGuiControls(TTransform<quat>& trans)
 	return edited;
 }
 
-bool ImGuiControlBasic(char const* name, ValuePtr val, bool isConst)
+struct NumericControlMeta
+{
+	std::optional<double> dragSpeed;
+	std::optional<double> min;
+	std::optional<double> max;
+
+	template<typename T>
+	T DragSpeed(double def = 0.1) const
+	{
+		return static_cast<T>(dragSpeed.value_or(def));
+	}
+
+	template<typename T>
+	T Min() const
+	{
+		return static_cast<T>(min.value_or(0.));
+	}
+
+	template<typename T>
+	T Max() const
+	{
+		return static_cast<T>(max.value_or(0.));
+	}
+
+	void Apply(MemberMetadata const& memberMeta)
+	{
+		auto memDrag = memberMeta.GetDragSpeed();
+		if (memDrag.has_value())
+		{
+			dragSpeed = memDrag.value();
+		}
+
+		auto memMin = memberMeta.GetMinValue();
+		if (memMin.has_value())
+		{
+			min = memMin.value();
+		}
+
+		auto memMax = memberMeta.GetMaxValue();
+		if (memMax.has_value())
+		{
+			max = memMax.value();
+		}
+	}
+};
+
+bool ImGuiControlBasic(char const* name, ValuePtr val, bool isConst, NumericControlMeta const& meta = {})
 {
 	if (val.GetType() == GetTypeInfo<int>())
 	{
@@ -29,7 +75,7 @@ bool ImGuiControlBasic(char const* name, ValuePtr val, bool isConst)
 		}
 		else
 		{
-			return ImGui::DragInt(name, &val.GetAs<int>());
+			return ImGui::DragInt(name, &val.GetAs<int>(), meta.DragSpeed<float>(), meta.Min<int>(), meta.Max<int>());
 		}
 	}
 	else if (val.GetType() == GetTypeInfo<float>())
@@ -41,7 +87,7 @@ bool ImGuiControlBasic(char const* name, ValuePtr val, bool isConst)
 		}
 		else
 		{
-			return ImGui::DragFloat(name, &val.GetAs<float>());
+			return ImGui::DragFloat(name, &val.GetAs<float>(), meta.DragSpeed<float>(), meta.Min<float>(), meta.Max<float>());
 		}
 	}
 	else if (val.GetType() == GetTypeInfo<String>())
@@ -93,7 +139,7 @@ float GetSpeed(TypeInfo const& typ)
 }
 
 
-bool ImGuiControls(char const* name, ValuePtr val, bool isConst)
+bool ImGuiControls(char const* name, ValuePtr val, bool isConst, bool expand = false, NumericControlMeta controlMeta = {})
 {
 	if (isConst)
 	{
@@ -102,6 +148,11 @@ bool ImGuiControls(char const* name, ValuePtr val, bool isConst)
 	switch (val.GetType().GetTypeCategory())
 	{
 		case ETypeCategory::CLASS:
+			if (expand)
+			{
+				return ImGuiControls(ClassValuePtr { val }, isConst);
+			}
+
 			if (ImGui::TreeNode(name))
 			{
 				bool result = ImGuiControls(ClassValuePtr { val }, isConst);
@@ -117,15 +168,16 @@ bool ImGuiControls(char const* name, ValuePtr val, bool isConst)
 			ContainerTypeInfo const& ctr = static_cast<ContainerTypeInfo const&>(val.GetType());
 			TypeInfo const&			 contained = ctr.GetContainedType();
 			auto					 acc = ctr.CreateAccessor(val);
+			controlMeta.Apply(ctr.GetContainedMeta());
 			if (!ctr.HasFlag(ContainerTypeInfo::RESIZABLE) && contained.GetTypeCategory() == ETypeCategory::BASIC && contained != GetTypeInfo<String>())
 			{
 				ImGuiDataType imTyp = GetImGuiType(contained);
-				float		  speed = GetSpeed(contained);
-				return ImGui::DragScalarN(name, imTyp, acc->GetAt(0).GetPtr(), acc->GetSize(), speed);
+				float		  defaultSpeed = GetSpeed(contained);
+				return ImGui::DragScalarN(name, imTyp, acc->GetAt(0).GetPtr(), acc->GetSize(), controlMeta.DragSpeed<float>(defaultSpeed));
 			}
+
 			bool edited = false;
-			if (ImGui::TreeNode(name))
-			{
+			auto displayContainer = [&] {
 				bool areConst = isConst || ctr.HasFlag(ContainerTypeInfo::CONST_CONTENT);
 				for (u32 i = 0; i < acc->GetSize(); ++i)
 				{
@@ -134,8 +186,19 @@ bool ImGuiControls(char const* name, ValuePtr val, bool isConst)
 					edited |= ImGuiControls(idx.c_str(), acc->GetAt(i), areConst);
 					ImGui::PopID();
 				}
+
+				};
+			if (expand)
+			{
+				ImGui::Text(name);
+				displayContainer();
+			}
+			else if (ImGui::TreeNode(name))
+			{
+				displayContainer();
 				ImGui::TreePop();
 			}
+
 			return edited;
 		}
 		case ETypeCategory::POINTER:
@@ -165,7 +228,12 @@ bool ImGuiControls(ClassValuePtr obj, bool isConst)
 	obj = obj.Downcast();
 	obj.GetRuntimeType().ForEachProperty([&obj, &changed, isConst] (PropertyInfo const* prop)
 	{
-		changed |= ImGuiControls(prop->GetName().c_str(), prop->Access(obj), isConst || prop->IsConst());
+		auto const& meta = prop->GetMetadata();
+		bool expand = meta.GetAutoExpand().value_or(false);	
+		NumericControlMeta controlMeta;
+		controlMeta.Apply(meta);
+
+		changed |= ImGuiControls(prop->GetName().c_str(), prop->Access(obj), isConst || prop->IsConst(), expand, controlMeta);
 	});
 	return changed;
 }

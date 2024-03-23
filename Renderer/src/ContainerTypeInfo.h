@@ -29,8 +29,8 @@ public:
 		CONST_CONTENT = 2
 	};
 
-	ContainerTypeInfo(Name name, size_t size, ETypeFlags typeFlags, EContainerFlag flags, TypeInfo const& contained)
-		: TypeInfo(name, size, ETypeCategory::CONTAINER, typeFlags), m_Flags(flags), m_ContainedType(contained) {}
+	ContainerTypeInfo(Name name, size_t size, ETypeFlags typeFlags, EContainerFlag flags, TypeInfo const& contained, MemberMetadata containedMeta = {})
+		: TypeInfo(name, size, ETypeCategory::CONTAINER, typeFlags), m_Flags(flags), m_ContainedType(contained), m_ContainedMeta(std::move(containedMeta)) {}
 
 	virtual OwningPtr<ContainerAccessor>	  CreateAccessor(ValuePtr container) const = 0;
 	virtual OwningPtr<ConstContainerAccessor> CreateAccessor(ConstValuePtr container) const = 0;
@@ -49,8 +49,14 @@ public:
 	{
 		return m_ContainedType;
 	}
+	
+	MemberMetadata const& GetContainedMeta() const
+	{
+		return m_ContainedMeta;
+	}
 
 protected:
+	MemberMetadata m_ContainedMeta;
 	EContainerFlag m_Flags = NONE;
 	TypeInfo const& m_ContainedType;
 };
@@ -59,8 +65,8 @@ template<typename T, typename TContained, typename TAccessor, typename TConstAcc
 class ContainerTypeInfoImpl : public ContainerTypeInfo
 {
 public:
-	ContainerTypeInfoImpl(Name name, size_t size, EContainerFlag flags)
-		: ContainerTypeInfo(name, size, ComputeFlags<T>(), flags, GetTypeInfo<TContained>())
+	ContainerTypeInfoImpl(Name name, size_t size, EContainerFlag flags, MemberMetadata&& containedMeta = {})
+		: ContainerTypeInfo(name, size, ComputeFlags<T>(), flags, GetTypeInfo<TContained>(), std::move(containedMeta))
 	{ }
 
 	OwningPtr<ContainerAccessor> CreateAccessor(ValuePtr container) const override
@@ -120,7 +126,7 @@ struct VecNames<N, float, defaultp>
 	constexpr static auto const NAME = concat("vec", U32ToStr<N>::value);
 };
 
-#define DECLARE_AGGREGATE_CONTAINER_TYPEINFO(type, entryType)\
+#define DECLARE_AGGREGATE_CONTAINER_TYPEINFO(type, entryType, ...)\
 	template<>\
 	struct TypeInfoHelper<type>\
 	{\
@@ -161,7 +167,7 @@ struct VecNames<N, float, defaultp>
 		};\
 		using AggAccessor = TAggAccessor<ContainerAccessor, false>;\
 		using ConstAggAccessor = TAggAccessor<ConstContainerAccessor, true>;\
-		inline static ContainerTypeInfoImpl<Type, entryType, AggAccessor, ConstAggAccessor> const s_TypeInfo{ NAME.str, sizeof(Type), ContainerTypeInfo::NONE };\
+		inline static ContainerTypeInfoImpl<Type, entryType, AggAccessor, ConstAggAccessor> const s_TypeInfo{ NAME.str, sizeof(Type), ContainerTypeInfo::NONE, __VA_ARGS__ };\
 	}
 
 template<u32 N, typename T, glm::qualifier Q>

@@ -56,7 +56,7 @@ CompoundMeshData ObjReader::Parse(string file)
 		}
 		Mesh& mesh = cMesh.meshes.emplace_back(file, std::move(vertices), std::move(faces), getName(), max(matId,0 ));
 		matId = -1;
-		ComputeNormals(mesh);
+//		ComputeNormals(mesh);
 		/* vertices.clear();
 		vertIndsPlus1.clear();
 		uvs.clear();
@@ -223,6 +223,6 @@ Mtlib ObjReader::ParseMtl(std::string file)
 MaterialID ObjReader::LoadMat(MtlMat& mat)
 {
 	
-	m_MatDB.emplace_back(vec4(mat.ambient, 1.f), glm::length(mat.specular), int(mat.specExp), glm::length(mat.diffuse), Texture::LoadFrom(("content/" + mat.diffuseMap).c_str()));
+	m_MatDB.emplace_back(std::make_shared<Material>(vec4(mat.ambient, 1.f), glm::length(mat.specular), int(mat.specExp), glm::length(mat.diffuse), Texture::LoadFrom(("content/" + mat.diffuseMap).c_str())));
 	return (mat.loadedMat = u32(m_MatDB.size() - 1));
 }

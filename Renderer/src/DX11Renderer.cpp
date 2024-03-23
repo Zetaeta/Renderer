@@ -183,7 +183,7 @@ void DX11Renderer::PrepareShadowMaps()
 	comparisonSamplerDesc.MipLODBias = 0.f;
 	comparisonSamplerDesc.MaxAnisotropy = 0;
 	comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-	comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+	comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
 
 	// Point filtered shadows can be faster, and may be a good choice when
 	// rendering on hardware with lower feature levels. This sample has a
@@ -291,7 +291,7 @@ void DX11Renderer::RenderShadowMap()
 		mat4 l2w = glm::inverse(mat4(w2ltrans));
 		shadowMap.m_World2Light = w2ltrans;
 
-		constexpr float ROTVAL = M_PI/2;
+		constexpr float ROTVAL = float(M_PI_2);
 		static mat4 rots[] = {
 			glm::rotate(ROTVAL,vec3{0,-1,0}), // +Z -> +X
 			glm::rotate(ROTVAL,vec3{0,1,0}), // +Z -> -X
@@ -319,68 +319,118 @@ void DX11Renderer::RenderShadowMap()
 	}
 }
 
+template <typename TFunc>
+void DX11Renderer::ForEachMesh(TFunc&& func)
+{
+	m_Scene->ForEach<StaticMeshComponent>([&](StaticMeshComponent const& smc) {
+		auto cmesh = smc.GetMesh();
+		auto const&			trans = smc.GetWorldTransform();
+		if (!IsValid(cmesh))
+		{
+			return;
+		}
+
+		for (auto const& mesh : cmesh->components)
+		{
+			func(mesh, trans);
+		}
+	});
+			
+}
+
+
 void DX11Renderer::RenderDepthOnly(ID3D11DepthStencilView *dsv, u32 width, u32 height,
 	mat4 const& transform, mat4 const& projection, DX11MaterialType* material, mat4* outFullTrans)
 {
-		pContext->PSSetShaderResources(0,0, nullptr);
-		pContext->OMSetRenderTargets(0, nullptr, dsv);
-		pContext->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH, 1.f, 0);
+	pContext->PSSetShaderResources(0,0, nullptr);
+	pContext->OMSetRenderTargets(0, nullptr, dsv);
+	pContext->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH, 1.f, 0);
+	m_Ctx.psTextures.ClearFlags(E_TS_SHADOWMAP);
 
-		D3D11_VIEWPORT viewport = {
-			.TopLeftX = 0,
-			.TopLeftY = 0,
-			.Width = float(width),
-			.Height = float(height),
-			.MinDepth = 0,
-			.MaxDepth = 1,
-		};
-		pContext->RSSetViewports(1, &viewport);
+	D3D11_VIEWPORT viewport = {
+		.TopLeftX = 0,
+		.TopLeftY = 0,
+		.Width = float(width),
+		.Height = float(height),
+		.MinDepth = 0,
+		.MaxDepth = 1,
+	};
+	pContext->RSSetViewports(1, &viewport);
 
 
-		float const FAR_PLANE = 1000;
-		float const NEAR_PLANE = .1f;
-		mat4 projWorld = projection * transform;
-		if (outFullTrans)
+	float const FAR_PLANE = 1000;
+	float const NEAR_PLANE = .1f;
+	mat4 projWorld = projection * transform;
+	if (outFullTrans)
+	{
+		*outFullTrans = projWorld; 
+	}
+	if (material != nullptr)
+	{
+		material->Bind(m_Ctx, EShadingLayer::BASE);
+	}
+
+	ForEachMesh([&](MeshPart const& mesh, Transform const& trans)
+	{
+		if (m_Scene->GetMaterial(mesh.material).translucent)
 		{
-			*outFullTrans = projWorld; 
+			return;
 		}
-		if (material != nullptr)
-		{
-			material->Bind(m_Ctx, EShadingLayer::BASE);
-		}
+		PerInstanceVSData PIVS;
+		PIVS.model2ShadeSpace = mat4(trans);
+		PIVS.model2ShadeDual = transpose(inverse(PIVS.model2ShadeSpace));
+		PIVS.fullTransform = projWorld * PIVS.model2ShadeSpace;
 
-		for (auto const& mi : m_Scene->m_MeshInstances)
-		{
-			if (mi.mesh == -1)
-			{
-				printf("Mesh instance with no mesh");
-				continue;
-			}
-			Transform const& trans = mi.trans;
-			Mesh const&		 mesh = m_Scene->GetMesh(mi.mesh);
+		WriteCBuffer(m_VSPerInstanceBuff,PIVS);
 
-			PerInstanceVSData PIVS;
-			PIVS.model2ShadeSpace = mat4(trans);
-			PIVS.model2ShadeDual = transpose(inverse(PIVS.model2ShadeSpace));
-			PIVS.fullTransform = projWorld * PIVS.model2ShadeSpace;
+		ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
+		pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
+		DrawMesh(mesh, EShadingLayer::BASE, material == nullptr);
+	});
 
-			WriteCBuffer(m_VSPerInstanceBuff,PIVS);
+	//for (auto const& mi : m_Scene->m_MeshInstances)
+	//{
+	//	if (mi.mesh == -1)
+	//	{
+	//		printf("Mesh instance with no mesh");
+	//		continue;
+	//	}
+	//	Transform const& trans = mi.trans;
+	//	Mesh const&		 mesh = m_Scene->GetMesh(mi.mesh);
 
-			ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
-			pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
-			DrawMesh(mi.mesh, EShadingLayer::NONE, material == nullptr);
-		}
+	//	PerInstanceVSData PIVS;
+	//	PIVS.model2ShadeSpace = mat4(trans);
+	//	PIVS.model2ShadeDual = transpose(inverse(PIVS.model2ShadeSpace));
+	//	PIVS.fullTransform = projWorld * PIVS.model2ShadeSpace;
+
+	//	WriteCBuffer(m_VSPerInstanceBuff,PIVS);
+
+	//	ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
+	//	pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
+	//	DrawMesh(mi.mesh, EShadingLayer::NONE, material == nullptr);
+	//}
 }
 
 __declspec(align(16))
 struct PerInstancePSData
 {
-	ALIGN16(vec3, colour);
+	vec4 colour;
 	vec3 ambdiffspec;
-	int specularExp;
+	float roughness = 1.f;
+	vec3 emissiveColour = vec3{0};
+	float alphaMask = 1.f;
 	DX11Bool useNormalMap;
 	DX11Bool useEmissiveMap;
+	DX11Bool useRoughnessMap;
 };
+
+ DX11Renderer::~DX11Renderer()
+{
+	m_Materials.clear();
+	m_PointLightShadows.clear();
+	m_DirLightShadows.clear();
+	m_SpotLightShadows.clear();
+ }
 
 void DX11Renderer::DrawControls()
 {
@@ -431,7 +481,7 @@ void DX11Renderer::DrawControls()
 			}
 			ImGui::EndCombo();
 		}
-		ImGui::DragFloat("Exponent", &m_TexViewExp, 0.01, 0.01, 10);
+		ImGui::DragFloat("Exponent", &m_TexViewExp, 0.01f, 0.01f, 10.f);
 
 		if (m_ViewerTex != nullptr)
 		{
@@ -464,31 +514,66 @@ void DX11Renderer::Setup()
 	u32 const empty = 0x00000000;
 	m_EmptyTexture = DX11Texture::Create(&m_Ctx, 1, 1, &empty);
 
-	D3D11_SAMPLER_DESC sDesc;
-	Zero(sDesc);
-	sDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	sDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	sDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	sDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	sDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	HR_ERR_CHECK(pDevice->CreateSamplerState(&sDesc, &m_Sampler));
-	pContext->PSSetSamplers(0, 1, m_Sampler.GetAddressOf());
-
-	PrepareBG();
+	{
+		D3D11_SAMPLER_DESC sDesc;
+		Zero(sDesc);
+		sDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		sDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		sDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		sDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		sDesc.MaxLOD = D3D11_FLOAT32_MAX;
+		HR_ERR_CHECK(pDevice->CreateSamplerState(&sDesc, &m_Sampler));
+	}
 	PrepareShadowMaps();
 
-	D3D11_BLEND_DESC blendDesc;
-	Zero(blendDesc);
-	blendDesc.RenderTarget[0].BlendEnable = true;
-	blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
-	blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
-	blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 
-	blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
-	blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
-	blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_MAX;
-	blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	HR_ERR_CHECK(pDevice->CreateBlendState(&blendDesc, &m_BlendState));
+	pContext->PSSetSamplers(0, 2, samplers );
+
+	PrepareBG();
+
+	{
+		D3D11_BLEND_DESC blendDesc;
+		Zero(blendDesc);
+		blendDesc.RenderTarget[0].BlendEnable = true;
+		blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+
+		blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_MAX;
+		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		HR_ERR_CHECK(pDevice->CreateBlendState(&blendDesc, &m_BlendState));
+	}
+	{
+		D3D11_BLEND_DESC blendDesc;
+		Zero(blendDesc);
+		blendDesc.RenderTarget[0].BlendEnable = true;
+		blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+		blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+
+		blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		HR_ERR_CHECK(pDevice->CreateBlendState(&blendDesc, &m_AlphaBlendState));
+	}
+	{
+		D3D11_BLEND_DESC blendDesc;
+		Zero(blendDesc);
+		blendDesc.RenderTarget[0].BlendEnable = true;
+		blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+
+		blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
+		blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ONE;
+		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		HR_ERR_CHECK(pDevice->CreateBlendState(&blendDesc, &m_AlphaLitBlendState));
+	}
 
 	{
 		CD3D11_DEPTH_STENCIL_DESC	 dsDesc {CD3D11_DEFAULT{}};
@@ -498,6 +583,15 @@ void DX11Renderer::Setup()
 		dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 		dsDesc.DepthFunc = D3D11_COMPARISON_EQUAL;
 		pDevice->CreateDepthStencilState(&dsDesc, &m_LightsDSState);
+	}
+	{
+		CD3D11_DEPTH_STENCIL_DESC	 dsDesc {CD3D11_DEFAULT{}};
+//		D3D11_DEPTH_STENCIL_DESC dsDesc;
+//		Zero(dsDesc);
+		dsDesc.DepthEnable = true;
+		dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+		dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+		pDevice->CreateDepthStencilState(&dsDesc, &m_AlphaDSState);
 	}
 
 	// 2D
@@ -561,8 +655,11 @@ void DX11Renderer::PrepareBG()
 
 void DX11Renderer::Render(const Scene& scene)
 {
-	m_Scene = &scene;
-	m_MeshData.resize(scene.GetAssetManager()->GetMeshes().size());
+	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
+
+	pContext->PSSetSamplers(0, 2, samplers );
+	m_Scene = const_cast<Scene*>(&scene);
+	//m_MeshData.resize(scene.GetAssetManager()->GetMeshes().size());
 	m_Materials.resize(scene.Materials().size());
 
 	RenderShadowMap();
@@ -603,25 +700,19 @@ void DX11Renderer::Render(const Scene& scene)
 	PFVD.screen2World = inverse(projWorld);
 	WriteCBuffer(m_VSPerFrameBuff, PFVD);
 
-	m_PIVS.resize(scene.m_MeshInstances.size());
-	for (u32 i=0; i< scene.m_MeshInstances.size(); ++i)
-	{
-		auto const& mi = scene.m_MeshInstances[i];
-		if (mi.mesh == -1)
-		{
-			printf("Mesh instance with no mesh");
-			continue;
-		}
-		Transform const& trans = mi.trans;
-		Mesh const&		 mesh = scene.GetMesh(mi.mesh);
+	//m_PIVS.resize(scene.m_MeshInstances.size());
+	ForEachMesh([&](MeshPart const& mesh, Transform const& trans) {
+		auto& mat = m_Scene->GetMaterial(mesh.material);
 
-		
-		PerInstanceVSData& PIVS = m_PIVS[i];
+		PerInstanceVSData& PIVS = m_PIVS[&mesh];
 		PIVS.model2ShadeSpace = mat4(trans);
 		PIVS.model2ShadeDual = transpose(inverse(PIVS.model2ShadeSpace));
 		PIVS.fullTransform = projWorld * PIVS.model2ShadeSpace;
 
 		WriteCBuffer(m_VSPerInstanceBuff,PIVS);
+	});
+	for (u32 i=0; i< scene.m_MeshInstances.size(); ++i)
+	{
 
 		//ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
 		//pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
@@ -630,7 +721,7 @@ void DX11Renderer::Render(const Scene& scene)
 	pContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
 	if (m_LayersEnabled[Denum(EShadingLayer::BASE)])
 	{
-		Render(scene, EShadingLayer::BASE);
+		Render(scene, EShadingLayer::BASE, -1, false);
 	}
 	pContext->OMSetBlendState(m_BlendState.Get(), nullptr, 0xffffffff);
 	pContext->OMSetDepthStencilState(m_LightsDSState.Get(), 1);
@@ -639,21 +730,51 @@ void DX11Renderer::Render(const Scene& scene)
 	{
 		for (int i = 0; i < scene.m_DirLights.size(); ++i)
 		{
-			Render(scene, EShadingLayer::DIRLIGHT, i);
+			Render(scene, EShadingLayer::DIRLIGHT, i, false);
 		}
 	}
 	if (m_LayersEnabled[Denum(EShadingLayer::SPOTLIGHT)])
 	{
 		for (int i = 0; i < scene.m_SpotLights.size(); ++i)
 		{
-			Render(scene, EShadingLayer::SPOTLIGHT, i);
+			Render(scene, EShadingLayer::SPOTLIGHT, i,false);
 		}
 	}
 	if (m_LayersEnabled[Denum(EShadingLayer::POINTLIGHT)])
 	{
 		for (int i = 0; i < scene.m_PointLights.size(); ++i)
 		{
-			Render(scene, EShadingLayer::POINTLIGHT, i);
+			Render(scene, EShadingLayer::POINTLIGHT, i,false);
+		}
+	}
+
+	pContext->OMSetBlendState(m_AlphaBlendState.Get(), nullptr, 0xffffffff);
+	pContext->OMSetDepthStencilState(m_AlphaDSState.Get(), 1);
+	if (m_LayersEnabled[Denum(EShadingLayer::BASE)])
+	{
+		Render(scene, EShadingLayer::BASE, -1, true);
+	}
+
+	pContext->OMSetBlendState(m_AlphaLitBlendState.Get(), nullptr, 0xffffffff);
+	if (m_LayersEnabled[Denum(EShadingLayer::DIRLIGHT)])
+	{
+		for (int i = 0; i < scene.m_DirLights.size(); ++i)
+		{
+			Render(scene, EShadingLayer::DIRLIGHT, i, true);
+		}
+	}
+	if (m_LayersEnabled[Denum(EShadingLayer::SPOTLIGHT)])
+	{
+		for (int i = 0; i < scene.m_SpotLights.size(); ++i)
+		{
+			Render(scene, EShadingLayer::SPOTLIGHT, i, true);
+		}
+	}
+	if (m_LayersEnabled[Denum(EShadingLayer::POINTLIGHT)])
+	{
+		for (int i = 0; i < scene.m_PointLights.size(); ++i)
+		{
+			Render(scene, EShadingLayer::POINTLIGHT, i, true);
 		}
 	}
 
@@ -675,7 +796,7 @@ void DX11Renderer::Render(const Scene& scene)
 }
 
 
-void DX11Renderer::Render(const Scene& scene, EShadingLayer layer, int index)
+void DX11Renderer::Render(const Scene& scene, EShadingLayer layer, int index, bool translucent)
 {
 
 	switch (layer)
@@ -733,21 +854,18 @@ void DX11Renderer::Render(const Scene& scene, EShadingLayer layer, int index)
 	default:
 		break;
 	}
-	for (u32 i=0; i< scene.m_MeshInstances.size(); ++i)
+	ForEachMesh([&] (MeshPart const& mesh, Transform const& trans)
 	{
-		auto const& mi = scene.m_MeshInstances[i];
-		if (mi.mesh == -1)
+		if (translucent != m_Scene->GetMaterial(mesh.material).translucent)
 		{
-			printf("Mesh instance with no mesh");
-			continue;
+			return;
 		}
-
-		WriteCBuffer(m_VSPerInstanceBuff, m_PIVS[i]);
+		WriteCBuffer(m_VSPerInstanceBuff, m_PIVS[&mesh]);
 
 		ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
 		pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
-		DrawMesh(mi.mesh, layer);
-	}
+		DrawMesh(mesh, layer);
+	});
 }
 
 void DX11Renderer::LoadShaders(bool reload)
@@ -784,8 +902,10 @@ void DX11Renderer::DrawBG()
 	const UINT offset = 0;
 	pContext->IASetVertexBuffers(0, 1, m_BGVBuff.GetAddressOf(), &stride, &offset);
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	ID3D11Buffer* vbuffs[] = { m_VSPerFrameBuff.Get() };
 
 	m_MatTypes[MAT_BG].Bind(m_Ctx, EShadingLayer::BASE);
+	pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
 	//WriteCBuffer(m_VSPerFrameBuff)
 
 //	ID3D11ShaderResourceView* srv = m_Background->GetSRV();
@@ -841,17 +961,17 @@ inline int Round(float x) {
 	return int(round(x));
 }
 
-void DX11Renderer::DrawMesh(MeshRef meshId, EShadingLayer layer, bool useMaterial)
+
+void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useMaterial /*= true*/)
 {
-	auto& meshData = m_MeshData[meshId];
-	Mesh const& mesh = m_Scene->GetMesh(meshId);
+	auto& meshData = m_MeshData[&mesh];
 	if (!meshData.vBuff)
 	{
 		PrepareMesh(mesh, meshData);
 	}
 	assert(meshData.iBuff);
 
-	if (!m_Materials[mesh.material])
+	if (!m_Materials[mesh.material] || m_Scene->GetMaterial(mesh.material).NeedsUpdate())
 	{
 		PrepareMaterial(mesh.material);
 	}
@@ -861,14 +981,16 @@ void DX11Renderer::DrawMesh(MeshRef meshId, EShadingLayer layer, bool useMateria
 		m_Materials[mesh.material]->Bind(m_Ctx, layer);
 	}
 
-
-
 	PerInstancePSData PIPS;
-	Material const& mat = m_Scene->Materials()[mesh.material];
+	Material const& mat = m_Scene->GetMaterial(mesh.material);
 	PIPS.colour = mat.colour;
+	PIPS.emissiveColour = mat.emissiveColour;
+	PIPS.roughness = mat.roughness;
 	PIPS.ambdiffspec = {1, mat.diffuseness, mat.specularity};
-	PIPS.specularExp = mat.specularExp;
 	PIPS.useNormalMap = mat.normal->IsValid();
+	PIPS.useEmissiveMap = mat.emissiveMap->IsValid();
+	PIPS.useRoughnessMap = mat.roughnessMap->IsValid();
+	PIPS.alphaMask = mat.mask;
 	WriteCBuffer(m_PSPerInstanceBuff, PIPS);
 
 	const UINT stride = Sizeof(mesh.vertices[0]);
@@ -884,7 +1006,7 @@ void DX11Renderer::DrawMesh(MeshRef meshId, EShadingLayer layer, bool useMateria
 	m_Materials[mesh.material]->UnBind(m_Ctx);
 }
 
-void DX11Renderer::PrepareMesh(Mesh const& mesh, DX11Mesh& meshData)
+void DX11Renderer::PrepareMesh(MeshPart const& mesh, DX11Mesh& meshData)
 {
 	printf("Creating buffers for mesh %s\n", mesh.name.c_str());
 	const UINT stride = Sizeof(mesh.vertices[0]);
@@ -922,25 +1044,31 @@ void DX11Renderer::PrepareMesh(Mesh const& mesh, DX11Mesh& meshData)
 
 void DX11Renderer::PrepareMaterial(MaterialID mid)
 {
+	Material&					  mat = m_Scene->GetMaterial(mid);
+	std::lock_guard lock{ mat.GetUpdateMutex() };
 	std::unique_ptr<DX11Material>& result = m_Materials[mid];
-	Material&					  mat = m_Scene->Materials()[mid];
 	if (mat.albedo->IsValid())
 	{
-		auto  texResource = PrepareTexture(*mat.albedo, true);
-		auto texMat = std::make_unique<DX11TexturedMaterial>(&m_MatTypes[MAT_TEX], texResource);
-		if (mat.normal->IsValid())
+		auto texMat = std::make_unique<DX11TexturedMaterial>(&m_MatTypes[MAT_TEX]);
+		if (mat.albedo.IsValid())
+		{
+			texMat->m_Albedo = PrepareTexture(*mat.albedo, true);
+		}
+		if (mat.normal.IsValid())
 		{
 			texMat->m_Normal = PrepareTexture(*mat.normal);
+//			mat.normal.Clear();
 		}
-		if (mat.emissive->IsValid())
+		if (mat.emissiveMap.IsValid())
 		{
-			texMat->m_Emissive = PrepareTexture(*mat.emissive);
+			texMat->m_Emissive = PrepareTexture(*mat.emissiveMap);
+//			mat.emissive.Clear();
 		}
 		else
 		{
 			texMat->m_Emissive = m_EmptyTexture;
 		}
-		if (mat.roughnessMap->IsValid())
+		if (mat.roughnessMap.IsValid())
 		{
 			texMat->m_Roughness = PrepareTexture(*mat.roughnessMap);
 		}

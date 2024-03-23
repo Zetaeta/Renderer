@@ -39,12 +39,10 @@ struct Mesh : public Asset
 
 	std::string name;
 
-	static Mesh Cube(MaterialID m = 0);
 };
 
 using MeshRef = s32;
 constexpr MeshRef INVALID_MESH_REF = -1;
-
 
 struct MeshInstance
 {
@@ -56,26 +54,59 @@ using MeshInstanceRef = s32;
 
 struct MeshPart
 {
-	MeshInstanceRef instance;
-	String name;
-	RotTransform trans;
+	template <typename TVert = std::vector<Vertex>, typename TInd = std::vector<IndexedTri>>
+	MeshPart(TVert&& verts, TInd&& tris, MaterialID mat = 0, std::string name = "")
+		: vertices(std::forward<TVert>(verts))
+		, triangles(std::forward<TInd>(tris))
+		, material(mat)
+		, name(name) {}
 
+	std::vector<Vertex>		vertices;
+	std::vector<IndexedTri> triangles;
+	MaterialID				material;
+
+	std::string name;
+	static MeshPart Cube(MaterialID m = 0);
 };
 
-struct CompoundMesh
+
+/// <summary>
+/// A compound mesh is collection of individual meshes that share an origin.
+/// </summary>
+struct CompoundMesh : public Asset
 {
-	String name;
+	RCOPY_PROTECT(CompoundMesh);
+	RMOVE_DEFAULT(CompoundMesh);
+	CompoundMesh(AssetPath const& path, Name const& name);
+	CompoundMesh(AssetPath const& path, Name const& name, MeshPart&& mesh);
+	Name name;
 	std::vector<MeshPart> components;
+
+	using Ref = std::shared_ptr<CompoundMesh>;
+	inline static Ref INVALID_REF = nullptr;
 };
 
 struct SceneletPart
 {
-	CompoundMesh mesh;
+	CompoundMesh::Ref mesh = CompoundMesh::INVALID_REF;
+	std::vector<SceneletPart> children;
 	RotTransform trans;
+
+	CompoundMesh::Ref FindMesh(String const& name);
 };
 
-struct Scenelet
+/// <summary>
+/// A scenelet represents an asset file, which may contain many meshes transformed.
+/// Meshes that share a transform are grouped into a single CompoundMesh, which theoretically
+/// represents a single object with subparts for different materials.
+/// </summary>
+struct Scenelet : public Asset
 {
-	Vector<SceneletPart> parts;
+	Scenelet(AssetPath const& path)
+		: Asset(path), m_Name(m_Name) {}
+	CompoundMesh::Ref FindMesh(String const& name);
+	SceneletPart m_Root;
+	Name m_Name;
+	using Ref = s32;
 };
 

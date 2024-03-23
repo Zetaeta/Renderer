@@ -1,6 +1,6 @@
 #include "Texture.h"
 #include "stb_image.h"
-std::shared_ptr<Texture> const Texture::EMPTY = Create(0,0,nullptr);
+std::shared_ptr<Texture> const Texture::EMPTY = Create(0, 0, "empty", nullptr);
 
 TextureRef Texture::LoadFrom(char const* fileName)
 {
@@ -11,6 +11,6 @@ TextureRef Texture::LoadFrom(char const* fileName)
 	{
 		return TextureRef {};
 	}
-	TextureRef result = (x > 0 && y > 0) ? Texture::Create(x,y,data) : Texture::EMPTY;
+	TextureRef result = (x > 0 && y > 0) ? Texture::Create(x,y, fileName,data) : Texture::EMPTY;
 	return result;
 }

@@ -20,7 +20,7 @@ struct MtlMat
 };
 
 using Mtlib = std::vector<MtlMat>;
-using MaterialDB = std::vector<Material>;
+using MaterialDB = std::vector<Material::Ref>;
 
 struct CompoundMeshData
 {

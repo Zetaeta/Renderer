@@ -52,7 +52,7 @@ class DX11TexturedMaterial : public DX11Material
 {
 public:
 
-	DX11TexturedMaterial(DX11MaterialType::Ref matType, std::shared_ptr<DX11Texture> const& albedo)
+	DX11TexturedMaterial(DX11MaterialType::Ref matType, std::shared_ptr<DX11Texture> const& albedo = nullptr)
 		: DX11Material(matType), m_Albedo(albedo) {}
 
 	
