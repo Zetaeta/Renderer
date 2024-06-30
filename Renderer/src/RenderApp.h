@@ -1,10 +1,10 @@
 #pragma once
 #include "Walnut/Application.h"
 #include "Walnut/Image.h"
-#include "RenderManager.h"
+#include "render/RenderManager.h"
 #include "Walnut/Timer.h"
-#include "ImageRenderer.h"
-#include "InputWalnut.h"
+#include "render/ImageRenderer.h"
+#include "common/InputWalnut.h"
 
 class RenderLayer : public Walnut::Layer, public ImageRenderMgr
 {

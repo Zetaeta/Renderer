@@ -1,4 +1,4 @@
-project "WalnutApp"
+project "Renderer"
    kind "ConsoleApp"
    language "C++"
    cppdialect "C++17"
@@ -12,8 +12,9 @@ project "WalnutApp"
       "../Walnut/vendor/imgui",
       "../Walnut/vendor/glfw/include",
       "../Walnut/vendor/glm",
-
+	  "../nativefiledialog/src/include",
       "../Walnut/Walnut/src",
+	  "src",
 
       "%{IncludeDir.VulkanSDK}",
    }

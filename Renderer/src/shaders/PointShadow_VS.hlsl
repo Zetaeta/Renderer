@@ -1,5 +1,4 @@
 
-#define screen2World world2Light;
 #include "VertexShader.hlsli"
 
 struct VSOut {

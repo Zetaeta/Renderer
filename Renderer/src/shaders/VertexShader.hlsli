@@ -9,5 +9,6 @@ cbuffer PerInstanceVSData : register(b0)
 cbuffer PerFrameVertexData : register(b1)
 {
 	Matrix screen2World;
+	Matrix world2Light;
 	float3 cameraPos;
 }

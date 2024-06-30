@@ -8,6 +8,13 @@
 #define TEXTURED 1
 #endif
 
+#define DEBUG_MODE_ALBEDO 1
+#define DEBUG_MODE_NORMAL 2
+#define DEBUG_MODE_ROUGHNESS 3
+#define DEBUG_MODE_METALNESS 4
+#define DEBUG_MODE_DEPTH 5
+
+
 cbuffer PerFramePSData : register(b0) {
 #ifdef BASE_LAYER
 	float3 ambient;
@@ -39,6 +46,9 @@ cbuffer PerFramePSData : register(b0) {
 	float3 spotLightCol;
 	Matrix world2Light;
 #endif
+	int debugMode;
+	float debugGrayscaleExp;
+	int brdf = 0;
 };
 
 cbuffer PerInstancePSData : register(b1) {
@@ -47,6 +57,7 @@ cbuffer PerInstancePSData : register(b1) {
 	float roughness;
 	float3 emissiveColour;
 	float alphaMask;
+	float matMetalness;
 #if TEXTURED
 	bool useNormalMap;
 	bool useEmissiveMap;
@@ -84,15 +95,30 @@ float squareLen(float3 v)
 	return dot(v,v);
 }
 
+//template<class Vec>
+//float pdot(Vec a, Vec b)
+//{
+//	return saturate(dot(a,b));
+//}
+
+#define pdot(a,b) saturate(dot(a,b));
+
 static const float PI = 3.14159265f;
+static const float dielectricF0 = 0.04;
+
+float4 Greyscale(float value)
+{
+	value = pow(value, debugGrayscaleExp);
+	return float4(value, value, value, value);
+}
 
 #define BLINN
-float3 ComputeLighting(float3 normal, float3 diffuseCol, float3 lightCol, float3 lightDir, float roughness, float3 viewDir)
+float3 ComputeLighting_BlinnPhong(float3 normal, float3 diffuseCol, float3 lightCol, float3 lightDir, float roughness, float3 viewDir, float metalness)
 {
 	float alpha = roughness * roughness;
 	float alphasq = max(alpha * alpha,0.001);
 	float specularExp = 2/alphasq - 2;
-	float diffInt = lightCol * saturate(dot(-lightDir, normal)) * ambdiffspec.y;
+	float diffInt = saturate(dot(-lightDir, normal)) * ambdiffspec.y;
 	#ifdef BLINN
 	float f = max(dot(normalize(-viewDir - lightDir),normal), 0.00001f);
 	if (f > 1)
@@ -108,6 +134,52 @@ float3 ComputeLighting(float3 normal, float3 diffuseCol, float3 lightCol, float3
 	return diffuseCol * (lightCol * diffInt) + lightCol * specInt;
 }
 
+float3 ComputeLighting_GGX(float3 normal, float3 diffuseCol, float3 lightCol, float3 lightDir, float roughness, float3 viewDir, float metalness)
+{
+	viewDir = -viewDir;
+	lightDir = -lightDir;
+	roughness = max(roughness, 0.01);
+	float3 halfVec = normalize(lightDir + viewDir);
+	float alpha = roughness * roughness;
+	float alphasq = alpha * alpha;
+	float NH = pdot(normal, halfVec);
+	float NV = pdot(normal, viewDir);
+    NV	= max (NV, 0.00005);
+	float NL = pdot(normal, lightDir);
+
+	float3 specularCol = metalness * diffuseCol + (1-metalness) * float3(dielectricF0,dielectricF0,dielectricF0);
+	float3 Fresnel = specularCol + (1-specularCol) * pow(1-NL, 5);
+	//return float3(1-NL, 1-NL, 1-NL) + 0.01 * Fresnel;
+	//return Fresnel;
+	float NDF = (NH > 0) * alphasq / (PI * pow(NH * NH * (alphasq - 1) + 1, 2));
+	//return float3(NDF, NDF, NDF);
+	//return Fresnel * NDF * lightCol;
+	float k = alpha/2;
+
+	float G11 = NV / max((NV * (1-k) + k), 0.0001);
+	float G12 = NL / max((NL * (1-k) + k), 0.0001);
+	float GeomShadowing = G11 * G12;
+//	return float3(GeomShadowing, GeomShadowing, GeomShadowing);
+
+	float3 specularPart = lightCol * (Fresnel * GeomShadowing * NDF) / max((4 * NL * NV),0.0001) ;
+//	return specularPart;
+	
+	float diffInt =  ambdiffspec.y;
+	float3 diffusePart = (1-metalness) * diffuseCol * lightCol * diffInt;
+
+    return (diffusePart + specularPart) * NL;
+	
+}
+
+float3 ComputeLighting(float3 normal, float3 diffuseCol, float3 lightCol, float3 lightDir, float roughness, float3 viewDir, float metalness)
+{
+	if (brdf == 1)
+	{
+        return ComputeLighting_GGX(normal, diffuseCol, lightCol, lightDir, roughness, viewDir, metalness);
+    }
+	return ComputeLighting_BlinnPhong(normal, diffuseCol, lightCol, lightDir, roughness, viewDir, metalness);
+}
+
 float4 main(
 	#if TEXTURED
 	float2 uv: TexCoord,
@@ -115,6 +187,10 @@ float4 main(
 	float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : Colour//, float4 lightPos: LightPos
 	) : SV_TARGET
 {
+//	if (debugMode < 0)
+//	{
+//		return float4(1,0,1,1);
+//	}
 	float4 texColour = matColour;
 	#if TEXTURED
 	texColour = diffuse.Sample(splr, float2(uv.x, uv.y));
@@ -127,6 +203,10 @@ float4 main(
 	float3 colour = float3(0,0,0);
 	float3 emiss = emissiveColour;
 #ifdef BASE_LAYER
+	if (debugMode == DEBUG_MODE_ALBEDO)
+	{
+		return texColour;
+	}
 #if TEXTURED
 	if (useEmissiveMap)
 	{
@@ -136,8 +216,13 @@ float4 main(
 #endif
 	colour += (ambient * ambdiffspec.x) * texColour;
 #else // BASE_LAYER
+	if (debugMode == DEBUG_MODE_ALBEDO)
+	{
+		return float4(0,0,0,0);
+	}
 	normal = normalize(normal);
 	float rough = roughness;
+	float metalness = matMetalness;
 #if TEXTURED
 	if (useNormalMap)
 	{
@@ -150,12 +235,37 @@ float4 main(
 	if (useRoughnessMap)
 	{
 		float3 fullRough = roughnessMap.Sample(splr, uv);
-		rough = fullRough.g;
+		rough = rough + fullRough.g;
+		metalness += fullRough.r;
 	}
 	
 #endif // TEXTURED
 	viewDir = normalize(viewDir);
 #endif // !BASE_LAYER
+	if (debugMode == DEBUG_MODE_ROUGHNESS)
+	{
+		#ifdef DIR_LIGHT
+		return Greyscale(rough);
+		#else
+		return float4(0,0,0,1);
+		#endif
+	}
+	if (debugMode == DEBUG_MODE_METALNESS)
+	{
+		#ifdef DIR_LIGHT
+		return Greyscale(metalness);
+		#else
+		return float4(0,0,0,1);
+		#endif
+	}
+	if (debugMode == DEBUG_MODE_NORMAL)
+	{
+		#ifdef DIR_LIGHT
+		return float4((normal + 1)/2, 1);
+		#else
+		return float4(0,0,0,0);
+		#endif
+	}
 
 
 
@@ -163,7 +273,6 @@ float4 main(
 	const float bias = 0.0005;
 #ifdef SHADOWMAP_2D
 	{
-
 		float4 lightPos = mul(world2Light, float4(shadeSpacePos, 1));
 		float2 lightCoord = float2((lightPos.x / lightPos.w + 1)/2, (1 - lightPos.y / lightPos.w)/2);
 		float shadowSpl = spotShadowMap.Sample(splr, lightCoord);
@@ -173,18 +282,27 @@ float4 main(
 //			shadowed = !( shadowSpl + bias >= depth);
 			unshadowed = spotShadowMap.SampleCmp(shadowSampler, lightCoord, depth - bias );
 		}
+		if (debugMode == 1)
+		{
+        	return float4(shadowSpl, shadowSpl, shadowSpl, 1);
+        }
+		else if (debugMode == 2)
+		{
+			return float4(lightCoord, lightPos.w, 1);
+		}
+		else if (debugMode == 3)
+		{
+			return float4(shadeSpacePos, 1);
+		}
 
 //		return mul(world2Light, float4(1,1,1,1))* 100;
 //		return lightPos;
 //		return float4(shadowSpl, shadowSpl, lightPos.z / lightPos.w, 1);
-	//	return float4(shadowSpl, shadowSpl, shadowSpl, 1);
 	}
 #endif
 
 #ifdef POINT_LIGHT
 	{
-			
-
 
 		float3 lightDist = -pointLightPos + shadeSpacePos;
 		//float3 lightPos = shadeSpacePos - pointLightPos
@@ -193,33 +311,21 @@ float4 main(
 		float r = pointLightRad;
 		float3 lightCol = pointLightCol / (d2 + r*r);
 
-		float4 dummy = 0.001 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, rough, viewDir),1);
+		float4 dummy = 0.001 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, rough, viewDir, metalness),1);
 
-//		return float4(shadeSpacePos, 1);
 		float4 lightPos = mul(world2Light, float4(shadeSpacePos, 1));
-		//return world2Light[3] + dummy;
-		//return float4(shadeSpacePos, 1) ;
-		//return lightPos;
-		//return lightPos + 0.01 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, specularExp, viewDir),1);
-		//return float4(lightDist + 0.01 * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, specularExp, viewDir),1);
-		//float shadowSpl = pointShadowMap.Sample(splr, lightDist);
 		float depth = length(lightDist.xyz) / 100;
-		//shadowSpl = abs(-shadowSpl + depth) > 0.005;
-	//	shadowSpl = depth;
-//shadowSpl = pow(shadowSpl, 1);
-		//return float4(shadowSpl, shadowSpl, shadowSpl,1)/1 + 0.001 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, specularExp, viewDir),1);
-//		unshadowed = !(shadowSpl + bias < depth);
 		unshadowed = pointShadowMap.SampleCmp(shadowSampler, lightDist, depth - bias );
 
 
-		//colour += float4(fullRough,1) + 0.001* (!shadowed) * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, roughness, viewDir);
-		colour += unshadowed * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, rough, viewDir);
+		colour += unshadowed * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, rough, viewDir, metalness);
 	}
 #endif
 
 #ifdef DIR_LIGHT
 	{
-		colour += (unshadowed) * ComputeLighting(normal, texColour * ambdiffspec.y, dirLightCol, dirLightDir, rough, viewDir);
+	//	unshadowed = 1 - 0.01*unshadowed;
+		colour += (unshadowed) * ComputeLighting(normal, texColour * ambdiffspec.y, dirLightCol, dirLightDir, rough, viewDir, metalness);
 	}
 #endif
 #ifdef SPOTLIGHT
@@ -232,19 +338,10 @@ float4 main(
 		float3 straightDist = dot(lightDist, spotLightDir) * spotLightDir;
 		float tangleSq = squareLen(lightDist - straightDist) / squareLen(straightDist);
 
-		colour += (unshadowed) * ((tangleSq < square(spotLightTan) && (dot(spotLightDir, lightDir) > 0))) * ComputeLighting(normal, texColour , lightCol, lightDir, rough, viewDir);
+		colour += (unshadowed) * ((tangleSq < square(spotLightTan) && (dot(spotLightDir, lightDir) > 0))) * ComputeLighting(normal, texColour , lightCol, lightDir, rough, viewDir, metalness);
 	}
 #endif
-//	float3 lightDir = dirLightDir;
-//	float3 lightCol = dirLightCol;
-//	float diffInt = lightCol * saturate(dot(-lightDir, normal)) * ambdiffspec.y;
-//	float3 outRay = normalize(lightDir - 2 * dot(lightDir, normal) * normal);
-//	float f = max(dot(normalize(viewDir),-outRay), 0.00001f);
-//	float specInt = pow(f, specularExp) * (specularExp > 0);// * ambdiffspec.z; 
-//	float x = specularExp / 500.0;//specularExp  > 0 ? 1 : 0;
 
 
 	return float4(colour, alpha);
-
-	//return float4(texColour * (ambient * ambdiffspec.x + lightCol * diffInt) + lightCol * specInt + shadeSpacePos * 0.f + emission, 1.0f);
 }
