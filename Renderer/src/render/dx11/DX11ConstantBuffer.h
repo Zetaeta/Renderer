@@ -4,14 +4,12 @@
 #include <core/TypeInfoUtils.h>
 #include <render/ConstantBuffer.h>
 
-struct PerFrameVertexData;
-
 namespace rnd
 {
 namespace dx11
 {
 
-class DX11ConstantBuffer
+class DX11ConstantBuffer : public IConstantBuffer
 {
 public:
 	DX11ConstantBuffer() {}
@@ -24,10 +22,6 @@ public:
 		if constexpr (HasClassTypeInfo<std::remove_cvref_t<T>>)
 		{
 			layout = GetLayout<T>();
-		}
-		else
-		{
-			static_assert(!std::is_same_v<std::remove_cvref_t<T>, PerFrameVertexData>);
 		}
 
 		mData = ConstantBufferData(size, layout);
@@ -66,12 +60,25 @@ public:
 	ID3D11Buffer* GetDeviceBuffer() { return mDeviceBuffer.Get(); }
 	ID3D11Buffer* Get() { return mDeviceBuffer.Get(); }
 
+	void SetLayout(CBLayout::Ref layout)
+	{
+		u64 currentSize = mData.GetSize();
+		if (layout->GetSize() > mData.GetSize())
+		{
+			mData = ConstantBufferData(currentSize * 2, layout);
+			CreateDeviceResource();
+		}
+		else
+		{
+			mData.SetLayout(layout);
+		}
+	}
+
 	void Update();
 	//void Bind(u32 idx);
 
 private:
 	void CreateDeviceResource();
-	ConstantBufferData mData;
 	DX11Ctx* mCtx = nullptr;
 	ComPtr<ID3D11Buffer> mDeviceBuffer;
 };

@@ -9,6 +9,7 @@
 #include "RenderContext.h"
 #include "RenderDeviceCtx.h"
 #include "RenderPass.h"
+#include "scene/Lights.h"
 
 struct MeshPart;
 class SceneComponent;
@@ -36,7 +37,7 @@ using RenderDeviceCtx = DX11Ctx;
 class SceneRenderPass : public RenderPass
 {
 public:
-	SceneRenderPass(DX11Ctx* ctx, Name passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil,
+	SceneRenderPass(RenderContext* ctx, Name passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil,
 				EMatType accepts = E_MT_ALL, EShadingLayer layer = EShadingLayer::NONE, ERenderPassMode mode = ERenderPassMode::IMMEDIATE);
 
 	bool Accepts(SceneComponent const* sceneComp, MeshPart const* mesh) const;
@@ -67,14 +68,13 @@ public:
 
 	IRenderDeviceCtx* DeviceCtx();
 
-	DX11Material* mMatOverride = nullptr;
+	IDeviceMaterial* mMatOverride = nullptr;
 
 protected:
 	RenderContext* mRCtx;
 	Vector<DrawData> mBuffer;
 
 	Name mPassName;
-	DX11Ctx* mCtx;
 	Scene const* mScene;
 	ERenderPassMode mMode;
 	EMatType mAcceptedMatTypes;

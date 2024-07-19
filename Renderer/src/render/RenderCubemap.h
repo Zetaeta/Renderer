@@ -19,7 +19,7 @@ public:
 
 	void SetCubemap(IDeviceTexture* cubemap);
 
-	IDeviceTexture* mCubemap;
+	IDeviceTextureCube* mCubemap;
 	EFlatRenderMode mMode;
 };
 

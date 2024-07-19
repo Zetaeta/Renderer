@@ -174,7 +174,7 @@ bool ImGuiControls(char const* name, ReflectedValue val, bool isConst, bool expa
 			{
 				ImGuiDataType imTyp = GetImGuiType(contained);
 				float		  defaultSpeed = GetSpeed(contained);
-				return ImGui::DragScalarN(name, imTyp, acc->GetAt(0).GetPtr(), acc->GetSize(), controlMeta.DragSpeed<float>(defaultSpeed));
+				return ImGui::DragScalarN(name, imTyp, acc->GetAt(0).GetPtr(), NumCast<u32>(acc->GetSize()), controlMeta.DragSpeed<float>(defaultSpeed));
 			}
 
 			bool edited = false;

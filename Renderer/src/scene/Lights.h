@@ -2,6 +2,7 @@
 #include "core/Maths.h"
 #include "core/TypeInfoUtils.h"
 #include "core/Transform.h"
+#include "common/Material.h"
 
 class SceneComponent;
 
@@ -16,19 +17,6 @@ enum class ELightType
 
 ITER_ENUM(ELightType)
 
-
-enum class EShadingLayer : u8
-{
-	BASE = 0,
-	DIRLIGHT,
-	LIGHTS_START = DIRLIGHT,
-	POINTLIGHT,
-	SPOTLIGHT,
-	SHADING_COUNT,
-	NONE = SHADING_COUNT,
-	DEPTH = NONE,
-	COUNT
-};
 
 inline EShadingLayer GetLightLayer(ELightType lightType)
 {

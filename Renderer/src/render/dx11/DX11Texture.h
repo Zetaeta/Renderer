@@ -9,6 +9,11 @@
 #include "DX11TextureBase.h"
 #include "DX11RenderTarget.h"
 
+namespace rnd
+{
+namespace dx11
+{
+
 struct DX11Ctx;
 
 using Microsoft::WRL::ComPtr;
@@ -93,3 +98,5 @@ public:
 	mat4 m_World2LightProj;
 };
 
+}
+}

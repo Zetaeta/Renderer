@@ -2,6 +2,7 @@
 #include "scene/Scene.h"
 #include "imgui.h"
 #include "common/ImguiControls.h"
+#include <editor/Editor.h>
 
 
 SceneComponent::SceneComponent(SceneComponent* parent, String const& name, Transform const& trans)
@@ -49,6 +50,9 @@ void SceneComponent::Initialize()
 	}
 	OnInitialize();
 	m_Initialized = true;
+	//#if R_EDITOR
+	Editor::Get()->GetScreenObjManager().Register<SOSceneComponent>(this);
+	//#endif
 }
 
 void SceneComponent::OnUpdate(Scene& scene)
@@ -56,7 +60,11 @@ void SceneComponent::OnUpdate(Scene& scene)
 
 	m_WorldTransform = static_cast<WorldTransform>(m_Transform);
 	if (m_Parent != nullptr)
+	{
 		m_WorldTransform = m_Parent->GetWorldTransform() * m_WorldTransform;
+	}
+
+
 }
 
 void StaticMeshComponent::OnInitialize()

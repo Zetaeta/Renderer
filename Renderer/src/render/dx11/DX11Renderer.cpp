@@ -16,6 +16,10 @@
 #include "glm/gtx/transform.hpp"
 #include <core/Matrix.h>
 
+namespace rnd
+{
+namespace dx11
+{
 using std::swap;
 using std::vector;
 using std::array;
@@ -99,22 +103,6 @@ struct PerFrameVertexData
 	vec3 cameraPos;
 };
 DECLARE_CLASS_TYPEINFO(PerFrameVertexData);
-
-DEFINE_CLASS_TYPEINFO(PerFrameVertexData)
-BEGIN_REFL_PROPS()
-REFL_PROP(screen2World)
-REFL_PROP(world2Light)
-REFL_PROP(cameraPos)
-END_REFL_PROPS()
-END_CLASS_TYPEINFO()
-
-DEFINE_CLASS_TYPEINFO(PerInstanceVSData)
-BEGIN_REFL_PROPS()
-REFL_PROP(fullTransform)
-REFL_PROP(model2ShadeSpace)
-REFL_PROP(model2ShadeDual)
-END_REFL_PROPS()
-END_CLASS_TYPEINFO()
 
 //template <typename T>
 //void DX11Renderer::CreateConstantBuffer(ComPtr<ID3D11Buffer>& buffer, T const& initialData, u32 size)
@@ -395,10 +383,13 @@ struct PerInstancePSData
  DX11Renderer::DX11Renderer(UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context)
 	: m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context)
 {
+	Device = this;
+	TextureManager = &m_Ctx.psTextures;
 	m_Ctx.pDevice = pDevice;
 	m_Ctx.pContext = pContext;
 	m_Ctx.m_Renderer = this;
 	Setup();
+	MatManager = new MaterialManager(this);
 }
 
 DX11Renderer::~DX11Renderer()
@@ -961,6 +952,11 @@ void DX11Renderer::DrawCubemap(ID3D11ShaderResourceView* srv, bool depth)
 	pContext->Draw(3,0);
 }
 
+void DX11Renderer::DrawCubemap(IDeviceTextureCube* cubemap)
+{
+	DrawCubemap(cubemap->GetTextureHandle<ID3D11ShaderResourceView>(), cubemap->IsDepthStencil());
+}
+
 void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 {
 	VS2DCBuff cbuff;
@@ -1051,6 +1047,23 @@ void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useM
 	m_Materials[mesh.material]->UnBind(m_Ctx);
 }
 
+IConstantBuffer* DX11Renderer::GetConstantBuffer(ECBFrequency freq, size_t size /* = 0 */)
+{
+	switch (freq)
+	{
+		case rnd::ECBFrequency::PS_PerInstance:
+			return &m_PSPerInstanceBuff;
+		case rnd::ECBFrequency::PS_PerFrame:
+			return &m_PSPerFrameBuff;
+		case rnd::ECBFrequency::VS_PerInstance:
+			return &m_VSPerInstanceBuff;
+		case rnd::ECBFrequency::VS_PerFrame:
+			return &m_VSPerFrameBuff;
+		default:
+			return nullptr;
+	}
+}
+
 void DX11Renderer::PrepareMesh(MeshPart const& mesh, DX11Mesh& meshData)
 {
 	printf("Creating buffers for mesh %s\n", mesh.name.c_str());
@@ -1135,7 +1148,7 @@ void DX11Renderer::SetMainRenderTarget(ComPtr<ID3D11RenderTargetView> rt, ComPtr
 	{
 		m_MainRenderTarget = std::make_shared<DX11RenderTarget>(RenderTargetDesc{ "MainRT", ETextureDimension::TEX_2D, width, height }, rt, ds);
 		m_MainDepthStencil = std::make_shared<DX11DepthStencil>(DepthStencilDesc{ "MainDS",  ETextureDimension::TEX_2D, width, height }, ds);
-		mRCtx = std::make_unique<RenderContext>(&m_Ctx, m_Camera, m_MainRenderTarget, m_MainDepthStencil);
+		mRCtx = std::make_unique<RenderContext>(this, m_Camera, m_MainRenderTarget, m_MainDepthStencil);
 		m_Ctx.mRCtx = mRCtx.get();
 	}
 	else
@@ -1407,4 +1420,23 @@ void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char con
 	}
 
 }
+
+}
+}
+
+DEFINE_CLASS_TYPEINFO(rnd::dx11::PerFrameVertexData)
+BEGIN_REFL_PROPS()
+REFL_PROP(screen2World)
+REFL_PROP(world2Light)
+REFL_PROP(cameraPos)
+END_REFL_PROPS()
+END_CLASS_TYPEINFO()
+
+DEFINE_CLASS_TYPEINFO(rnd::dx11::PerInstanceVSData)
+BEGIN_REFL_PROPS()
+REFL_PROP(fullTransform)
+REFL_PROP(model2ShadeSpace)
+REFL_PROP(model2ShadeDual)
+END_REFL_PROPS()
+END_CLASS_TYPEINFO()
 

@@ -5,15 +5,21 @@
 #include "render/dx11/DX11Texture.h"
 #include "render/dx11/DX11Ctx.h"
 #include <scene/Lights.h>
+#include <common/Material.h>
+namespace rnd
+{
+namespace dx11
+{
 
-struct DX11MaterialType
+struct DX11MaterialType : public MaterialArchetype
 {
 	ComPtr<ID3D11PixelShader>  m_PixelShader[Denum(EShadingLayer::COUNT)];
 	ComPtr<ID3D11VertexShader> m_VertexShader;
 	ComPtr<ID3D11InputLayout> m_InputLayout;
 	std::unique_ptr<class DX11Material> m_Default;
+	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) override;
 	
-	using Ref = DX11MaterialType*;
+	using Ref = RefPtr<DX11MaterialType>;
 	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer)
 	{
 		ctx.pContext->PSSetShader(m_PixelShader[layer >= EShadingLayer::NONE ? 0 : Denum(layer)].Get(), nullptr, 0);
@@ -22,19 +28,20 @@ struct DX11MaterialType
 	}
 };
 
-class DX11Material
+class DX11Material : public IDeviceMaterial
 {
 public:
 	DX11Material(DX11MaterialType::Ref matType)
-		: m_MatType(matType) {}
+		: IDeviceMaterial(matType) {}
 
-	DX11MaterialType::Ref m_MatType;
 
 	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer);
 
 	virtual void UnBind(DX11Ctx& ctx)
 	{
 	}
+
+	void Bind(rnd::RenderContext& rctx, EShadingLayer layer) override;
 };
 
 class DX11TexturedMaterial : public DX11Material
@@ -54,3 +61,5 @@ public:
 	std::shared_ptr<DX11Texture> m_Roughness;
 };
 
+}
+}

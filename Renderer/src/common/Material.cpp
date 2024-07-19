@@ -1,4 +1,5 @@
 #include "common/Material.h"
+#include <render/dx11/DX11Renderer.h>
 
 
 
@@ -26,4 +27,9 @@ void Material::MarkUpdateDone()
 void Material::OnPropertyUpdate()
 {
 	translucent = colour.a < 1;
+}
+
+IDeviceMaterial* MaterialManager::GetDefaultMaterial(int matType)
+{
+	return static_cast<rnd::dx11::DX11Renderer*>(mRenderer)->GetDefaultMaterial(matType);
 }

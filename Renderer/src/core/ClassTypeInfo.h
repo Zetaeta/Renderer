@@ -480,11 +480,15 @@ struct ConstructorHelper
 #define ATSTART(name, block) \
 static auto s_##name = ConstructorHelper([] { block; });
 
-#define DECLARE_CLASS_TYPEINFO(typ)\
-	template<>\
-	DECLARE_CLASS_TYPEINFO_TEMPLATE(typ)
-#define DECLARE_CLASS_TYPEINFO_TEMPLATE(typ)\
-	struct TypeInfoHelper<typ>           \
+#define DECLARE_CLASS_TYPEINFO_TEMPLATE(typ)
+#define DECLARE_CLASS_TYPEINFO(typ)
+
+
+//	template<>\
+//	DECLARE_CLASS_TYPEINFO_TEMPLATE_(typ)
+//#define DECLARE_CLASS_TYPEINFO_TEMPLATE_(typ)
+#define DECLARE_CLASS_TYPEINFO_(typ)\
+	struct TypeInfoHelper           \
 	{                               \
 		constexpr static u64 ID = #typ ""_hash;\
 		constexpr static auto const NAME = Static(#typ);\
@@ -494,17 +498,19 @@ static auto s_##name = ConstructorHelper([] { block; });
 		static MyClassInfo const	s_TypeInfo;\
 	};
 
-#define DECLARE_STI(Class, Parent) friend struct TypeInfoHelper<Class>;\
+#define DECLARE_STI(Class, Parent)\
 public:\
 	using Super = Parent;\
 	ClassTypeInfo const& GetTypeInfo() const; \
-	static ClassTypeInfo const& GetStaticTypeInfo(); 
+	static ClassTypeInfo const& GetStaticTypeInfo();\
+	DECLARE_CLASS_TYPEINFO_(Class)
 
-#define DECLARE_RTTI(Class, Parent) friend struct TypeInfoHelper<Class>;\
+#define DECLARE_RTTI(Class, Parent)\
 public:\
 	using Super = Parent;\
 	virtual ClassTypeInfo const& GetTypeInfo() const override;\
-	static ClassTypeInfo const& GetStaticTypeInfo();
+	static ClassTypeInfo const& GetStaticTypeInfo();\
+	DECLARE_CLASS_TYPEINFO_(Class)
 
 #define DECLARE_STI_NOBASE(Class) DECLARE_STI(Class, void)
 
@@ -520,9 +526,9 @@ public:\
 		return ::GetClassTypeInfo<Class>();\
 	}\
 	temp\
-	ClassTypeInfoImpl<Class> const TypeInfoHelper<Class>::s_TypeInfo = MakeTypeInfo();\
+	ClassTypeInfoImpl<Class> const Class::TypeInfoHelper::s_TypeInfo = MakeTypeInfo();\
 	temp\
-	ClassTypeInfoImpl<Class> TypeInfoHelper<Class>::MakeTypeInfo() {\
+	ClassTypeInfoImpl<Class> Class::TypeInfoHelper::MakeTypeInfo() {\
 		Name name = #Class;\
 		ClassTypeInfo::Properties attrs;\
 		auto const* parent = MaybeGetClassTypeInfo<Class::Super>();\
@@ -536,8 +542,8 @@ public:\
 	{                                        \
 		return ::GetClassTypeInfo<Class>();\
 	}\
-	ClassTypeInfoImpl<Class> const TypeInfoHelper<Class>::s_TypeInfo = MakeTypeInfo();\
-	ClassTypeInfoImpl<Class> TypeInfoHelper<Class>::MakeTypeInfo() {\
+	ClassTypeInfoImpl<Class> const Class::TypeInfoHelper::s_TypeInfo = MakeTypeInfo();\
+	ClassTypeInfoImpl<Class> Class::TypeInfoHelper::MakeTypeInfo() {\
 		Name name = #Class;\
 		ClassTypeInfo::Properties attrs;\
 		auto const* parent = MaybeGetClassTypeInfo<Class::Super>();
@@ -545,8 +551,8 @@ public:\
 	//g_TypeDB[TypeInfoHelper<Class>::ID] = std::make_unique<ClassTypeInfo>(#Class, GetTypeInfo<Class::Super>(), Vector<OwningPtr<AttributeInfo>> { 
 
 #define BEGIN_REFL_PROPS()
-#define REFL_PROP(prop, ...) attrs.emplace_back(#prop, GetTypeInfo<decltype(Type::prop)>(), offsetof(Type, prop), std::is_const_v < decltype(Type::prop)>, __VA_ARGS__);
-#define REFL_PROP_SETTER(prop, setter, ...) attrs.emplace_back(#prop, GetTypeInfo<decltype(Type::prop)>(), offsetof(Type, prop), new MemberFunctionImpl<Type, decltype(Type{}.setter(Type{}.prop)), const decltype(Type::prop)&>(&Type::setter), std::is_const_v<decltype(Type::prop)>, __VA_ARGS__);
+#define REFL_PROP(prop, ...) attrs.emplace_back(#prop, ::GetTypeInfo<decltype(Type::prop)>(), offsetof(Type, prop), std::is_const_v<decltype(Type::prop)>, __VA_ARGS__);
+#define REFL_PROP_SETTER(prop, setter, ...) attrs.emplace_back(#prop, ::GetTypeInfo<decltype(Type::prop)>(), offsetof(Type, prop), new MemberFunctionImpl<Type, decltype(Type{}.setter(Type{}.prop)), const decltype(Type::prop)&>(&Type::setter), std::is_const_v<decltype(Type::prop)>, __VA_ARGS__);
 #define END_REFL_PROPS()
 #define END_CLASS_TYPEINFO()                           \
 		return ClassTypeInfoImpl<Type>{ name, parent, std::move(attrs) }; \

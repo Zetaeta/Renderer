@@ -448,7 +448,7 @@ Scenelet::Ref AssetManager::ImportScenelet(String const& path, bool loadTextures
 
 	if (aiscene != nullptr)
 	{
-		u32 start = m_Meshes.size();
+		u32 start = NumCast<u32>(m_Meshes.size());
 		auto assName = filePath.filename();
 		AssetPath assetPath = assName.replace_extension().string();
 		u32 end = AddScenelet(aiscene, assetPath, true, path, loadTextures, async);

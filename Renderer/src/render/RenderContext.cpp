@@ -10,16 +10,13 @@
 namespace rnd
 {
 
-RenderContext::RenderContext(DX11Ctx* ctx, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds)
-		: mCtx(ctx)
+RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds)
 {
-	mCtx = ctx;
-	mCtx->mRCtx = this;
-	mDevice = mCtx->m_Renderer;
-	mDeviceCtx = mCtx->m_Renderer;
-	mPasses.emplace_back(std::make_unique<ShadowmapsPass>(mCtx));
+	mDevice = DeviceCtx->Device;
+	mDeviceCtx = DeviceCtx;
+	mPasses.emplace_back(std::make_unique<ShadowmapsPass>(this));
 	mPasses.emplace_back(std::make_unique<ForwardRenderPass>(this, "ForwardRender", camera, rt, ds));
-	mPasses.emplace_back(std::make_unique<RenderCubemap>(EFlatRenderMode::BACK, "Background", mCtx->m_Renderer->m_BG.get()));
+	mPasses.emplace_back(std::make_unique<RenderCubemap>(EFlatRenderMode::BACK, "Background", static_cast<dx11::DX11Renderer*>(DeviceCtx)->m_BG.get()));
 	mDebugCubePass = static_cast<RenderCubemap*>(mPasses.emplace_back(std::make_unique<RenderCubemap>(EFlatRenderMode::FRONT, "DebugCube")).get());
 	memset(mLayersEnabled, 1, Denum(EShadingLayer::COUNT));
 }

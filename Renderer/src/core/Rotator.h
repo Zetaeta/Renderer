@@ -5,7 +5,7 @@
 
 struct Rotator
 {
-	DECLARE_STI_NOBASE(Rotator);
+//	DECLARE_STI_NOBASE(Rotator);
 
 	float		  pitch = 0;
 	float		  yaw = 0;

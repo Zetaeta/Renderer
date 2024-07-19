@@ -1,13 +1,19 @@
 #pragma once
 #include "ImageRenderMgrDX11.h"
+
+namespace rnd
+{
+namespace dx11
+{
+
 class RenderManagerDX11 : public RenderManager
 {
 public:
 	using Super = RenderManager;
 
 
-	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context)
-		: Super(new InputImgui())
+	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input)
+		: Super(input)
 	{
 		m_hardwareRenderer = std::make_unique<DX11Renderer>(&m_Camera, 0, 0, device, context);
 	}
@@ -42,3 +48,6 @@ protected:
 	float m_HwFrame = 0;
 	//std::vector<ComPtr
 };
+
+}
+}

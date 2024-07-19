@@ -2,6 +2,10 @@
 #include <format>
 #include "DX11Renderer.h"
 
+namespace rnd
+{
+namespace dx11
+{
 
 
 DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBRESOURCE_DATA const* initData)
@@ -143,4 +147,7 @@ void DX11ShadowCube::Init(DX11Ctx& ctx, u32 size)
 	desc.width = size;
 	desc.height = size;
 	m_Cube = std::make_unique<DX11Cubemap>(ctx, desc);
+}
+
+}
 }

@@ -28,7 +28,7 @@ void ShadowmapsPass::RenderShadowmap(ELightType lightType, u32 lightIndex)
 	mViewCam = lrd.GetCamera();
 	if (lightType == ELightType::POINT_LIGHT)
 	{
-		mMatOverride = mCtx->m_Renderer->GetDefaultMaterial(DX11Renderer::MAT_POINT_SHADOW_DEPTH);
+		mMatOverride = mRCtx->GetMaterialManager()->GetDefaultMaterial(MAT_POINT_SHADOW_DEPTH);
 	}
 	RenderBuffer();
 	mMatOverride = nullptr;

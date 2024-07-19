@@ -5,6 +5,14 @@
 #include <common/Material.h>
 #include <atomic>
 #include <mutex>
+#include <core/RefCounted.h>
+#include <render/ConstantBuffer.h>
+
+namespace rnd
+{
+class RenderContext;
+class IRenderDeviceCtx;
+}
 
 enum EMatType
 {
@@ -15,6 +23,53 @@ enum EMatType
 };
 
 FLAG_ENUM(EMatType)
+
+enum EMatArchetype
+ {
+	 MAT_PLAIN = 0,
+	 MAT_TEX,
+	 MAT_BG,
+	 MAT_2D,
+	 MAT_POINT_SHADOW_DEPTH,
+	 MAT_CUBE_DEPTH,
+	 MAT_COUNT
+ };
+
+enum class EShadingLayer : u8
+{
+	BASE = 0,
+	DIRLIGHT,
+	LIGHTS_START = DIRLIGHT,
+	POINTLIGHT,
+	SPOTLIGHT,
+	SHADING_COUNT,
+	NONE = SHADING_COUNT,
+	DEPTH = NONE,
+	COUNT
+};
+
+
+class MaterialArchetype : public RefCountedObject
+{
+public:
+	rnd::CBLayout::Ref PSPerFrame;
+	rnd::CBLayout::Ref VSPerFrame;
+	rnd::CBLayout::Ref PSPerInstance;
+	rnd::CBLayout::Ref VSPerInstance;
+	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) = 0;
+};
+
+enum class EShadingLayer : u8;
+
+class IDeviceMaterial
+{
+public:
+	IDeviceMaterial(RefPtr<MaterialArchetype> matType)
+		: Archetype(matType){}
+
+	const RefPtr<MaterialArchetype> Archetype;
+	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) = 0;
+};
 
 using col4 = vec4;
 struct Material
@@ -63,10 +118,26 @@ struct Material
 		if (mask < 1.f) return E_MT_MASKED;
 		return E_MT_OPAQUE;
 	}
-	private:
+
+	OwningPtr<IDeviceMaterial> DeviceMat;
+private:
 	std::atomic<bool> m_Updated = false;
 	std::mutex m_UpdateMutex;
 };
 
 using MaterialID = int;
+
+class MaterialManager
+{
+public:
+	MaterialManager(rnd::IRenderDeviceCtx* deviceCtx)
+		: mRenderer(deviceCtx)
+	{
+	}
+	IDeviceMaterial* GetDefaultMaterial(int matType);
+
+	//std::vector<OwningPtr<MaterialArchetype>> mMatTypes;
+	//std::vector<OwningPtr<IDeviceMaterial>> mMaterials;
+	rnd::IRenderDeviceCtx* mRenderer;
+};
 

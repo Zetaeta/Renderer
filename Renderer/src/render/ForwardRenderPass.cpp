@@ -5,8 +5,8 @@
 namespace rnd
 {
 
-ForwardRenderPass::ForwardRenderPass(RenderContext const* rctx, Name const& name, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds)
-	: SceneRenderPass(rctx->mCtx, name, camera, rt, ds)
+ForwardRenderPass::ForwardRenderPass(RenderContext* rctx, Name const& name, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds)
+	: SceneRenderPass(rctx, name, camera, rt, ds)
 {
 }
 
@@ -49,8 +49,9 @@ void ForwardRenderPass::BeginRender()
 void ForwardRenderPass::SetupLayer(EShadingLayer layer, u32 index)
 {
 	mLayer = layer;
-	auto& PSPF = mCtx->m_Renderer->GetPerFramePSCB();
+	auto& PSPF = static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerFramePSCB();
 
+	using namespace dx11;
 	if (layer == EShadingLayer::BASE)
 	{
 		PerFramePSData perFrameData;
@@ -124,7 +125,7 @@ void ForwardRenderPass::SetupLayer(EShadingLayer layer, u32 index)
 	default:
 		break;
 	}
-	mCtx->psTextures.SetTexture(E_TS_SHADOWMAP, lrd.mShadowMap->GetTextureHandle<ID3D11ShaderResourceView>());
+	DeviceCtx()->TextureManager->SetTexture(E_TS_SHADOWMAP, lrd.mShadowMap);
 }
 
 }

@@ -5,6 +5,10 @@
 #include <render/dx11/DX11TextureBase.h>
 #include "DX11RenderTarget.h"
 
+namespace rnd
+{
+namespace dx11
+{
 class DX11Cubemap : public DX11TextureBase
 {
 public:
@@ -61,3 +65,5 @@ public:
 
 	mat4 m_World2Light;
 };
+}
+}

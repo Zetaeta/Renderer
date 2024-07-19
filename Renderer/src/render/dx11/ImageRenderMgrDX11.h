@@ -4,6 +4,11 @@
 #include "render/ImageRenderer.h"
 #include "render/dx11/DX11Texture.h"
 
+namespace rnd
+{
+namespace dx11
+{
+
 class ImageRenderMgrDX11 : public ImageRenderMgr
 {
 public:
@@ -24,6 +29,7 @@ public:
 	}
 	std::unique_ptr<DX11Texture> m_Img;
 	ID3D11Device* m_Device;
-
-
 };
+
+}
+}

@@ -117,7 +117,7 @@ CompoundMeshData ObjReader::Parse(string file)
 				if (vip1 == 0)
 				{
 					vertices.push_back(Vertex{ getPos(parsed[0]), getNorm(parsed[2]), getUVs(parsed[1]) });
-					vip1 = vertices.size();
+					vip1 = NumCast<u32>(vertices.size());
 				}
 				assert(vip1 > 0);
 				face[i] = vip1 - 1;

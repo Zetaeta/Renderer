@@ -3,17 +3,16 @@
 #include "DeviceTexture.h"
 #include <scene/Lights.h>
 #include "RenderDevice.h"
+#include "RenderDeviceCtx.h"
 
 struct Scene;
 struct DX11Ctx;
-class IRenderDeviceCtx;
 namespace rnd { class RenderCubemap; }
 
 namespace rnd { class IRenderDevice; }
 
 namespace rnd
 {
-
 class RenderPass;
 //template<typename T>
 class LightRenderData
@@ -47,7 +46,7 @@ enum class EShadingDebugMode : u32
 class RenderContext
 {
 public:
-	RenderContext(DX11Ctx* mCtx, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds);
+	RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds);
 	void RenderFrame(Scene const& scene);
 
 	LightRenderData CreateLightRenderData(ELightType lightType, u32 lightIdx);
@@ -69,9 +68,13 @@ public:
 		return mDeviceCtx;
 	}
 
+	MaterialManager* GetMaterialManager()
+	{
+		return mDeviceCtx->MatManager;
+	}
+
 	const Scene& GetScene() { return *mScene; }
 
-	DX11Ctx* mCtx;
 
 	bool mLayersEnabled[Denum(EShadingLayer::COUNT)];
 

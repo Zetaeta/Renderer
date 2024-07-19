@@ -16,6 +16,10 @@
 #include "render/RenderDevice.h"
 #include "render/RenderDeviceCtx.h"
 
+namespace rnd
+{
+namespace dx11
+{
 using namespace rnd;
 using namespace rnd::dx11;
 
@@ -87,7 +91,7 @@ struct PFPSSpotLight// : PerFramePSData
 	int brdf = 0;
 };
 
-class DX11Renderer : public IRenderer, public IRenderDeviceCtx, public IRenderDevice
+class DX11Renderer : public IRenderer, public rnd::IRenderDeviceCtx, public IRenderDevice
 {
 public:
 	DX11Renderer(UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context);
@@ -106,6 +110,7 @@ public:
 	void PrepareBG();
 	void DrawBG();
 	void DrawCubemap(ID3D11ShaderResourceView* srv, bool depth = false);
+	void DrawCubemap(IDeviceTextureCube* cubemap);
 
 	//template<typename T>
 	//void CreateConstantBuffer(ComPtr<ID3D11Buffer>& buffer, T const& initialData = T {}, u32 size = sizeof(T));
@@ -118,6 +123,7 @@ public:
 	void RenderDepthOnly(ID3D11DepthStencilView* dsv, u32 width, u32 height, mat4 const& transform, mat4 const& projection, DX11MaterialType* material = nullptr, mat4* outFullTrans = nullptr);
 
 	void DrawMesh(MeshPart const& meshPart, EShadingLayer layer, bool useMaterial = true);
+	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size /* = 0 */) override;
 
 	DX11ConstantBuffer& GetPerFramePSCB() { return m_PSPerFrameBuff; }
 	DX11ConstantBuffer& GetPerFrameVSCB() { return m_VSPerFrameBuff; }
@@ -175,17 +181,6 @@ public:
 		return mat.specularity;
 	}*/
 
-	enum EMatType
-	 {
-		 MAT_PLAIN = 0,
-		 MAT_TEX,
-		 MAT_BG,
-		 MAT_2D,
-		 MAT_POINT_SHADOW_DEPTH,
-		 MAT_CUBE_DEPTH,
-		 MAT_COUNT
-	 };
-
 	//constexpr static u32 const MAT_PLAIN = 0;
 	//constexpr static u32 const MAT_TEX = 1;
 	//constexpr static u32 const MAT_BG = 2;
@@ -196,6 +191,7 @@ public:
 	std::vector<DX11MaterialType> m_MatTypes;
 	std::vector<std::unique_ptr<DX11Material>> m_Materials;
 	std::unique_ptr<DX11Cubemap> m_BG;
+	DX11Ctx m_Ctx;
 
 private:
 	template<typename TFunc>
@@ -215,7 +211,6 @@ protected:
 	ID3D11Device*		   pDevice;
 	ID3D11DeviceContext*	   pContext;
 
-	DX11Ctx m_Ctx;
 
 //	std::vector<DX11Mesh> m_MeshData;
 	std::unordered_map<MeshPart const*, DX11Mesh> m_MeshData;
@@ -293,3 +288,5 @@ protected:
 	bool mUsePasses = true;
 };
 
+}
+}

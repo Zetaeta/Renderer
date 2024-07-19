@@ -1,10 +1,14 @@
 #include "render/dx11/DX11Material.h"
+#include "DX11Renderer.h"
 
-
+namespace rnd
+{
+namespace dx11
+{
 
 void DX11TexturedMaterial::Bind(DX11Ctx& ctx, EShadingLayer layer)
 {
-	m_MatType->Bind(ctx, layer);
+	Archetype->Bind(*ctx.mRCtx, layer);
 	if (layer == EShadingLayer::NONE || layer == EShadingLayer::DEPTH)
 	{
 		ctx.psTextures.ClearFlags();
@@ -44,11 +48,24 @@ void DX11TexturedMaterial::UnBind(DX11Ctx& ctx)
 
 void DX11Material::Bind(DX11Ctx& ctx, EShadingLayer layer)
 {
-	m_MatType->Bind(ctx, layer);
+	Archetype->Bind(*ctx.mRCtx, layer);
 	ctx.psTextures.ClearFlags();
 	if (layer == EShadingLayer::SPOTLIGHT || layer == EShadingLayer::DIRLIGHT || layer == EShadingLayer::POINTLIGHT)
 	{
 		ctx.psTextures.SetFlags(F_TS_SHADOWMAP);
 	}
 	ctx.psTextures.Bind(ctx);
+}
+
+void DX11Material::Bind(rnd::RenderContext& rctx, EShadingLayer layer)
+{
+	Bind(static_cast<DX11Renderer*>(rctx.DeviceCtx())->m_Ctx, layer);
+}
+
+void DX11MaterialType::Bind(rnd::RenderContext& rctx, EShadingLayer layer)
+{
+	Bind(static_cast<DX11Renderer*>(rctx.DeviceCtx())->m_Ctx, layer);
+}
+
+}
 }

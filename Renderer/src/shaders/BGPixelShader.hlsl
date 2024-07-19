@@ -10,6 +10,7 @@ float4 main(float3 uvw: TexCoord) : SV_TARGET
 	//s = pow(s,0.5);
 	//return float4(s,s,s,1);
 	float4 outColour = tex.Sample(splr, uvw);
+//	return outColour * 0.01 + float4(uvw,1);
 #if DEPTH_SAMPLE
 	float d = outColour.x;
 	d = pow(d,0.5);

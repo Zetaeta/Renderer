@@ -66,8 +66,8 @@ public:
 
 	TLight m_LightData;
 };
-template<typename TLight>
-DECLARE_CLASS_TYPEINFO_TEMPLATE(LightComponent<TLight>);
+//template<typename TLight>
+//DECLARE_CLASS_TYPEINFO_TEMPLATE(LightComponent<TLight>);
 
 
 template <typename T>
@@ -109,5 +109,5 @@ public:
 	}
 };
 
-template<typename TLight>
-DECLARE_CLASS_TYPEINFO_TEMPLATE(LightObject<TLight>);
+//template<typename TLight>
+//DECLARE_CLASS_TYPEINFO_TEMPLATE(LightObject<TLight>);

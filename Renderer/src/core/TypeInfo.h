@@ -206,23 +206,69 @@ struct TypeInfoHelper
 	
 };
 
-template<typename T>
-TypeInfo const& GetTypeInfo()
-{
-	return TypeInfoHelper<std::remove_cvref_t<T>>::s_TypeInfo;// g_TypeDB[TypeInfoHelper<T>::ID].Get();
-}
+//template<typename T>
+//struct TypeInfoHelper
+//{
+//	
+//};
 
 template<typename T>
-concept HasTypeInfo = requires(T a)
+concept HasInternalTypeInfo = requires(T a)
+{
+	T::TypeInfoHelper::s_TypeInfo;
+};
+
+template<typename T>
+concept HasExternalTypeInfo = requires(T a)
 {
 	TypeInfoHelper<T>::s_TypeInfo;
 };
 
 template<typename T>
+inline TypeInfo const& GetTypeInfo()
+	requires(HasExternalTypeInfo<T>)
+{
+	return TypeInfoHelper<std::remove_cvref_t<T>>::s_TypeInfo;// g_TypeDB[TypeInfoHelper<T>::ID].Get();
+}
+
+template<typename T>
+	requires(HasInternalTypeInfo<T>)
+inline TypeInfo const& GetTypeInfo()
+{
+	return std::remove_cvref_t<T>::TypeInfoHelper::s_TypeInfo;// g_TypeDB[TypeInfoHelper<T>::ID].Get();
+}
+
+template<typename T>
+concept HasTypeInfo = HasInternalTypeInfo<T> || HasExternalTypeInfo<T>;
+
+template<typename T>
 concept HasClassTypeInfo = requires(T a)
 {
-	{ TypeInfoHelper<T>::s_TypeInfo } -> DerivedStrip<ClassTypeInfo>;
+	{ T::TypeInfoHelper::s_TypeInfo } -> DerivedStrip<ClassTypeInfo>;
 };
+
+template<typename T>
+struct GetTypeInfoHelper_
+{
+};
+
+template<typename T>
+	requires (HasInternalTypeInfo<T>)
+struct GetTypeInfoHelper_<T>
+{
+	using Type = T::TypeInfoHelper;
+};
+
+template<typename T>
+	requires (HasExternalTypeInfo<T>)
+struct GetTypeInfoHelper_<T>
+{
+	using Type = ::TypeInfoHelper<T>;
+};
+
+template<typename T>
+using GetTypeInfoHelper = GetTypeInfoHelper_<T>::Type;
+
 
 TypeInfo const* FindTypeInfo(Name name);
 
@@ -274,7 +320,7 @@ public:
 	struct TypeInfoHelper<typ>           \
 	{                               \
 		constexpr static u64 ID = #typ ""_hash;\
-		constexpr static auto const		NAME = Static(#typ);\
+		constexpr static auto const	NAME = Static(#typ);\
 		static TI const s_TypeInfo;\
 	};
 

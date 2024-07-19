@@ -84,9 +84,53 @@ struct pos3 : public vec3
 	template<typename... TArgs>
 	pos3(TArgs&&... args)
 		: vec3(std::forward<TArgs>(args)...) {}
-	pos3(float f)
+
+	constexpr pos3(float x, float y, float z)
+		: vec3(x, y, z) {}
+
+	constexpr pos3(float f)
 		: vec3(f) {}
+
+	constexpr static pos3 Max()
+	{
+		return pos3(std::numeric_limits<value_type>::max());
+	}
+
+	constexpr static pos3 Min()
+	{
+		return pos3(std::numeric_limits<value_type>::max());
+	}
 };
+
+namespace maths
+{
+
+inline pos3 Min(pos3 const& a, pos3 const& b)
+{
+	return
+	pos3 {
+		min(a.x, b.x),
+		min(a.y, b.y),
+		min(a.z, b.z)
+	};
+}
+
+inline pos3 Max(pos3 const& a, pos3 const& b)
+{
+	return
+	pos3 {
+		max(a.x, b.x),
+		max(a.y, b.y),
+		max(a.z, b.z)
+	};
+}
+
+}
+
+inline bool operator>=(const vec3& v, float f)
+{
+	return v.x >= f && v.y >= f && v.z >= f;
+}
 
 using pos = pos3;
 

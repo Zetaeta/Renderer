@@ -6,8 +6,9 @@
 #include "core/Transform.h"
 #include "scene/SceneObject.h"
 #include "Lights.h"
-//#include "scene/Scene.h"
 #include "core/TypeInfoUtils.h"
+#include "AABB.h"
+#include "scene/ScreenObject.h"
 
 struct Scene;
 class SceneComponent;
@@ -122,6 +123,8 @@ public:
 	void Initialize();
 	virtual void OnInitialize() {}
 
+	ScreenObjectId GetScreenId() const { return mScreenId; }
+
 protected:
 
 	void SetOwner(SceneObject* owner)
@@ -129,11 +132,14 @@ protected:
 		m_Object = owner;
 	}
 
+	RefPtr<ScreenObject> mScreenObj;
 	std::string			   m_Name;
 	RotTransform			   m_Transform;
 	std::vector<Owner> m_Children;
 	SceneComponent*		   m_Parent = nullptr;
 	SceneObject*		   m_Object = nullptr;
+	AABB aabb;
+	ScreenObjectId			   mScreenId = {};
 
 	Scene& GetScene()
 	{

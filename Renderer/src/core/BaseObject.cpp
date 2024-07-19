@@ -12,11 +12,11 @@ ClassTypeInfo const& BaseObject::GetStaticTypeInfo()
 	return GetClassTypeInfo<BaseObject>();
 }
 
-	ClassTypeInfoImpl<BaseObject> const TypeInfoHelper<BaseObject>::s_TypeInfo = MakeTypeInfo();
-	ClassTypeInfoImpl<BaseObject> TypeInfoHelper<BaseObject>::MakeTypeInfo() {
-		Name							  name = "BaseObject";
-		ClassTypeInfo::Properties attrs;
-		ClassTypeInfo const* parent = nullptr;
-		return ClassTypeInfoImpl<BaseObject>(name, parent, std::move(attrs));
-	}
+ClassTypeInfoImpl<BaseObject> const BaseObject::TypeInfoHelper::s_TypeInfo = BaseObject::TypeInfoHelper::MakeTypeInfo();
+ClassTypeInfoImpl<BaseObject> BaseObject::TypeInfoHelper::MakeTypeInfo() {
+	Name							  name = "BaseObject";
+	ClassTypeInfo::Properties attrs;
+	ClassTypeInfo const* parent = nullptr;
+	return ClassTypeInfoImpl<BaseObject>(name, parent, std::move(attrs));
+}
 

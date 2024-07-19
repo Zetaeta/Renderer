@@ -15,10 +15,14 @@
 #include "core/WinUtils.h"
 #include "RenderManagerDX11.h"
 #include "core/Hash.h"
+#include <editor/Editor.h>
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "D3DCompiler.lib")
 //#pragma comment(lib, "d3dx11.lib")
+
+using namespace rnd;
+using namespace rnd::dx11;
 
 // Data
 static ComPtr<ID3D11Device>		   g_pd3dDevice = nullptr;
@@ -183,7 +187,9 @@ int MainDX11(int argc, char** argv)
 	bool   show_demo_window = true;
 	bool   show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext);
+	InputImgui input;
+	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input);
+	Editor*			  editor = Editor::Create(&input, &renderMgr);
 
 	// Main loop
 	bool done = false;
@@ -212,6 +218,7 @@ int MainDX11(int argc, char** argv)
 			g_ResizeWidth = g_ResizeHeight = 0;
 			CreateRenderTarget();
 			renderMgr.Resize(g_CurrWidth, g_CurrHeight);
+			editor->OnWindowResize(g_CurrWidth, g_CurrHeight);
 		}
 
 		renderMgr.m_hardwareRenderer->SetMainRenderTarget(g_msaaRenderTargetView, dsv, g_CurrWidth, g_CurrHeight);

@@ -2,6 +2,10 @@
 #include "render/dx11/DX11Ctx.h"
 #include "render/DeviceTexture.h"
 
+namespace rnd
+{
+namespace dx11
+{
 class DX11TextureBase : public IDeviceTexture
 {
 public:
@@ -13,3 +17,5 @@ public:
 protected:
 	DX11Ctx* m_Ctx;
 };
+}
+}

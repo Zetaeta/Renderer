@@ -62,7 +62,7 @@ public:
 template<typename T>
 struct TypeInfoHelper<std::unique_ptr<T>>
 {
-	constexpr static auto const NAME = concat("std::unique_ptr<", TypeInfoHelper<T>::NAME.str, ">");
+	constexpr static auto const NAME = concat("std::unique_ptr<", GetTypeInfoHelper<T>::NAME.str, ">");
 	constexpr static u64 ID = crc64(NAME);
 
 	constexpr static bool s_ConstTarget = std::is_const_v<T>;

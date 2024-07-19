@@ -171,4 +171,13 @@ T const& CBAccessor::operator|=(T const& val)
 	return val;
 }
 
+class IConstantBuffer
+{
+public:
+	ConstantBufferData& Data() { return mData; }
+	virtual void		Update() = 0;
+protected:
+	ConstantBufferData mData;
+};
+
 } // namespace rnd
