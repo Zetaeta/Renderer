@@ -1,6 +1,7 @@
 #pragma once
 #include "scene/ScreenObject.h"
 #include <unordered_map>
+#include <core/Utils.h>
 
 template<typename T, typename HandleType>
 struct PooledObject
@@ -17,8 +18,9 @@ public:
 	PooledObject<T, HandleType> Emplace(Args&&... args)
 	{
 		HandleType handle = GetNewHandle();
-		auto it = mObjects.insert(handle, std::forward<Args>(args)...);
-		return {handle, &it->second};
+		auto it = mObjects.insert({handle, T{std::forward<Args>(args)...}});
+		RASSERT(it.second);
+		return {handle, &it.first->second};
 	}
 
 	void Release(HandleType handle)
@@ -34,17 +36,35 @@ public:
 	HandleType GetNewHandle()
 	{
 		HandleType nextEmpty = mFirstEmpty + 1;
-		while (mObjects.find(nextEmpty) != mObjects.end())
+		while (mObjects.find(nextEmpty) != mObjects.end() || nextEmpty == 0)
 		{
 			nextEmpty++;
 		}
 
-		swap(nextEmpty, mFirstEmpty);
+		std::swap(nextEmpty, mFirstEmpty);
 		return nextEmpty;
 	}
 
+	T* Get(HandleType handle)
+	{
+		if (auto it = mObjects.find(handle); it != mObjects.end())
+		{
+			return &it->second;
+		}
+		return nullptr;
+	}
+
+	T const* Get(HandleType handle) const
+	{
+		if (auto it = mObjects.find(handle); it != mObjects.end())
+		{
+			return &it->second;
+		}
+		return nullptr;
+	}
+
 	std::unordered_map<HandleType, T> mObjects;
-	HandleType mFirstEmpty = 0;
+	HandleType mFirstEmpty = 1;
 	HandleType mMax = 0;
 };
 
@@ -59,6 +79,8 @@ public:
 
 	ScreenObjectId Register(ScreenObject* screenObj);
 	void Unregister(ScreenObject* screenObj);
+
+	ScreenObject* GetScreenObj(ScreenObjectId id) const;
 private:
 	ObjectPool<ScreenObject*, ScreenObjectId> mPool;
 };

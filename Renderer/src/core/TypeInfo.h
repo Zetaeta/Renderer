@@ -112,6 +112,8 @@ public:
 		return m_Obj == nullptr;
 	}
 
+	operator bool() { return m_Obj != nullptr; }
+
 protected:
 	Ptr m_Obj;
 	TypeInfo const* m_Type;
@@ -315,11 +317,13 @@ public:
 	ReflectedValue Construct(void* location) const override { return NoValue; }
 };
 
+#define IF_CT_TYPEID(x)
+
 #define DECLARE_TYPEINFO(typ, TI)\
 	template<>\
 	struct TypeInfoHelper<typ>           \
 	{                               \
-		constexpr static u64 ID = #typ ""_hash;\
+		IF_CT_TYPEID(constexpr static u64 ID = #typ ""_hash;)\
 		constexpr static auto const	NAME = Static(#typ);\
 		static TI const s_TypeInfo;\
 	};

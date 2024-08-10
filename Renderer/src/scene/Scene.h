@@ -39,6 +39,18 @@ struct Sphere
 
 void ComputeNormals(MeshPart& mesh);
 
+template<typename TFunc>
+void ForEachCompRecursive(SceneComponent& comp, TFunc&& func)
+{
+	func(comp);
+	for (auto& child : comp.GetChildren())
+	{
+		if (IsValid(child))
+		{
+			ForEachCompRecursive(*child, func);
+		}
+	}
+}
 
 
 /*class PointLightComponent : SceneComponent
@@ -57,9 +69,9 @@ class DirLightComponent : SceneComponent
 };*/ 
 
 
-struct Scene// : public BaseObject
+class Scene : public BaseSerialized
 {
-	DECLARE_STI_NOBASE(Scene);
+	DECLARE_RTTI(Scene, BaseSerialized);
 	Scene(AssetManager* assMan)
 		: m_AssetManager(assMan)
 	{}
@@ -81,12 +93,14 @@ struct Scene// : public BaseObject
 	void ForEachComponent(std::function<void(SceneComponent&)> const& func );
 	void ForEachComponent(std::function<void(SceneComponent const&)> const& func ) const;
 
+	void Teardown() {}
+
 	template<typename TComponent>
 	void ForEach(std::function<void(TComponent&)> const& func)
 	{
 		ForEachComponent([&func](SceneComponent& sc)
 		{
-			if (sc.GetTypeInfo() == TComponent::GetStaticTypeInfo())
+			if (sc.IsA<TComponent>())
 			{
 				func(static_cast<TComponent&>(sc));
 			}
@@ -98,7 +112,7 @@ struct Scene// : public BaseObject
 	{
 		ForEachComponent([&func](SceneComponent const& sc)
 		{
-			if (sc.GetTypeInfo() == TComponent::GetStaticTypeInfo())
+			if (sc.IsA<TComponent>())
 			{
 				func(static_cast<TComponent const&>(sc));
 			}
@@ -127,6 +141,7 @@ struct Scene// : public BaseObject
 	}
 
 	SceneObject * CreateObject(ClassTypeInfo const& type);
+
 	
 	AssetManager* m_AssetManager;
 	Material const&			   GetMaterial(MaterialID matId) const { return m_AssetManager->GetMaterial(matId); }
@@ -134,6 +149,8 @@ struct Scene// : public BaseObject
 	std::vector<Material::Ref>&	   Materials() const { return m_AssetManager->m_Materials; }
 	auto& CompoundMeshes() const { return m_AssetManager->m_CompoundMeshes; }
 	std::vector<MeshInstance>  m_MeshInstances;
+
+
 
 	MeshInstance* GetMeshInstance(MeshInstanceRef ref)
 	{
@@ -150,6 +167,8 @@ struct Scene// : public BaseObject
 	std::vector<DirLight> m_DirLights;
 	std::vector<PointLight> m_PointLights;
 	std::vector<SpotLight> m_SpotLights;
+
+	bool mModified = false;
 
 	std::variant<DirLight const*, PointLight const*, SpotLight const*> GetLight(ELightType lightType, u32 lightIdx) const
 	{
@@ -244,6 +263,8 @@ struct Scene// : public BaseObject
 	col3				  m_AmbientLight = col3(0.2f);
 private:
 	std::vector<Mesh>& Meshes() const { return m_AssetManager->m_Meshes; }
+
+	void ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive = false) override;
 };
 
 DECLARE_CLASS_TYPEINFO(Scene);

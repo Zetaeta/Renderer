@@ -21,6 +21,11 @@ using namespace std;
 using namespace glm;
 namespace fs = std::filesystem;
 
+namespace rnd
+{
+	class IRenderDeviceCtx;
+}
+
 namespace ch = std::chrono;
 class Timer
 {
@@ -44,6 +49,13 @@ class RenderManager
 public:
 	RenderManager(Input* input);
 
+	void CreateStarterScene();
+	void CreateInitialScene();
+	void CreateScene();
+
+	bool LoadScene(String const& path);
+	void SaveScene(String const& path);
+
 	void SceneControls();
 
 	void DrawUI();
@@ -56,7 +68,10 @@ public:
 	virtual void OnRenderFinish() {}
 
 	virtual IRenderer* Renderer() { return m_Renderer.get(); }
+	virtual rnd::IRenderDeviceCtx* DeviceCtx() { return nullptr; }
+	virtual rnd::IRenderDevice* Device() { return nullptr; }
 
+	Scene scene;
 protected:
 	void TypeSelector(ClassTypeInfo const& cls);
 
@@ -64,7 +79,6 @@ protected:
 
 	UserCamera m_Camera;
 	unique_ptr<IRenderer> m_Renderer;
-	Scene scene;
 	AssetManager m_AssMan;
 	float m_FrameTime = 0;
 	Timer m_Timer;

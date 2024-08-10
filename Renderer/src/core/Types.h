@@ -1,5 +1,6 @@
 #pragma once
 
+#include "BaseDefines.h"
 #include <vector>
 #include <string>
 #include <memory>

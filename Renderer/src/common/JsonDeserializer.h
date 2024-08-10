@@ -7,7 +7,7 @@ using json = nlohmann::json;
 class JsonDeserializer
 {
 public:
-	static bool Read(ReflectedValue value, std::string file);
+	static bool Read(ReflectedValue value, std::string const& file);
 
 	void Deserialize(ReflectedValue value, json const& data)
 	{

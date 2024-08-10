@@ -190,6 +190,7 @@ int MainDX11(int argc, char** argv)
 	InputImgui input;
 	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input);
 	Editor*			  editor = Editor::Create(&input, &renderMgr);
+	renderMgr.CreateInitialScene();
 
 	// Main loop
 	bool done = false;
@@ -294,6 +295,7 @@ int MainDX11(int argc, char** argv)
 			}*/
 
 			renderMgr.DrawUI();
+			editor->Tick(0);
 
 			ImGui::End();
 			static float f = 0.0f;

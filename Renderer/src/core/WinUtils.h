@@ -18,3 +18,11 @@ using Microsoft::WRL::ComPtr;
 			assert(false);\
 		}\
 	}
+
+#define CHECK_COM_REF(resource)\
+	if (resource)\
+	{                           \
+		resource->AddRef();\
+		RASSERT(resource->Release() == 1);\
+	}
+

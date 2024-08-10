@@ -1,5 +1,6 @@
 #pragma once
 
+#include "BaseDefines.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/ext/quaternion_float.hpp>
@@ -91,6 +92,9 @@ struct pos3 : public vec3
 	constexpr pos3(float f)
 		: vec3(f) {}
 
+	constexpr pos3(int x)
+		: vec3(float(x)) {}
+
 	constexpr static pos3 Max()
 	{
 		return pos3(std::numeric_limits<value_type>::max());
@@ -133,6 +137,7 @@ inline bool operator>=(const vec3& v, float f)
 }
 
 using pos = pos3;
+using col4 = vec4;
 
 template<typename TTo, typename TFrom>
 inline TTo NumCast(TFrom from)

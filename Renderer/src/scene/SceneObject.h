@@ -2,14 +2,14 @@
 #include <memory>
 #include <string>
 #include "core/TypeInfoUtils.h"
-#include "core/BaseObject.h"
+#include <core/BaseSerialized.h>
 
-struct Scene;
+class Scene;
 class SceneComponent;
 
-class SceneObject : public BaseObject
+class SceneObject : public BaseSerialized
 {
-	DECLARE_RTTI(SceneObject, BaseObject);
+	DECLARE_RTTI(SceneObject, BaseSerialized);
 	SceneObject();
 	SceneObject(Scene* scene, std::string n //, std::vector<SceneComponent> ms = {}
 		);
@@ -43,6 +43,8 @@ class SceneObject : public BaseObject
 		m_Scene = scene;
 	}
 
+	void Modify(bool bAllChildren);
+
 	void Update();
 
 	template <typename TComp, typename... TArgs>
@@ -68,6 +70,9 @@ class SceneObject : public BaseObject
 	std::unique_ptr<SceneComponent> root;
 	private:
 	void OnSetRoot();
+
+public:
+	void ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive = false) override;
 };
 
 DECLARE_CLASS_TYPEINFO(SceneObject);

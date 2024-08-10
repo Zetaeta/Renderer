@@ -9,6 +9,13 @@ enum class ETextureDimension : u8
 	TEX_CUBE
 };
 
+enum class ETextureFormat : u8
+{
+	RGBA8_Unorm,
+	D24_Unorm_S8_Uint,
+	R32_Uint
+};
+
 struct DeviceResourceDesc
 {
 	String DebugName;
@@ -40,6 +47,8 @@ public:
 	IDepthStencil(DepthStencilDesc desc)
 		: Desc(desc) {}
 
+	virtual ~IDepthStencil() {}
+
 //	virtual void*	 GetData() const = 0;
 	DEFINE_DEVICE_RESOURCE_GETTER(GetData);
 	using Ref = std::shared_ptr<IDepthStencil>;
@@ -58,6 +67,7 @@ public:
 	virtual bool HasDepth() const = 0;
 	virtual void*	 GetRTData() = 0;
 	virtual void*	 GetDSData() = 0;
+	DEFINE_DEVICE_RESOURCE_GETTER(GetData);
 
 	using Ref = std::shared_ptr<IRenderTarget>;
 
@@ -69,12 +79,17 @@ enum ETextureFlags
 	TF_NONE = 0,
 	TF_DEPTH = 0x1,
 	TF_SRGB = 0x2,
-	TF_RENDER_TARGET = 0x3
+	TF_RenderTarget = 0x4,
+	TF_CpuReadback = 0x8,
+	TF_SRV = 0x10
 };
+
+FLAG_ENUM(ETextureFlags);
 
 struct DeviceTextureDesc : DeviceResourceDesc
 {
-	ETextureFlags flags;
+	ETextureFlags flags = TF_SRV;
+	ETextureFormat format = ETextureFormat::RGBA8_Unorm;
 	u32 width;
 	u32 height;
 	u32 numMips = 1;
@@ -93,12 +108,36 @@ struct CubemapData
 
 using TextureData = void const*;
 
+struct MappedResource
+{
+	void* Data;
+	u32 RowPitch;
+	u32 DepthPitch;
+};
 
-class IDeviceTexture
+enum class ECpuAccessFlags
+{
+	None,
+	Read = 0x1,
+	Write = 0x2
+};
+
+FLAG_ENUM(ECpuAccessFlags);
+
+class IDeviceResource
+{
+public:
+	virtual MappedResource Map(u32 subResource, ECpuAccessFlags flags) = 0;
+	virtual void Unmap(u32 subResource) = 0;
+};
+
+class IDeviceTexture : public IDeviceResource
 {
 public:
 	IDeviceTexture(DeviceTextureDesc const& desc)
 		: Desc(desc) {}
+
+	virtual ~IDeviceTexture() {}
 	using Ref = std::shared_ptr<IDeviceTexture>;
 
 	virtual void* GetTextureHandle() const = 0;

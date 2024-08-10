@@ -10,3 +10,20 @@ class DX11RenderTarget;
 class DX11Texture;
 class DX11DepthStencil;
 class DX11Cubemap;
+
+namespace rnd
+{
+namespace dx11
+{
+
+template<typename ResourcePtr>
+void SetResourceName(const ResourcePtr& resource, const String& str)
+{
+	if (!str.empty())
+	{
+		resource->SetPrivateData(WKPDID_D3DDebugObjectName, (u32) str.size(), str.c_str());
+	}
+}
+
+}
+}

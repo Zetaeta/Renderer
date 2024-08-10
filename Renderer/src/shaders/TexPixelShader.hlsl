@@ -184,7 +184,7 @@ float4 main(
 	#if TEXTURED
 	float2 uv: TexCoord,
 	#endif
-	float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : Colour//, float4 lightPos: LightPos
+	float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : WorldPos//, float4 lightPos: LightPos
 	) : SV_TARGET
 {
 //	if (debugMode < 0)

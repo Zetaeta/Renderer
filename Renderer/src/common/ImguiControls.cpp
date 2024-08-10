@@ -3,11 +3,10 @@
 #include <format>
 #include "misc/cpp/imgui_stdlib.h"
 
+namespace rg = std::ranges;
 
-namespace rnd
-{
 
-bool rnd::ImGuiControls(TTransform<quat>& trans)
+bool ImGuiControls(TTransform<quat>& trans)
 {
 	bool edited = false;
 	edited |= ImGui::DragFloat3("translation", &trans.translation[0], 0.1f);
@@ -223,12 +222,20 @@ bool ImGuiControls(char const* name, ReflectedValue val, bool isConst, bool expa
 	return false;
 }
 
-bool ImGuiControls(ClassValuePtr obj, bool isConst)
+bool ImGuiControls(ClassValuePtr obj, bool isConst, const PropertyFilter& filter)
 {
 	bool changed = false;
 	obj = obj.Downcast();
-	obj.GetRuntimeType().ForEachProperty([&obj, &changed, isConst] (PropertyInfo const& prop)
+	obj.GetRuntimeType().ForEachProperty([&obj, &changed, isConst, &filter] (PropertyInfo const& prop)
 	{
+		if (rg::find(filter.ExcludedProperties, &prop) != filter.ExcludedProperties.end()
+			|| rg::find_if(filter.ExcludedTypes, [&prop](const TypeInfo* type)
+				{
+				return type->Contains(prop.GetType());
+			}) != filter.ExcludedTypes.end())
+		{
+			return;
+		}
 		auto const& meta = prop.GetMetadata();
 		bool expand = meta.GetAutoExpand().value_or(false);	
 		NumericControlMeta controlMeta;
@@ -246,5 +253,4 @@ bool ImGuiControls(ClassValuePtr obj, bool isConst)
 		
 	});
 	return changed;
-}
 }

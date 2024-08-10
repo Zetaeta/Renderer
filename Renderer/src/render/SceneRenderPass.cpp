@@ -9,7 +9,7 @@ namespace rnd
  SceneRenderPass::SceneRenderPass(RenderContext* ctx, Name passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil,
 						EMatType accepts /*= E_MT_ALL*/, EShadingLayer layer /*= EShadingLayer::NONE*/,
 						ERenderPassMode mode /*= ERenderPassMode::IMMEDIATE*/)
-		: mRCtx(ctx), mAcceptedMatTypes(accepts), mLayer(layer), mRenderTarget(renderTarget), mDepthStencil(depthStencil)
+		: RenderPass(ctx), mAcceptedMatTypes(accepts), mLayer(layer), mRenderTarget(renderTarget), mDepthStencil(depthStencil)
 		, mViewCam(camera), mMode(mode), mPassName(passName)
 	{
 }
@@ -110,7 +110,7 @@ void SceneRenderPass::SetCubeRTAndDS(u8 face)
 	{
 		rtFace = face;
 		auto const& rtDesc = mRenderTarget->GetDesc();
-		DeviceCtx()->SetViewport(rtDesc.Width, rtDesc.Height);
+		DeviceCtx()->SetViewport(float(rtDesc.Width), float(rtDesc.Height));
 	}
 	if (mDepthStencil != nullptr && (mDepthStencil->GetDesc().Dimension == ETextureDimension::TEX_CUBE))
 	{
@@ -137,7 +137,7 @@ void SceneRenderPass::RenderBuffer()
 				{
 					mMatOverride->Bind(*mRCtx, mLayer);
 				}
-				DrawSingle(drawData, projection, projection * mViewCam->WorldToCamera(), mMatOverride == nullptr);
+				DrawSingle(drawData, projection, projection * mViewCam->WorldToCamera());
 			}
 		}
 	}
@@ -172,28 +172,16 @@ void SceneRenderPass::Draw(DrawData const& data)
 	}
 }
 
-namespace CB
+void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, mat4 const& projWorld)
 {
-#define CBENTRY(name)\
-	static Name name = #name;
-	CBENTRY(colour);
-	CBENTRY(emissiveColour);
-	CBENTRY(roughness);
-	CBENTRY(metalness);
-	CBENTRY(ambdiffspec);
-	CBENTRY(useNormalMap);
-	CBENTRY(useEmissiveMap);
-	CBENTRY(useRoughnessMap);
-	CBENTRY(alphaMask);
-	CBENTRY(screenObjectId);
-}
-
-void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, mat4 const& projWorld, bool useMaterial)
-{
+	mRCtx->SetScreenObjId(data.component->GetScreenId());
+	mRCtx->DrawPrimitive(data.mesh, data.component->GetWorldTransform(), projWorld,
+						mMatOverride ? mMatOverride : nullptr, mLayer);
+	return;
 	MaterialArchetype* matArch = nullptr;
 
 	Material const& mat = mRCtx->GetScene().GetMaterial(data.mesh->material);
-	if (!useMaterial && mMatOverride)
+	if (mMatOverride)
 	{
 		matArch = mMatOverride->Archetype;
 	}
@@ -204,7 +192,7 @@ void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, m
 
 	if (matArch)
 	{
-		if (CBLayout::Ref layout = matArch->PSPerInstance)
+		if (CBLayout::Ref layout = matArch->CBData[Denum(ECBFrequency::PS_PerInstance)].Layout)
 		{
 			IConstantBuffer* psPerInst = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, layout->GetSize());
 			ConstantBufferData& cbData = psPerInst->Data();
@@ -230,12 +218,7 @@ void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, m
 	PIVS.fullTransform = projWorld * PIVS.model2ShadeSpace;
 
 	static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerInstanceVSCB().WriteData(PIVS);
-	DeviceCtx()->DrawMesh(*data.mesh, mLayer, useMaterial);
-}
-
-IRenderDeviceCtx* SceneRenderPass::DeviceCtx()
-{
-	return mRCtx->DeviceCtx();
+	DeviceCtx()->DrawMesh(*data.mesh, mLayer, mMatOverride == nullptr);
 }
 
 void SceneRenderPass::RenderFrame(RenderContext& renderCtx)

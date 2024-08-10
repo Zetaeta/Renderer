@@ -103,4 +103,4 @@ ClassTypeInfo const& GetTypeInfo(BaseObject const& obj)
 }
 
 ReflectedValue		NoValue{ nullptr, TypeInfoHelper<void>::s_TypeInfo };
-//ConstReflectedValue ConstNoValue{ nullptr, GetTypeInfo<void>() };
+ConstReflectedValue ConstNoValue{ nullptr, TypeInfoHelper<void>::s_TypeInfo };

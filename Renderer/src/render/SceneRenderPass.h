@@ -14,7 +14,7 @@
 struct MeshPart;
 class SceneComponent;
 struct DX11Ctx;
-struct Scene;
+class Scene;
 
 namespace rnd
 {
@@ -61,17 +61,14 @@ public:
 	void ProcessBuffer();
 
 	void Draw(DrawData const& data);
-	void DrawSingle(DrawData const& data, mat4 const& projection, mat4 const& projWorld, bool useMaterial = true);
+	void DrawSingle(DrawData const& data, mat4 const& projection, mat4 const& projWorld);
 
 	bool IsDepthOnly() { return mLayer == EShadingLayer::DEPTH; }
 	bool IsDeferred() { return mMode == ERenderPassMode::DEFERRED; }
 
-	IRenderDeviceCtx* DeviceCtx();
-
 	IDeviceMaterial* mMatOverride = nullptr;
 
 protected:
-	RenderContext* mRCtx;
 	Vector<DrawData> mBuffer;
 
 	Name mPassName;

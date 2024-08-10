@@ -60,7 +60,7 @@ public:
 	ID3D11Buffer* GetDeviceBuffer() { return mDeviceBuffer.Get(); }
 	ID3D11Buffer* Get() { return mDeviceBuffer.Get(); }
 
-	void SetLayout(CBLayout::Ref layout)
+	void SetLayout(CBLayout::Ref layout) override
 	{
 		u64 currentSize = mData.GetSize();
 		if (layout->GetSize() > mData.GetSize())

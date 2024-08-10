@@ -14,7 +14,7 @@ enum class EFlatRenderMode
 class RenderCubemap : public RenderPass
 {
 public:
-	RenderCubemap(EFlatRenderMode mode, String DebugName = "", IDeviceTexture* texture = nullptr );
+	RenderCubemap(RenderContext* renderCtx, EFlatRenderMode mode, String DebugName = "", IDeviceTexture* texture = nullptr );
 	virtual void RenderFrame(RenderContext& renderCtx) override;
 
 	void SetCubemap(IDeviceTexture* cubemap);

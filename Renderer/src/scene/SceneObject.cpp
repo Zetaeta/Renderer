@@ -58,6 +58,15 @@ bool SceneObject::ImGuiControls()
 	}
 }
 
+void SceneObject::Modify(bool bAllChildren)
+{
+	m_Scene->Modify(false);
+	if (bAllChildren)
+	{
+		root->Modify(true);
+	}
+}
+
 void SceneObject::Update()
 {
 	if (root != nullptr)
@@ -69,6 +78,15 @@ void SceneObject::Update()
 void SceneObject::OnSetRoot()
 {
 	root->SetOwner(this);
+}
+
+void SceneObject::ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive /*= false*/)
+{
+	callback(root.get());
+	if (recursive)
+	{
+		root->ForAllChildren(callback, true);
+	}
 }
 
 DEFINE_CLASS_TYPEINFO(SceneObject)

@@ -160,8 +160,16 @@ public:
 
 	template<typename T>
 	static TClassValuePtr From(T& object)
+		requires HasClassTypeInfo<std::remove_cvref_t<T>>
 	{
 		return TClassValuePtr(&object, static_cast<ClassTypeInfo const&>(GetTypeInfo(object)));
+	}
+
+	template<typename T>
+	static TClassValuePtr From(T* object)
+		requires HasClassTypeInfo<std::remove_cvref_t<T>>
+	{
+		return TClassValuePtr(object, static_cast<ClassTypeInfo const&>(GetTypeInfo(*object)));
 	}
 
 	TClassValuePtr<IsConst> Downcast()
@@ -406,43 +414,10 @@ public:
 template<typename TParent, typename TChild>
 using MemberPtr = TChild TParent::*;
 
-//template<typename TParent, typename TChild>
-//class AttrAccessorImpl : public PropertyInfo
-//{
-//public:
-//	AttrAccessorImpl(Name name, MemberPtr<TParent, TChild> member, MemberMetadata&& meta = {}) :PropertyInfo(name, GetTypeInfo<TChild>(), static_cast<ptrdiff_t>(member), std::move(meta)), m_Member(member) {}
-//	virtual ReflectedValue Access(ClassValuePtr const& obj) const override
-//	{
-//		RASSERT(obj.GetType().IsA<TParent>());
-//		TChild* member = &(obj.GetAs<TParent>().*m_Member);
-//		return ReflectedValue {member, *m_Type};
-//	}
-//
-//	virtual ConstReflectedValue Access(ConstClassValuePtr const& obj) const override
-//	{
-//		RASSERT(obj.GetType().IsA<TParent>());
-//		TChild const* member = &(obj.GetAs<TParent>().*m_Member);
-//		return ConstReflectedValue {member, *m_Type};
-//	}
-//
-//private:
-//	MemberPtr<TParent, TChild> m_Member;
-//};
-
-//template<>
-//TypeInfo const& GetTypeInfo<void>()
-//{
-//	static TypeInfo s_Void {"void", ETypeCategory::BASIC};
-//	return s_Void;
-//}
 
 template<typename T>
 ClassTypeInfo const* MaybeGetClassTypeInfo()
 {
-	//if constexpr (std::is_same_v<T,void>)
-	//{
-	//	return nullptr;
-	//}
 	if constexpr (std::is_class_v<T>)
 	{
 		return static_cast<ClassTypeInfo const*>(&GetTypeInfo<std::remove_cvref_t<T>>());
@@ -453,20 +428,22 @@ ClassTypeInfo const* MaybeGetClassTypeInfo()
 template<typename T>
 ClassTypeInfo const& GetClassTypeInfo()
 {
-	//if constexpr (std::is_same_v<T,void>)
-	//{
-	//	return nullptr;
-	//}
 	static_assert(std::is_class_v<T>, "T is not a class");
 	return *MaybeGetClassTypeInfo<T>();
 }
 
+template<typename To, typename From>
+To* Cast(From* from)
+	requires std::is_base_of_v<std::remove_cvref_t<From>, std::remove_cvref_t<To>>
+		&& std::is_base_of_v<BaseObject, std::remove_cvref_t<From>>
+{
+	if (from && from->IsA<To>())
+	{
+		return static_cast<To*>(from);
+	}
 
-//template<class T>
-//std::enable_if_t<std::is_class_v<T>, ClassTypeInfo const&> GetClassTypeInfo()
-//{
-//	
-//}
+	return nullptr;
+}
 
 template<typename TFunc>
 struct ConstructorHelper
@@ -490,7 +467,7 @@ static auto s_##name = ConstructorHelper([] { block; });
 #define DECLARE_CLASS_TYPEINFO_(typ)\
 	struct TypeInfoHelper           \
 	{                               \
-		constexpr static u64 ID = #typ ""_hash;\
+		IF_CT_TYPEID(constexpr static u64 ID = #typ ""_hash;)\
 		constexpr static auto const NAME = Static(#typ);\
 		using Type = typ;\
 		using MyClassInfo = ClassTypeInfoImpl<Type>;\
@@ -502,14 +479,14 @@ static auto s_##name = ConstructorHelper([] { block; });
 public:\
 	using Super = Parent;\
 	ClassTypeInfo const& GetTypeInfo() const; \
-	static ClassTypeInfo const& GetStaticTypeInfo();\
+	static ClassTypeInfo const& StaticClass();\
 	DECLARE_CLASS_TYPEINFO_(Class)
 
 #define DECLARE_RTTI(Class, Parent)\
 public:\
 	using Super = Parent;\
 	virtual ClassTypeInfo const& GetTypeInfo() const override;\
-	static ClassTypeInfo const& GetStaticTypeInfo();\
+	static ClassTypeInfo const& StaticClass();\
 	DECLARE_CLASS_TYPEINFO_(Class)
 
 #define DECLARE_STI_NOBASE(Class) DECLARE_STI(Class, void)
@@ -521,7 +498,7 @@ public:\
 		return ::GetClassTypeInfo<Class>();\
 	}\
 	temp\
-	ClassTypeInfo const& Class::GetStaticTypeInfo() \
+	ClassTypeInfo const& Class::StaticClass() \
 	{                                        \
 		return ::GetClassTypeInfo<Class>();\
 	}\
@@ -538,7 +515,7 @@ public:\
 	{                                  \
 		return ::GetClassTypeInfo<Class>();\
 	}\
-	ClassTypeInfo const& Class::GetStaticTypeInfo() \
+	ClassTypeInfo const& Class::StaticClass() \
 	{                                        \
 		return ::GetClassTypeInfo<Class>();\
 	}\
@@ -552,7 +529,7 @@ public:\
 
 #define BEGIN_REFL_PROPS()
 #define REFL_PROP(prop, ...) attrs.emplace_back(#prop, ::GetTypeInfo<decltype(Type::prop)>(), offsetof(Type, prop), std::is_const_v<decltype(Type::prop)>, __VA_ARGS__);
-#define REFL_PROP_SETTER(prop, setter, ...) attrs.emplace_back(#prop, ::GetTypeInfo<decltype(Type::prop)>(), offsetof(Type, prop), new MemberFunctionImpl<Type, decltype(Type{}.setter(Type{}.prop)), const decltype(Type::prop)&>(&Type::setter), std::is_const_v<decltype(Type::prop)>, __VA_ARGS__);
+#define REFL_PROP_SETTER(prop, setter, ...) attrs.emplace_back(#prop, ::GetTypeInfo<decltype(Type::prop)>(), offsetof(Type, prop), new MemberFunctionImpl<Type, decltype(std::declval<Type>().setter(Type{}.prop)), const decltype(Type::prop)&>(&Type::setter), std::is_const_v<decltype(Type::prop)>, __VA_ARGS__);
 #define END_REFL_PROPS()
 #define END_CLASS_TYPEINFO()                           \
 		return ClassTypeInfoImpl<Type>{ name, parent, std::move(attrs) }; \

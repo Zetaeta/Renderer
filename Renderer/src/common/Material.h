@@ -30,8 +30,10 @@ enum EMatArchetype
 	 MAT_TEX,
 	 MAT_BG,
 	 MAT_2D,
+	 MAT_2D_UINT,
 	 MAT_POINT_SHADOW_DEPTH,
 	 MAT_CUBE_DEPTH,
+	 MAT_SCREEN_ID,
 	 MAT_COUNT
  };
 
@@ -48,15 +50,28 @@ enum class EShadingLayer : u8
 	COUNT
 };
 
+struct ShaderCBData
+{
+	rnd::CBLayout::Ref Layout{};
+	bool IsUsed = false;
+};
 
 class MaterialArchetype : public RefCountedObject
 {
 public:
-	rnd::CBLayout::Ref PSPerFrame;
-	rnd::CBLayout::Ref VSPerFrame;
-	rnd::CBLayout::Ref PSPerInstance;
-	rnd::CBLayout::Ref VSPerInstance;
+	std::array<ShaderCBData, Denum(rnd::ECBFrequency::Count)> CBData;
+	ShaderCBData const& GetCBData(rnd::ECBFrequency freq) const
+	{
+		return CBData[Denum(freq)];
+	}
+
+	ShaderCBData& GetCBData(rnd::ECBFrequency freq)
+	{
+		return CBData[Denum(freq)];
+	}
+	
 	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) = 0;
+	String DebugName;
 };
 
 enum class EShadingLayer : u8;
@@ -71,7 +86,6 @@ public:
 	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) = 0;
 };
 
-using col4 = vec4;
 struct Material
 {
 	RCOPY_PROTECT(Material);
@@ -119,7 +133,7 @@ struct Material
 		return E_MT_OPAQUE;
 	}
 
-	OwningPtr<IDeviceMaterial> DeviceMat;
+	IDeviceMaterial* DeviceMat;
 private:
 	std::atomic<bool> m_Updated = false;
 	std::mutex m_UpdateMutex;

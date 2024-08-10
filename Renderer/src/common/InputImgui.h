@@ -1,6 +1,7 @@
 #pragma once
 #include "../../Walnut/vendor/imgui/imgui.h"
 #include "Input.h"
+#include <windows.h>
 
 class InputImgui : public Input
 {
@@ -45,21 +46,7 @@ public:
 		return ImGui::IsMouseDown(mbs[(int)mb]);
 	}
 
-	void GetCursorPosition(int* xpos, int* ypos)
-	{
-		POINT pos;
-
-		// ImGui::GetCursorPos()
-		if (GetCursorPos(&pos))
-		{
-			ScreenToClient(m_Hwnd, &pos);
-
-			if (xpos)
-				*xpos = pos.x;
-			if (ypos)
-				*ypos = pos.y;
-		}
-	}
+	void GetCursorPosition(int* xpos, int* ypos);
 
 	void SetCursorMode(CursorMode mm)
 	{
@@ -96,6 +83,9 @@ public:
 		ClientToScreen(m_Hwnd, (POINT*)&clipRect.right);
 		ClipCursor(&clipRect);
 	}
+
+
+ vec2 GetWindowMousePos() override;
 
 private:
 	CursorMode		m_CursorMode;

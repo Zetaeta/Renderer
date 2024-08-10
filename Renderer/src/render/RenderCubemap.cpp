@@ -7,8 +7,8 @@
 namespace rnd
 {
 
-RenderCubemap::RenderCubemap(EFlatRenderMode mode, String DebugName /*= ""*/, IDeviceTextureCube* texture)
-	: mCubemap(texture), mMode(mode)
+RenderCubemap::RenderCubemap(RenderContext* renderCtx, EFlatRenderMode mode, String DebugName /*= ""*/, IDeviceTextureCube* texture)
+	:RenderPass(renderCtx), mCubemap(texture), mMode(mode)
 {
 	SetEnabled(texture != nullptr);
 }

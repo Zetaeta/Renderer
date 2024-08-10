@@ -2,7 +2,7 @@
 
 #include "core/Maths.h"
 
-struct Scene;
+class Scene;
 class UserCamera;
 class IRenderer
 {

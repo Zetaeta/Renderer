@@ -212,7 +212,7 @@ Scenelet::Ref AssetManager::AddScenelet(aiScene const* aiscene, AssetPath const&
 	auto* root = aiscene->mRootNode;
 //	auto& cmesh = m_CompoundMeshes.emplace_back(string(root->mName.C_Str()));
 
-	u32 matStart = m_Materials.size();
+	u32 matStart = NumCast<u32>(m_Materials.size());
 
 	std::unordered_map<string, int> names;
 
@@ -533,7 +533,7 @@ Scenelet::Ref AssetManager::LoadScenelet(AssetPath const& path, bool loadTexture
 
 	if (aiscene != nullptr)
 	{
-		u32 start = m_Meshes.size();
+		u32 start = NumCast<u32>(m_Meshes.size());
 		u32 end = AddScenelet(aiscene, filePath, false, "", loadTextures, async);
 		if (!subMesh.empty())
 		{

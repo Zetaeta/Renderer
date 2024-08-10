@@ -1,8 +1,8 @@
 #pragma once
-#include <string>
-#include <vector>
 #include "core/Maths.h"
 #include "core/Types.h"
+#include <string>
+#include <vector>
 
 #define Zero(x) ZeroMemory(&x, sizeof(x))
 
@@ -40,7 +40,15 @@ constexpr auto Denum(TEnum e)
 #define FLAG_ENUM(EType)\
 	DECLARE_ENUM_OP(EType, |)\
 	DECLARE_ENUM_OP(EType, &)\
-	DECLARE_ENUM_OP(EType, ^)
+	DECLARE_ENUM_OP(EType, ^)\
+	constexpr bool operator==(EType enumVal, std::underlying_type_t<EType> other)\
+	{\
+		return Denum(enumVal) == other;\
+	}\
+	constexpr bool operator!=(EType enumVal, std::underlying_type_t<EType> other)\
+	{\
+		return Denum(enumVal) != other;\
+	}
 
 #define DECLARE_ENUM_UNOP(EType, op, valop)\
 	constexpr EType& operator op(EType& val)\
@@ -375,6 +383,8 @@ using RefWrap = std::reference_wrapper<T>;
 
 template<typename Derived, typename Base>
 concept DerivedStrip = std::derived_from<std::remove_cvref_t<Derived>, Base>;
+
+bool FindIgnoreCase(const std::string_view& haystack, const std::string_view& needle);
 
 //template<typename... Args>
 //using Variant = std::Variant<Args...>;

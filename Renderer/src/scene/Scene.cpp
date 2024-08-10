@@ -56,6 +56,18 @@ void ComputeNormals(MeshPart& mesh)
 	}
 }
 
+void Scene::ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive /*= false*/)
+{
+	for (auto& obj : m_Objects)
+	{
+		callback(obj.get());
+		if (recursive)
+		{
+			obj->ForAllChildren(callback, true);
+		}
+	}
+}
+
 Name Scene::MakeName(String base)
 {
 	if (!IsObjNameTaken(base))
@@ -103,6 +115,7 @@ void Scene::AddScenelet(Scenelet const& scenelet)
 	auto& obj = m_Objects.emplace_back(make_unique<SceneObject>(this,scenelet.m_Path));
 	auto& root = obj->SetRoot<StaticMeshComponent>();
 	AddSceneletPart(root, scenelet.m_Root);
+	obj->Initialize();
 }
 
 void Scene::AddSceneletPart(StaticMeshComponent& component, SceneletPart const& part)
@@ -147,18 +160,6 @@ SceneObject* Scene::CreateObject(ClassTypeInfo const& type)
 	return ptr.get();
 }
 
-template<typename TFunc>
-void ForEachCompRecursive(SceneComponent& comp, TFunc&& func)
-{
-	func(comp);
-	for (auto& child : comp.GetChildren())
-	{
-		if (IsValid(child))
-		{
-			ForEachCompRecursive(*child, func);
-		}
-	}
-}
 void Scene::ForEachComponent(std::function<void(SceneComponent&)> const& func)
 {
 	for (auto& obj : m_Objects)
@@ -180,6 +181,7 @@ void Scene::ForEachComponent(std::function<void(SceneComponent const&)> const& f
 		}
 	}
 }
+
 
 DEFINE_CLASS_TYPEINFO(Scene)
 BEGIN_REFL_PROPS()

@@ -10,14 +10,14 @@
 #include "AABB.h"
 #include "scene/ScreenObject.h"
 
-struct Scene;
+class Scene;
 class SceneComponent;
 
 //#define SC_CONSTRUCTORS()
 
-class SceneComponent : public BaseObject
+class SceneComponent : public BaseSerialized
 {
-	DECLARE_RTTI(SceneComponent, BaseObject);
+	DECLARE_RTTI(SceneComponent, BaseSerialized);
 public:
 	using Transform = RotTransform;
 	friend class SceneObject;
@@ -56,7 +56,7 @@ public:
 	}
 
 	using Owner = std::unique_ptr<SceneComponent>;
-	Vector<Owner> const& GetChildren();
+	Vector<Owner> const& GetChildren() const;
 
 	void SetParent(SceneComponent* parent)
 	{
@@ -93,6 +93,8 @@ public:
 		}
 	}
 
+	void Modify(bool allChildren);
+
 	virtual void Begin()
 	{
 		for (auto& child : m_Children)
@@ -124,6 +126,9 @@ public:
 	virtual void OnInitialize() {}
 
 	ScreenObjectId GetScreenId() const { return mScreenId; }
+
+
+ void ForAllChildren(std::function<void(BaseSerialized*)>, bool recursive = false) override;
 
 protected:
 
@@ -173,6 +178,13 @@ protected:
 };
 
 DECLARE_CLASS_TYPEINFO(SceneComponent)
+
+//class PrimitiveComponent : public SceneComponent
+//{
+//	DECLARE_RTTI(PrimitiveComponent, SceneComponent);
+//};
+//
+//DECLARE_CLASS_TYPEINFO(PrimitiveComponent);
 
 class StaticMeshComponent : public SceneComponent
 {
@@ -225,7 +237,7 @@ protected:
 };
 DECLARE_CLASS_TYPEINFO(StaticMeshComponent)
 
-
+using PrimitiveComponent = StaticMeshComponent;
 
 //template<typename T>
 //struct TypeInfoAccessor

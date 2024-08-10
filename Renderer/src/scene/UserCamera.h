@@ -18,7 +18,7 @@ public:
 
 	float movespeed = .005f;
 	float turnspeed = .001f;
-	private:
+private:
 	vec2 m_LastMouse;
 	bool m_ViewChanged;
 	Input* m_Input;

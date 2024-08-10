@@ -15,7 +15,7 @@ public:
 	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input)
 		: Super(input)
 	{
-		m_hardwareRenderer = std::make_unique<DX11Renderer>(&m_Camera, 0, 0, device, context);
+		m_hardwareRenderer = std::make_unique<DX11Renderer>(&scene, &m_Camera, 0, 0, device, context);
 	}
 	
 	virtual void DrawFrameData() override
@@ -39,6 +39,9 @@ public:
 		//m_ViewWidth = width;
 		m_hardwareRenderer->Resize(width, height);
 	}
+
+	virtual rnd::IRenderDeviceCtx* DeviceCtx() override;
+	virtual rnd::IRenderDevice* Device() override;
 
 	DX11Renderer* Renderer() override { return m_hardwareRenderer.get(); }
 

@@ -7,7 +7,7 @@ ClassTypeInfo const& BaseObject::GetTypeInfo() const
 	return GetClassTypeInfo<BaseObject>();
 }
 
-ClassTypeInfo const& BaseObject::GetStaticTypeInfo()
+ClassTypeInfo const& BaseObject::StaticClass()
 {
 	return GetClassTypeInfo<BaseObject>();
 }

@@ -15,6 +15,9 @@
 #include "imgui.h"
 #include "glm/gtx/transform.hpp"
 #include <core/Matrix.h>
+#include <editor/Viewport.h>
+
+#pragma comment(lib, "dxguid.lib")
 
 namespace rnd
 {
@@ -33,7 +36,7 @@ namespace fs = std::filesystem;
 	u8	 _pad_##name[16 - sizeof(Type)];
 
 
-using DX11Bool = int;
+using DX11Bool = u32;
 
 struct BGVert
 {
@@ -53,7 +56,7 @@ __declspec(align(16))
 struct PS2DCBuff
 {
 	float exponent = 1.f;
-	DX11Bool isDepth = false;
+	int renderMode = 0; // 1=depth, 2=uint
 };
 
 template<typename... Args>
@@ -369,6 +372,7 @@ void DX11Renderer::RenderDepthOnly(ID3D11DepthStencilView *dsv, u32 width, u32 h
 __declspec(align(16))
 struct PerInstancePSData
 {
+	DECLARE_STI_NOBASE(PerInstancePSData);
 	vec4 colour;
 	vec3 ambdiffspec;
 	float roughness = 1.f;
@@ -379,9 +383,10 @@ struct PerInstancePSData
 	DX11Bool useEmissiveMap;
 	DX11Bool useRoughnessMap;
 };
+DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 
- DX11Renderer::DX11Renderer(UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context)
-	: m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context)
+ DX11Renderer::DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context)
+	: m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context), m_Scene(scene)
 {
 	Device = this;
 	TextureManager = &m_Ctx.psTextures;
@@ -390,6 +395,7 @@ struct PerInstancePSData
 	m_Ctx.m_Renderer = this;
 	Setup();
 	MatManager = new MaterialManager(this);
+	mViewport = MakeOwning<Viewport>(this, scene, camera);
 }
 
 DX11Renderer::~DX11Renderer()
@@ -429,7 +435,7 @@ void DX11Renderer::DrawControls()
 	ImGui::DragFloat("Dir shadowmap scale", &m_DirShadowSize);
 	ImGui::DragFloat("Point shadow factor", &m_PointShadowFactor, 0.1f);
 	ImGui::DragInt("Debug mode", reinterpret_cast<int*>(&mRCtx->ShadingDebugMode), 0.5, 0, Denum(EShadingDebugMode::COUNT));
-	ImGui::DragFloat("Debug greyscale exponent", &mRCtx->mDebugGrayscaleExp, 0.1, 0, 10);
+	ImGui::DragFloat("Debug greyscale exponent", &mRCtx->mDebugGrayscaleExp, 0.1f, 0, 10);
 	mRCtx->DrawControls();
 
 	{
@@ -485,10 +491,10 @@ void DX11Renderer::DrawControls()
 		}
 		ImGui::DragFloat("Exponent", &m_TexViewExp, 0.01f, 0.01f, 10.f);
 
-		if (m_ViewerTex != nullptr)
-		{
-			ImGui::Image(m_ViewerTex->GetSRV(), {500, 500}, {0,1}, {1,0});
-		}
+		//if (m_ViewerTex != nullptr)
+		//{
+		//	ImGui::Image(m_ViewerTex->GetSRV(), {500, 500}, {0,1}, {1,0});
+		//}
 	}
 
 	//ImGui::Selectable()
@@ -904,6 +910,9 @@ void DX11Renderer::LoadShaders(bool reload)
 		CreateMatType(MAT_PLAIN, "PlainVertexShader","PlainPixelShader",ied,Size(ied), reload);
 		CreateMatType(MAT_TEX, "TexVertexShader","TexPixelShader",ied,Size(ied), reload);
 		CreateMatTypeUnshaded(MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied,Size(ied), reload);
+		CreateMatTypeUnshaded(MAT_SCREEN_ID, "PlainVertexShader", "ScreenId_PS", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "SHADED", "0" } });
+		static CBLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
+		m_MatTypes[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;
 	}
 
 	{
@@ -913,6 +922,7 @@ void DX11Renderer::LoadShaders(bool reload)
 			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(BGVert, uv), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 		CreateMatTypeUnshaded(MAT_2D, "2D_VS", "2D_PS", ied, Size(ied), reload);
+		CreateMatTypeUnshaded(MAT_2D_UINT, "2D_VS", "2D_PS_Uint", ied, Size(ied), reload);
 		CreateMatTypeUnshaded(MAT_BG, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload);
 		CreateMatTypeUnshaded(MAT_CUBE_DEPTH, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "DEPTH_SAMPLE", "1" } });
 	
@@ -971,19 +981,36 @@ void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 	m_VS2DCBuff.WriteData(cbuff);
 
 	PS2DCBuff pbuff;
-	pbuff.isDepth = tex->IsDepthStencil();
+	if (tex->IsDepthStencil())
+	{
+		pbuff.renderMode = 1;
+	}
+	else if (tex->Desc.format == ETextureFormat::R32_Uint)
+	{
+		pbuff.renderMode = 2;
+	}
+
 	pbuff.exponent = m_TexViewExp;
 	m_PS2DCBuff.WriteData(pbuff);
 
 	const UINT stride = sizeof(BGVert);
 	const UINT offset = 0;
 
+	SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
 	pContext->VSSetConstantBuffers(0, 1, m_VS2DCBuff.GetAddressOf());
 	pContext->PSSetConstantBuffers(0, 1, m_PS2DCBuff.GetAddressOf());
 
 	pContext->IASetVertexBuffers(0, 1, m_2DVBuff.GetAddressOf(), &stride, &offset);
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_MatTypes[MAT_2D].Bind(m_Ctx, EShadingLayer::BASE);
+	if (pbuff.renderMode <= 1)
+	{
+		m_MatTypes[MAT_2D].Bind(m_Ctx, EShadingLayer::BASE);
+	}
+	else
+	{
+		m_PS2DCBuff.WriteData(ivec2(m_Width, m_Height));
+		m_MatTypes[MAT_2D_UINT].Bind(m_Ctx, EShadingLayer::BASE);
+	}
 
 	auto* srv = tex->GetSRV();
 	pContext->PSSetShaderResources(0,1, &srv);
@@ -1002,8 +1029,8 @@ inline int Round(float x) {
 
 void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useMaterial /*= true*/)
 {
-	ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
-	pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
+//	ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
+//	pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
 	auto& meshData = m_MeshData[&mesh];
 	if (!meshData.vBuff)
 	{
@@ -1011,7 +1038,13 @@ void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useM
 	}
 	assert(meshData.iBuff);
 
-	if (!m_Materials[mesh.material] || m_Scene->GetMaterial(mesh.material).NeedsUpdate())
+	bool needsUpdate = false;
+	auto const& sceneMats = m_Scene->Materials();
+	if (RCHECK(mesh.material < sceneMats.size() && sceneMats[mesh.material]))
+	{
+		needsUpdate = sceneMats[mesh.material]->NeedsUpdate();
+	}
+	if (!m_Materials[mesh.material] || needsUpdate)
 	{
 		PrepareMaterial(mesh.material);
 	}
@@ -1021,24 +1054,24 @@ void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useM
 		m_Materials[mesh.material]->Bind(m_Ctx, layer);
 	}
 
-	PerInstancePSData PIPS;
-	Material const& mat = m_Scene->GetMaterial(mesh.material);
-	PIPS.colour = mat.colour;
-	PIPS.emissiveColour = mat.emissiveColour;
-	PIPS.roughness = mat.roughness;
-	PIPS.metalness = mat.metalness;
-	PIPS.ambdiffspec = {1, mat.diffuseness, mat.specularity};
-	PIPS.useNormalMap = mat.normal->IsValid();
-	PIPS.useEmissiveMap = mat.emissiveMap->IsValid();
-	PIPS.useRoughnessMap = mat.roughnessMap->IsValid();
-	PIPS.alphaMask = mat.mask;
-	m_PSPerInstanceBuff.WriteData(PIPS);
+	//PerInstancePSData PIPS;
+	//Material const& mat = m_Scene->GetMaterial(mesh.material);
+	//PIPS.colour = mat.colour;
+	//PIPS.emissiveColour = mat.emissiveColour;
+	//PIPS.roughness = mat.roughness;
+	//PIPS.metalness = mat.metalness;
+	//PIPS.ambdiffspec = {1, mat.diffuseness, mat.specularity};
+	//PIPS.useNormalMap = mat.normal->IsValid();
+	//PIPS.useEmissiveMap = mat.emissiveMap->IsValid();
+	//PIPS.useRoughnessMap = mat.roughnessMap->IsValid();
+	//PIPS.alphaMask = mat.mask;
+	//m_PSPerInstanceBuff.WriteData(PIPS);
 
 	const UINT stride = Sizeof(mesh.vertices[0]);
 	const UINT offset = 0;
 
-	ID3D11Buffer* pbuffs[] = { m_PSPerFrameBuff.Get(), m_PSPerInstanceBuff.Get() };
-	pContext->PSSetConstantBuffers(0, Size(pbuffs), pbuffs);
+	//ID3D11Buffer* pbuffs[] = { m_PSPerFrameBuff.Get(), m_PSPerInstanceBuff.Get() };
+	//pContext->PSSetConstantBuffers(0, Size(pbuffs), pbuffs);
 
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	pContext->IASetVertexBuffers(0, 1, meshData.vBuff.GetAddressOf(), &stride, &offset);
@@ -1140,6 +1173,7 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 	{
 		result = std::make_unique<DX11Material>(&m_MatTypes[MAT_PLAIN]);
 	}
+	mat.DeviceMat = result.get();
 }
 
 void DX11Renderer::SetMainRenderTarget(ComPtr<ID3D11RenderTargetView> rt, ComPtr<ID3D11DepthStencilView> ds, u32 width, u32 height)
@@ -1148,14 +1182,14 @@ void DX11Renderer::SetMainRenderTarget(ComPtr<ID3D11RenderTargetView> rt, ComPtr
 	{
 		m_MainRenderTarget = std::make_shared<DX11RenderTarget>(RenderTargetDesc{ "MainRT", ETextureDimension::TEX_2D, width, height }, rt, ds);
 		m_MainDepthStencil = std::make_shared<DX11DepthStencil>(DepthStencilDesc{ "MainDS",  ETextureDimension::TEX_2D, width, height }, ds);
-		mRCtx = std::make_unique<RenderContext>(this, m_Camera, m_MainRenderTarget, m_MainDepthStencil);
-		m_Ctx.mRCtx = mRCtx.get();
 	}
 	else
 	{
 		m_MainRenderTarget->RenderTargets = {rt};
 		m_MainDepthStencil->DepthStencils = {ds};
 	}
+	mViewport->Resize(width, height, m_MainRenderTarget, m_MainDepthStencil);
+	m_Ctx.mRCtx = mRCtx = mViewport->GetRenderContext();
 	m_MainRenderTarget->Desc.Width = width;
 	m_MainRenderTarget->Desc.Height = height;
 	m_MainDepthStencil->Desc.Width = width;
@@ -1171,13 +1205,35 @@ void DX11Renderer::Resize(u32 width, u32 height, u32* canvas)
 	m_Scale = float(min(width, height));
 }
 
+MappedResource DX11Renderer::MapResource(ID3D11Resource* resource, u32 subResource, ECpuAccessFlags flags)
+{
+	D3D11_MAP mapFlags;
+	if (flags == ECpuAccessFlags::Write)
+	{
+		mapFlags = D3D11_MAP_WRITE_DISCARD;
+	}
+	else
+	{
+		RASSERT(flags != ECpuAccessFlags::None);
+		mapFlags = ((flags & ECpuAccessFlags::Write) != 0) ? D3D11_MAP_READ_WRITE : D3D11_MAP_READ;
+	}
+	D3D11_MAPPED_SUBRESOURCE mapped{};
+	HR_ERR_CHECK(m_Ctx.pContext->Map(resource, subResource,  mapFlags, 0, &mapped));
+
+	MappedResource result;
+	result.Data = mapped.pData;
+	result.RowPitch = mapped.RowPitch;
+	result.DepthPitch = mapped.DepthPitch;
+	return result;
+}
+
 DX11Texture::Ref DX11Renderer::PrepareTexture(Texture const& tex, bool sRGB /*= false*/)
 {
 	if (IsValid(tex.GetDeviceTexture()))
 	{
 		return std::static_pointer_cast<DX11Texture>(tex.GetDeviceTexture());
 	}
-	auto result = DX11Texture::Create(&m_Ctx, tex.width, tex.height, tex.GetData(), sRGB ? TF_SRGB : TF_NONE);
+	auto result = DX11Texture::Create(&m_Ctx, tex.width, tex.height, tex.GetData(), (sRGB ? TF_SRGB : TF_NONE) | TF_SRV);
 	tex.SetDeviceTexture(result);
 	return result;
 }
@@ -1277,8 +1333,9 @@ void DX11Renderer::SetBlendMode(EBlendState mode)
 	}
 	else
 	{
-		RASSERT(false);
+		blendState = nullptr;
 	}
+
 	pContext->OMSetBlendState(blendState, nullptr, 0xffffffff);
 }
 
@@ -1288,6 +1345,40 @@ void DX11Renderer::ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMo
 	for (auto const& DSV : dx11DS->DepthStencils)
 	{
 		pContext->ClearDepthStencilView(DSV.Get(), static_cast<D3D11_CLEAR_FLAG>(clearMode), depth, stencil);
+	}
+}
+
+void DX11Renderer::ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour)
+{
+	const float clearCol[4] = {clearColour.x, clearColour.y, clearColour.z, clearColour.w};
+	pContext->ClearRenderTargetView(rt->GetData<ID3D11RenderTargetView>(), clearCol);
+}
+
+void DX11Renderer::SetConstantBuffers(EShaderType shader, IConstantBuffer** buffers, u32 numBuffers)
+{
+	constexpr u32 MAX_CONSTANT_BUFFERS = 16;
+	ID3D11Buffer* dx11Buffers[MAX_CONSTANT_BUFFERS];
+	for (u32 i = 0; i < min(MAX_CONSTANT_BUFFERS, numBuffers); ++i)
+	{
+		if (!buffers[i])
+		{
+			dx11Buffers[i] = nullptr;
+		}
+		else
+		{
+			dx11Buffers[i] = static_cast<DX11ConstantBuffer*>(buffers[i])->GetDeviceBuffer();
+		}
+	}
+	switch (shader)
+	{
+	case EShaderType::Vertex:
+		pContext->VSSetConstantBuffers(0, numBuffers, dx11Buffers);
+		break;
+	case EShaderType::Pixel:
+		pContext->PSSetConstantBuffers(0, numBuffers, dx11Buffers);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -1303,6 +1394,24 @@ struct ShaderVariant
 	ComPtr<ID3DBlob> m_Blob;
 	bool m_Dirty = false;
 };
+
+u64 Hash(ID3DBlob* blob)
+{
+	size_t size = blob->GetBufferSize();
+	u64 result = 0;
+	size_t u64Size = size/8;
+	for (u32 i=0; i<u64Size; ++i)
+	{
+		result ^= *(reinterpret_cast<const u64*>(blob->GetBufferPointer()) + i);
+	}
+	u32 finalOffset = 0;
+	for (u32 i=0; i<size%8; ++i)
+	{
+		result ^= (u64(*(reinterpret_cast<const u8*>(blob->GetBufferPointer()) + u64Size * 4 + i)) << finalOffset);
+		finalOffset++;
+	}
+	return result;
+}
 
 int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 numVars, char const* shaderType, bool reload = false)
 {
@@ -1329,9 +1438,28 @@ int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 num
 			HRESULT hr = D3DCompileFromFile(src.wstring().c_str(), Addr(var.m_Defines), D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", shaderType, flags, 0, &output, &errBlob);
 			if (SUCCEEDED(hr))
 			{
+				if (reload && var.m_Blob)
+				{
+					if(output->GetBufferSize() != var.m_Blob->GetBufferSize() ||
+						memcmp(output->GetBufferPointer(), var.m_Blob->GetBufferPointer(), output->GetBufferSize()) != 0)
+					{
+						fprintf(stderr, "%s HAS CHANGED (hash before %llu, hash after %llu)\n", cso.string().c_str(), Hash(var.m_Blob.Get()), Hash(output));
+					}
+				}
 				var.m_Blob = output;
 				printf("Saving to file %s\n", cso.string().c_str());
-				HR_ERR_CHECK(D3DWriteBlobToFile(var.m_Blob.Get(), cso.wstring().c_str(), true));
+				HR_ERR_CHECK(D3DWriteBlobToFile(var.m_Blob.Get(), cso.c_str(), true));
+				#define BLOB_DEBUG
+				#ifdef BLOB_DEBUG
+				{
+					ComPtr<ID3DBlob> saved;
+					HR_ERR_CHECK(D3DReadFileToBlob(cso.c_str(), &saved));
+					RASSERT(saved->GetBufferSize() == var.m_Blob->GetBufferSize() &&
+						memcmp(saved->GetBufferPointer(), var.m_Blob->GetBufferPointer(), saved->GetBufferSize()) == 0);
+					printf("Hash: %llu\n", Hash(var.m_Blob.Get()));
+
+				}
+				#endif
 			}
 			else
 			{
@@ -1349,9 +1477,40 @@ int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 num
 		{
 			printf("Reading precompiled shader %s from %s\n", name, cso.string().c_str());
 			HR_ERR_CHECK(D3DReadFileToBlob(cso.c_str(), &var.m_Blob));
+			printf("Hash: %llu\n", Hash(var.m_Blob.Get()));
 		}
 	}
 	return numVars;
+}
+
+
+void GetCBInfo(ID3DBlob* shaderCode, DX11MaterialType& matType, ECBFrequency perFrame, ECBFrequency perInst)
+{
+	ComPtr<ID3D11ShaderReflection> reflection;
+	HR_ERR_CHECK(D3DReflect(shaderCode->GetBufferPointer(), shaderCode->GetBufferSize(), IID_ID3D11ShaderReflection, &reflection))
+	D3D11_SHADER_DESC desc;
+	reflection->GetDesc(&desc);
+	for (u32 i = 0; i < desc.ConstantBuffers; ++i)
+	{
+		ID3D11ShaderReflectionConstantBuffer* cBuffer = reflection->GetConstantBufferByIndex(i);
+		D3D11_SHADER_BUFFER_DESC			  cbDesc;
+		cBuffer->GetDesc(&cbDesc);
+		ECBFrequency freq = ECBFrequency::Count;
+		printf("Found cb %s\n", cbDesc.Name);
+		if (FindIgnoreCase(cbDesc.Name, "instance"))
+		{
+			freq = perInst;
+		}
+		else if (FindIgnoreCase(cbDesc.Name, "frame"))
+		{
+			freq = perFrame;
+		}
+
+		if (freq != ECBFrequency::Count)
+		{
+			matType.GetCBData(freq).IsUsed = true;
+		}
+	}
 }
 
 void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload)
@@ -1371,11 +1530,16 @@ void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psNa
 		}},
 	};
 
+	DX11MaterialType& matType = m_MatTypes[index];
+	matType.CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = GetLayout<PerInstancePSData>();
+	matType.DebugName = psName;
 	if (GetCompiledShaderVariants(vsName, variants, Size(variants), "vs_5_0", reload) > 0)
 	{
 		auto const& vertBlob = variants[0].m_Blob;
-		HR_ERR_CHECK(pDevice->CreateVertexShader(vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), nullptr, &m_MatTypes[index].m_VertexShader));
+		GetCBInfo(vertBlob.Get(), matType, ECBFrequency::VS_PerFrame, ECBFrequency::VS_PerInstance);
+		HR_ERR_CHECK(pDevice->CreateVertexShader(vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), nullptr, &matType.m_VertexShader));
 		HR_ERR_CHECK(pDevice->CreateInputLayout(ied, iedsize, vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), &m_MatTypes[index].m_InputLayout));
+		SetResourceName(m_MatTypes[index].m_VertexShader, vsName);
 	}
 	else
 	{
@@ -1388,6 +1552,11 @@ void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psNa
 	{
 		auto const& pixBlob = variants[i].m_Blob;
 		HR_ERR_CHECK(pDevice->CreatePixelShader(pixBlob->GetBufferPointer(), pixBlob->GetBufferSize(), nullptr, &m_MatTypes[index].m_PixelShader[i]));
+		SetResourceName(m_MatTypes[index].m_PixelShader[i], String(psName));
+		if (i == 0)
+		{
+			GetCBInfo(pixBlob.Get(), matType, ECBFrequency::PS_PerFrame, ECBFrequency::PS_PerInstance);
+		}
 	}
 
 }
@@ -1400,11 +1569,14 @@ void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char con
 		{ "base", std::move(defines) },
 	};
 
+	DX11MaterialType& matType = m_MatTypes[index];
 	if (GetCompiledShaderVariants(vsName, variants, Size(variants), "vs_5_0", reload) > 0)
 	{
 		auto const& vertBlob = variants[0].m_Blob;
+		GetCBInfo(vertBlob.Get(), matType, ECBFrequency::VS_PerFrame, ECBFrequency::VS_PerInstance);
 		HR_ERR_CHECK(pDevice->CreateVertexShader(vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), nullptr, &m_MatTypes[index].m_VertexShader));
 		HR_ERR_CHECK(pDevice->CreateInputLayout(ied, iedsize, vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), &m_MatTypes[index].m_InputLayout));
+		SetResourceName(m_MatTypes[index].m_VertexShader, vsName);
 	}
 	else
 	{
@@ -1417,9 +1589,28 @@ void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char con
 	{
 		auto const& pixBlob = variants[i].m_Blob;
 		HR_ERR_CHECK(pDevice->CreatePixelShader(pixBlob->GetBufferPointer(), pixBlob->GetBufferSize(), nullptr, &m_MatTypes[index].m_PixelShader[i]));
+		SetResourceName(m_MatTypes[index].m_PixelShader[i], String(psName));
+		if (i == 0)
+		{
+			GetCBInfo(pixBlob.Get(), matType, ECBFrequency::PS_PerFrame, ECBFrequency::PS_PerInstance);
+		}
 	}
 
 }
+
+DEFINE_CLASS_TYPEINFO(PerInstancePSData)
+BEGIN_REFL_PROPS()
+REFL_PROP(colour)
+REFL_PROP(ambdiffspec)
+REFL_PROP(roughness)
+REFL_PROP(emissiveColour)
+REFL_PROP(alphaMask)
+REFL_PROP(metalness)
+REFL_PROP(useNormalMap)
+REFL_PROP(useEmissiveMap)
+REFL_PROP(useRoughnessMap)
+END_REFL_PROPS()
+END_CLASS_TYPEINFO()
 
 }
 }

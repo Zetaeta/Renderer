@@ -21,7 +21,7 @@ void DX11ConstantBuffer::CreateDeviceResource()
 }
 
 DX11ConstantBuffer::DX11ConstantBuffer(DX11Ctx* ctx, u32 size, CBLayout::Ref layout /*= nullptr*/)
-	:mCtx(ctx), mData(size, layout)
+	:mCtx(ctx), IConstantBuffer(size, layout)
 {
 	CreateDeviceResource();
 }

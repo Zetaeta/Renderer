@@ -12,7 +12,7 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 	: DX11TextureBase(ctx, desc)
 {
 	
-	ID3D11Texture2D* cubeTex;
+	ComPtr<ID3D11Texture2D> cubeTex;
 
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	u32			faceWidth = static_cast<u32>(desc.width);
@@ -47,7 +47,7 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 	}
 
 	HR_ERR_CHECK(ctx.pDevice->CreateTexture2D(&texDesc, initData, &cubeTex));
-	HR_ERR_CHECK(ctx.pDevice->CreateShaderResourceView(cubeTex, &srvDesc, &srv));
+	HR_ERR_CHECK(ctx.pDevice->CreateShaderResourceView(cubeTex.Get(), &srvDesc, &srv));
 	if (desc.flags & TF_DEPTH)
 	{
 		DepthStencilDesc dsDesc{ std::format("{}DS", desc.DebugName), ETextureDimension::TEX_CUBE };
@@ -56,7 +56,7 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 		mDepthStencil = std::make_shared<DX11DepthStencil>(dsDesc);
 		for (int i=0; i<6; ++i)
 		{
-			ID3D11DepthStencilView* dsv;
+			ComPtr<ID3D11DepthStencilView> dsv;
 			D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
 			ZeroMemory(&dsvDesc, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
 			dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -64,8 +64,8 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 			dsvDesc.Texture2DArray.FirstArraySlice = i;
 			dsvDesc.Texture2DArray.ArraySize = 1;
 			dsvDesc.Texture2DArray.MipSlice = 0;
-			HR_ERR_CHECK(ctx.pDevice->CreateDepthStencilView(cubeTex, &dsvDesc, &dsv));
-			mDepthStencil->DepthStencils.emplace_back(dsv);
+			HR_ERR_CHECK(ctx.pDevice->CreateDepthStencilView(cubeTex.Get(), &dsvDesc, &dsv));
+			mDepthStencil->DepthStencils.emplace_back(std::move(dsv));
 		}
 	}
 	ctx.m_Renderer->RegisterTexture(this);
@@ -79,6 +79,7 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 
  DX11Cubemap::~DX11Cubemap()
 {
+//	CHECK_COM_REF(srv);
 	m_Ctx->m_Renderer->UnregisterTexture(this);
 }
 
@@ -91,7 +92,7 @@ DX11Cubemap DX11Cubemap::FoldUp(DX11Ctx& ctx, TextureRef tex)
 		6, 4, 1, 9, 5, 7
 
 	};
-	ID3D11Texture2D* cubeTex;
+	ComPtr<ID3D11Texture2D> cubeTex;
 
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	u32			faceWidth = static_cast<u32>(tex->width / 4);
@@ -125,7 +126,7 @@ DX11Cubemap DX11Cubemap::FoldUp(DX11Ctx& ctx, TextureRef tex)
 		sData[i].SysMemSlicePitch = 0;
 	}
 	HR_ERR_CHECK(device->CreateTexture2D(&texDesc, &sData[0], &cubeTex));
-	HR_ERR_CHECK(device->CreateShaderResourceView(cubeTex, &srvDesc, &res.srv));
+	HR_ERR_CHECK(device->CreateShaderResourceView(cubeTex.Get(), &srvDesc, &res.srv));
 
 	return res;
 }
@@ -138,6 +139,17 @@ IRenderTarget::Ref DX11Cubemap::GetRT()
 IDepthStencil::Ref DX11Cubemap::GetDS()
 {
 	return mDepthStencil;
+}
+
+MappedResource DX11Cubemap::Map(u32 subResource, ECpuAccessFlags flags)
+{
+	RASSERT(false);
+	return MappedResource {};
+}
+
+void DX11Cubemap::Unmap(u32 subResource)
+{
+	RASSERT(false);
 }
 
 void DX11ShadowCube::Init(DX11Ctx& ctx, u32 size)

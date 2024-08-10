@@ -26,7 +26,7 @@ struct AssetRef
 	EAssetType assType;
 };
 
-struct Scene;
+class Scene;
 struct MeshPart;
 
 inline std::string ToString(std::filesystem::path const& path)
@@ -97,7 +97,7 @@ public:
 	~AssetManager();
 	using Meshes = std::vector<Mesh>;
 	
-	friend struct Scene;
+	friend Scene;
 	Asset::Ref LoadAssetUntyped(AssetPath path);
 
 	Asset::Ref LoadAssetUntyped(std::filesystem::directory_entry const& file);

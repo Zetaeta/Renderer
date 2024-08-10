@@ -2,8 +2,12 @@
 #include <scene/SceneComponent.h>
 #include "imgui.h"
 
-namespace rnd
+struct PropertyFilter
 {
+	Vector<const TypeInfo*> ExcludedTypes;
+	Vector<const PropertyInfo*> ExcludedProperties;
+};
+
 inline bool ImGuiControls(SceneObject& so)
 {
 	return so.ImGuiControls();
@@ -21,6 +25,5 @@ inline bool ImGuiControls(TTransform<Rotator>& trans)
 
 }
 
-bool ImGuiControls(ClassValuePtr cls, bool isConst);
+bool ImGuiControls(ClassValuePtr cls, bool isConst = false, const PropertyFilter& filter = {});
 
-}

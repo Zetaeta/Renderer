@@ -16,6 +16,7 @@
 #include "render/RenderDevice.h"
 #include "render/RenderDeviceCtx.h"
 
+class Viewport;
 namespace rnd
 {
 namespace dx11
@@ -94,7 +95,7 @@ struct PFPSSpotLight// : PerFramePSData
 class DX11Renderer : public IRenderer, public rnd::IRenderDeviceCtx, public IRenderDevice
 {
 public:
-	DX11Renderer(UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context);
+	DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context);
 
 	~DX11Renderer();
 
@@ -142,9 +143,13 @@ public:
 	void SetDepthMode(EDepthMode mode) override;
 	void SetBlendMode(EBlendState mode) override;
 	void ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMode, float depth, u8 stencil /* = 0 */) override;
+	void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) override;
+	void SetConstantBuffers(EShaderType shader, IConstantBuffer** buffers, u32 numBuffers) override;
 	// End IRenderDeviceCtx overrides
 
 	void Resize(u32 width, u32 height, u32* canvas = nullptr) override;
+
+	MappedResource MapResource(ID3D11Resource*, u32 subResource, ECpuAccessFlags flags);
 
 	void RegisterTexture(DX11Texture* tex)
 	{
@@ -193,12 +198,17 @@ public:
 	std::unique_ptr<DX11Cubemap> m_BG;
 	DX11Ctx m_Ctx;
 
+	Viewport* GetViewport()
+	{
+		return mViewport.get();
+	}
+
 private:
 	template<typename TFunc>
 	void ForEachMesh(TFunc&& func);
 	DX11Texture::Ref PrepareTexture(Texture const& tex, bool sRGB = false);
 
-	std::unique_ptr<RenderContext> mRCtx;
+	RenderContext* mRCtx = nullptr;
 
 protected:
 
@@ -250,6 +260,8 @@ protected:
 
 	Vector<DX11Texture*> m_TextureRegistry;
 	Vector<DX11Cubemap*> m_CubemapRegistry;
+
+	OwningPtr<Viewport> mViewport;
 
 	DX11Texture::Ref m_Background;
 	ComPtr<ID3D11Buffer> m_BGVBuff;

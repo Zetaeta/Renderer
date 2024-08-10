@@ -4,7 +4,7 @@
 
 
 
-bool JsonDeserializer::Read(ReflectedValue value, std::string file)
+bool JsonDeserializer::Read(ReflectedValue value, std::string const& file)
 {
 	std::ifstream i(file);
 	if (!i) return false;

@@ -28,8 +28,8 @@ public:
 	using Ref = std::shared_ptr<DX11Texture>;
 
 	//template<template<typename T> typename TPtr>
-	static Ref Create(DX11Ctx* ctx, u32 width, u32 height, u32 const* data, ETextureFlags flags = TF_NONE);
-	static Ref CreateFrom(TextureRef tex, DX11Ctx* ctx, ETextureFlags flags = TF_NONE)
+	static Ref Create(DX11Ctx* ctx, u32 width, u32 height, u32 const* data, ETextureFlags flags = TF_SRV);
+	static Ref CreateFrom(TextureRef tex, DX11Ctx* ctx, ETextureFlags flags = TF_SRV)
 	{
 		return Create(ctx, u32(tex->width), u32(tex->height), tex->GetData(), flags);
 	}
@@ -50,21 +50,25 @@ public:
 	{
 		return mDepthStencil->GetDSV();
 	}
-	
+
 	void Init(u32 width, u32 height, u32 const* data, ETextureFlags flags);
 
 	~DX11Texture();
 
 	DX11DepthStencil::Ref mDepthStencil;
 
-	 IRenderTarget::Ref GetRT() override;
-	 IDepthStencil::Ref GetDS() override;
+	IRenderTarget::Ref GetRT() override;
+	IDepthStencil::Ref GetDS() override;
+
+	virtual MappedResource Map(u32 subResource, ECpuAccessFlags flags) override;
+	virtual void		   Unmap(u32 subResource) override;
 
  private:
 	ComPtr<ID3D11ShaderResourceView> m_SRV = nullptr;
 	ComPtr<ID3D11Texture2D> m_Texture;
+	ComPtr<ID3D11Texture2D> m_CpuTexture;
 
-	std::optional<DX11RenderTarget> m_RT;
+	std::shared_ptr<DX11RenderTarget> mRenderTarget;
 //	std::optional<DX11DepthStencil> m_DS;
 
 };

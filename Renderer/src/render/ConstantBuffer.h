@@ -3,11 +3,12 @@
 #include <core/Types.h>
 #include <core/TypeInfoUtils.h>
 #include <core/Maths.h>
-
+#include <core/MovableContiguousBumpAllocator.h>
+#include <limits>
 
 namespace rnd
 {
-
+class CBDataSource;
 struct CBLEntry
 {
 	TypeInfo const* mType;
@@ -21,12 +22,23 @@ CBLEntry Entry(Name name)
 	return CBLEntry { &GetTypeInfo<T>(), name };
 }
 
+enum class ECBFrequency : u8
+{
+	PS_PerInstance,
+	PS_PerFrame,
+	VS_PerInstance,
+	VS_PerFrame,
+	Count
+};
+
 class ConstantBufferData;
+
+using GPUBoolType = u32;
 
 struct CBAccessor
 {
 	ConstantBufferData* mCBuffer;
-	CBLEntry* mEntry;
+	CBLEntry const* mEntry;
 
 	ReflectedValue Access();
 	bool		   Exists() const { return mEntry != nullptr; }
@@ -36,8 +48,15 @@ struct CBAccessor
 	template<HasTypeInfo T>
 	T const& operator=(T const& val);
 
+	template<>
+	bool const& operator=(bool const& val)
+	{
+		*this = (GPUBoolType) val;
+		return val;
+	}
+
 	template<HasTypeInfo T>
-	T const& operator|=(T const& val);
+	T const&  operator|=(T const& val);
 };
 
 struct CBLayout
@@ -47,7 +66,7 @@ struct CBLayout
 	CBLayout(size_t alignment, Vector<CBLEntry>&& entries);
 
 	size_t mAlignment;
-	Vector<CBLEntry> mEntries;
+	Vector<CBLEntry> Entries;
 	size_t mSize;
 
 	size_t GetSize()
@@ -86,14 +105,13 @@ public:
 		Data = std::make_unique<u8[]>(size);
 	}
 
-	void SetLayout(CBLayout::Ref layout)
+	void Resize(size_t size)
 	{
-		if (layout != nullptr)
-		{
-			RASSERT(layout->GetSize() < DataSize, "Layout too big");
-		}
-		Layout = layout;
+		Data = std::make_unique<u8[]>(size);
+		DataSize = size;
 	}
+
+	void SetLayout(CBLayout::Ref layout);
 
 	u8* GetData(){ return Data.get(); }
 	CBLayout::Ref			  Layout;
@@ -101,7 +119,7 @@ public:
 	CBAccessor operator[](Name const& name)
 	{
 		RASSERT(Layout != nullptr);
-		for (auto& entry: Layout->mEntries)
+		for (auto& entry: Layout->Entries)
 		{
 			if (entry.mName == name)
 			{
@@ -137,7 +155,7 @@ public:
 		operator[](name) |= val;
 	}
 
-
+	void FillFromSource(const CBDataSource& source);
 
 	std::unique_ptr<u8[]> Data;
 	size_t DataSize;
@@ -174,10 +192,70 @@ T const& CBAccessor::operator|=(T const& val)
 class IConstantBuffer
 {
 public:
+	template<typename... Args>
+	IConstantBuffer(Args... args)
+		: mData(std::forward<Args>(args)...) {}
 	ConstantBufferData& Data() { return mData; }
 	virtual void		Update() = 0;
+	virtual void		SetLayout(CBLayout::Ref layout) = 0;
 protected:
 	ConstantBufferData mData;
+};
+
+class CBDataSource
+{
+	constexpr static size_t InvalidPos = std::numeric_limits<size_t>::max();
+public:
+	CBDataSource()
+		: mData(64) {}
+
+	struct Entry
+	{
+		TypeInfo const* Type = nullptr;
+		size_t Pos = InvalidPos;
+		bool Enabled = true;
+	};
+
+	ConstReflectedValue Get(const Name& key) const
+	{
+		auto const it = mEntries.find(key);
+		if (it == mEntries.end() || !it->second.Enabled)
+		{
+			return ConstNoValue;
+		}
+
+		return {mData[it->second.Pos], it->second.Type};
+	}
+
+	template<typename T>
+	void Set(const Name& key, const T& value)
+		requires(std::is_trivially_copyable_v<T>)
+	{
+		Entry& entry = mEntries[key];
+		if (entry.Type == nullptr)
+		{
+			entry.Type = &GetTypeInfo<T>();
+			entry.Pos = mData.Allocate(sizeof(T), alignof(T));
+		}
+		else
+		{
+			RASSERT(GetTypeInfo<T>() == *entry.Type);
+		}
+		entry.Enabled = true;
+		*reinterpret_cast<T*>(mData[entry.Pos]) = value;
+	}
+
+	void Unset(const Name& key)
+	{
+		if (auto const it = mEntries.find(key); it != mEntries.end())
+		{
+			it->second.Enabled = false;
+		}
+	}
+
+private:
+	std::unordered_map<Name, Entry> mEntries;
+	MovableContiguousBumpAllocator mData;
 };
 
 } // namespace rnd

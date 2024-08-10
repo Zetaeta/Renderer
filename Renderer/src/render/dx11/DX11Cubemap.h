@@ -38,6 +38,12 @@ public:
 	IRenderTarget::Ref GetRT() override;
 	IDepthStencil::Ref GetDS() override;
 
+
+ MappedResource Map(u32 subResource, ECpuAccessFlags flags) override;
+
+
+ void Unmap(u32 subResource) override;
+
  private:
 	DX11Cubemap(DX11Ctx& ctx);
 };

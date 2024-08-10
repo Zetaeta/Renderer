@@ -11,7 +11,7 @@ SceneComponent::SceneComponent(SceneComponent* parent, String const& name, Trans
 	m_WorldTransform = WorldTransform(m_Transform) * parent->GetWorldTransform();
 }
 
-Vector<SceneComponent::Owner> const& SceneComponent::GetChildren()
+Vector<SceneComponent::Owner> const& SceneComponent::GetChildren() const
 {
 	return m_Children;
 }
@@ -32,13 +32,33 @@ bool SceneComponent::ImGuiControls()
 	//	ImGui::TreePop();
 	//}
 
-	bool dirty = rnd::ImGuiControls(ClassValuePtr::From(*this), false);
+	bool dirty = ::ImGuiControls(ClassValuePtr::From(*this), false);
 
 	if (dirty)
 	{
 		MarkDirty();
 	}
 	return dirty;
+}
+
+void SceneComponent::Modify(bool allChildren)
+{
+	if (m_Parent)
+	{
+		m_Parent->Modify(false);
+	}
+	else
+	{
+		m_Object->Modify(false);
+	}
+
+	if (allChildren)
+	{
+		for (auto& child : m_Children)
+		{
+			child->Modify(true);
+		}
+	}
 }
 
 void SceneComponent::Initialize()
@@ -51,8 +71,24 @@ void SceneComponent::Initialize()
 	OnInitialize();
 	m_Initialized = true;
 	//#if R_EDITOR
-	Editor::Get()->GetScreenObjManager().Register<SOSceneComponent>(this);
+	if (Editor* editor = Editor::Get())
+	{
+		mScreenId = editor->GetScreenObjManager().Register<SOSceneComponent>(this);
+	}
 	//#endif
+}
+
+void SceneComponent::ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive /*= false*/)
+{
+	for (auto& child : m_Children)
+	{
+		callback(child.get());
+		if (recursive)
+		{
+			child->ForAllChildren(callback, recursive);
+		}
+	}
+
 }
 
 void SceneComponent::OnUpdate(Scene& scene)
@@ -137,6 +173,11 @@ REFL_PROP_SETTER(m_Transform, SetTransform, META(AutoExpand))
 REFL_PROP(m_Children)
 END_REFL_PROPS()
 END_CLASS_TYPEINFO()
+
+//DEFINE_CLASS_TYPEINFO(PrimitiveComponent)
+//BEGIN_REFL_PROPS()
+//END_REFL_PROPS()
+//END_CLASS_TYPEINFO()
 
 DEFINE_CLASS_TYPEINFO(StaticMeshComponent)
 BEGIN_REFL_PROPS()

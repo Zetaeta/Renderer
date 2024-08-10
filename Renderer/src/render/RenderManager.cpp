@@ -24,32 +24,9 @@ inline vec2 Vec2(aiVector3D const& v)
  RenderManager::RenderManager(Input* input)
 	: m_Camera(input), scene(&m_AssMan)
 {
-	int			   x, y, comp;
-	unsigned char* data = stbi_load("content/Dirt.png", &x, &y, &comp, 4);
-	fprintf(stdout, "width: %d, height: %d, comp: %d\n", x, y, comp);
-	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, "dirt", data) : Texture::EMPTY;
-	stbi_image_free(data);
-	scene.Materials() = { make_shared<Material>("Red", vec4{ 1.f, 0.f, 0.f, 1.f }, 1.f, 10), make_shared<Material>("Dirt", vec4{ 0.f, 0.f, 0.f, 1.f }, 1.f, 500, 1.f, dirt), make_shared<Material>("Yellow", vec4{ 1.f, 1.f, 0.f, 1.f }) };
-	scene.m_Spheres = { Sphere({ 0, 0, 2 }, .5f, 0), { { 0, 1, 2 }, .3f, 1 } };
-	//scene.m_DirLights = { DirLight({ -1.f, -1.f, 1.f }, 0.5) };
-	//scene.m_PointLights.emplace_back(vec3(1), vec3(1),1.f);
-//	scene.m_SpotLights.emplace_back(vec3(1), vec3{ 0, 0, 1 }, vec3(1), 1.f, 1.f);
-	vector<IndexedTri> inds = { IndexedTri({ 0, 1, 2 }) };
-	scene.m_Objects.emplace_back(make_unique<LightObject<SpotLight>>(&scene));
-	scene.m_Objects.emplace_back(make_unique<LightObject<PointLight>>(&scene));
-	scene.m_Objects.emplace_back(make_unique<LightObject<DirLight>>(&scene));
-	auto mesh = MeshPart::Cube(1);
-	ComputeNormals(mesh);
-	auto		   cube = m_AssMan.AddMesh({ "cube", "cube", std::move(mesh) });
-	StaticMeshComponent& cubeMC = scene.m_Objects.emplace_back(make_unique<SceneObject>(&scene, "cube"))->SetRoot<StaticMeshComponent>();
-	cubeMC.SetMesh(cube);
-	cubeMC.SetTransform(RotTransform{ { 0, 0, 2 }, { 1, 1, 1 } } );
-		//	scene.m_MeshInstances.emplace_back(MeshInstance{ m_AssMan.AddMesh(Mesh::Cube(1)),  );
-	m_Renderer = make_unique<RastRenderer>(&m_Camera, 0, 0, nullptr);
 
 	ObjReader objReader{ scene.Materials() };
 
-	scene.Initialize();
 
 	for (const auto& file : fs::directory_iterator("content"))
 	{
@@ -82,7 +59,72 @@ inline vec2 Vec2(aiVector3D const& v)
 	m_AssMan.Start();
 }
 
-	string savefile;
+void RenderManager::CreateStarterScene()
+{
+	int			   x, y, comp;
+	unsigned char* data = stbi_load("content/Dirt.png", &x, &y, &comp, 4);
+	fprintf(stdout, "width: %d, height: %d, comp: %d\n", x, y, comp);
+	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, "dirt", data) : Texture::EMPTY;
+	stbi_image_free(data);
+	scene.Materials() = { make_shared<Material>("Red", vec4{ 1.f, 0.f, 0.f, 1.f }, 1.f, 10), make_shared<Material>("Dirt", vec4{ 0.f, 0.f, 0.f, 1.f }, 1.f, 500, 1.f, dirt), make_shared<Material>("Yellow", vec4{ 1.f, 1.f, 0.f, 1.f }) };
+	scene.m_Spheres = { Sphere({ 0, 0, 2 }, .5f, 0), { { 0, 1, 2 }, .3f, 1 } };
+	//scene.m_DirLights = { DirLight({ -1.f, -1.f, 1.f }, 0.5) };
+	//scene.m_PointLights.emplace_back(vec3(1), vec3(1),1.f);
+//	scene.m_SpotLights.emplace_back(vec3(1), vec3{ 0, 0, 1 }, vec3(1), 1.f, 1.f);
+	vector<IndexedTri> inds = { IndexedTri({ 0, 1, 2 }) };
+	scene.m_Objects.emplace_back(make_unique<LightObject<SpotLight>>(&scene));
+	scene.m_Objects.emplace_back(make_unique<LightObject<PointLight>>(&scene));
+	scene.m_Objects.emplace_back(make_unique<LightObject<DirLight>>(&scene));
+	auto mesh = MeshPart::Cube(1);
+	ComputeNormals(mesh);
+	auto		   cube = m_AssMan.AddMesh({ "cube", "cube", std::move(mesh) });
+	StaticMeshComponent& cubeMC = scene.m_Objects.emplace_back(make_unique<SceneObject>(&scene, "cube"))->SetRoot<StaticMeshComponent>();
+	cubeMC.SetMesh(cube);
+	cubeMC.SetTransform(RotTransform{ { 0, 0, 2 }, { 1, 1, 1 } } );
+		//	scene.m_MeshInstances.emplace_back(MeshInstance{ m_AssMan.AddMesh(Mesh::Cube(1)),  );
+	m_Renderer = make_unique<RastRenderer>(&m_Camera, 0, 0, nullptr);
+
+	scene.Initialize();
+}
+
+void RenderManager::CreateInitialScene()
+{
+	const String defaultSceneFile = "saves/default.json";
+	if (!LoadScene(defaultSceneFile))
+	{
+		CreateStarterScene();
+	}
+}
+
+void RenderManager::CreateScene()
+{
+}
+
+bool RenderManager::LoadScene(String const& path)
+{
+	Scene newScene(&m_AssMan);
+	if (JsonDeserializer::Read(ReflectedValue::From(newScene), path))
+	{
+		scene.Teardown();
+		scene = std::move(newScene);
+		printf("Loaded %s", path.c_str());
+		scene.Initialize();
+		return true;
+	}
+
+	return false;
+}
+
+void RenderManager::SaveScene(String const& path)
+{
+	fs::path inPath = path;
+	fs::path directory = "saves" / inPath.parent_path();
+	std::filesystem::create_directories(directory);
+	JsonSerializer::Dump(ConstReflectedValue::From(scene), (directory / inPath.filename()).string());
+	printf("Saved to %s", path.c_str());
+}
+
+string savefile;
 void RenderManager::SceneControls()
 {
 	int			i = 0;
@@ -130,12 +172,8 @@ void RenderManager::SceneControls()
 	}
 	if (ImGui::Button("Load"))
 	{
-		Scene newScene(&m_AssMan);
-		if (JsonDeserializer::Read(ReflectedValue::From(newScene), "saves/" + savefile))
-		{
-			scene = std::move(newScene);
-			scene.Initialize();
-		}
+		String path = "saves/" + savefile;
+		LoadScene(path);
 	}
 	
 	if (ImGui::TreeNode("Add Object"))
@@ -281,7 +319,7 @@ void RenderManager::SceneControls()
 		ImGui::PushID(&so);
 		if (ImGui::TreeNode(so.GetName().c_str()))
 		{
-			rnd::ImGuiControls(so);
+			ImGuiControls(so);
 			if (ImGui::Button("Delete"))
 			{
 				scene.m_Objects.erase(scene.m_Objects.begin() + o);
