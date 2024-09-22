@@ -16,11 +16,17 @@ ScreenObject* Viewport::GetObjectAt(ivec2 pos)
 	return nullptr;
 }
 
-void Viewport::Resize(u32 width, u32 height, IRenderTarget::Ref rt, IDepthStencil::Ref ds)
+void Viewport::Resize(u32 width, u32 height, IDeviceTexture::Ref backbuffer)
 {
-	mRCtx = MakeOwning<rnd::RenderContext>(mDeviceCtx, mCamera, rt, ds);
+	mRCtx = MakeOwning<rnd::RenderContext>(mDeviceCtx, mCamera, backbuffer);
 	mWidth = width;
 	mHeight = height;
+}
+
+void Viewport::Reset()
+{
+	mWidth = mHeight = 0;
+	mRCtx = nullptr;
 }
 
 void Viewport::Draw()

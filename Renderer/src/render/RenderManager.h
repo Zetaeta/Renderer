@@ -71,7 +71,7 @@ public:
 	virtual rnd::IRenderDeviceCtx* DeviceCtx() { return nullptr; }
 	virtual rnd::IRenderDevice* Device() { return nullptr; }
 
-	Scene scene;
+	Scene mScene;
 protected:
 	void TypeSelector(ClassTypeInfo const& cls);
 

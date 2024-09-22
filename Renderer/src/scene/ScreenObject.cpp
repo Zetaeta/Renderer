@@ -4,5 +4,5 @@
 
 void SOSceneComponent::OnClicked()
 {
-	Editor::Get()->SelectComponent(mSceneComp);
+	Editor::Get()->ClickComponent(mSceneComp);
 }

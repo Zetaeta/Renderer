@@ -59,6 +59,63 @@ public:
 	TypeInfo const& m_TargetType;
 };
 
+template<typename TPtr>
+class TPtrTypeInfo : public PointerTypeInfo
+{
+	using T = std::remove_reference_t<decltype(*std::declval<TPtr>())>;
+	constexpr static bool s_ConstTarget = std::is_const_v<T>;
+public:
+	TPtrTypeInfo()
+		: PointerTypeInfo(TypeInfoHelper<TPtr>::NAME.str, sizeof(TPtr), ComputeFlags<TPtr>(), PointerTypeInfo::EPtrFlags((s_ConstTarget ? CONST_TARGET : NONE) | OWNING), GetTypeInfo<T>())
+	{
+	}
+
+	bool IsNull(ConstReflectedValue ptr) const override
+	{
+		return ptr.GetAs<TPtr>() == nullptr;
+	}
+
+	ConstReflectedValue GetConst(ConstReflectedValue ptr) const override
+	{
+		RASSERT(ptr.GetType() == *this);
+		return ConstReflectedValue::From ( **static_cast<TPtr const*>(ptr.GetPtr()) );
+	}
+
+	bool New(ReflectedValue holder, TypeInfo const& newType) const override
+	{
+		RASSERT(holder.GetType().IsDefaultConstructible());
+		void* storage = new u8[newType.GetSize()];
+		newType.Construct(storage);
+		TPtr& uptr = holder.GetAs<TPtr>();
+		uptr = TPtr { static_cast<T*>(storage) };
+		return true;
+	}
+
+	void Copy(ConstReflectedValue const& from, ReflectedValue const& to) const override
+	{
+		if constexpr (std::is_copy_assignable_v<TPtr>)
+		{
+			to.GetAs<TPtr>() = from.GetAs<TPtr>();
+		}
+		else
+		{
+			RASSERT(false, "Can't copy %s", TypeInfoHelper<T>::Name.str);
+		}
+	}
+
+	ReflectedValue Construct(void* location) const override
+	{
+		T* value = new (location) T;
+		return ReflectedValue {value, this};
+	}
+
+	void Move(ReflectedValue const& from, ReflectedValue const& to) const override
+	{
+		RASSERT(from.GetType() == *this && to.GetType() == *this);
+		to.GetAs<TPtr>() = std::move(from.GetAs<TPtr>());
+	}
+};
+
 template<typename T>
 struct TypeInfoHelper<std::unique_ptr<T>>
 {
@@ -117,4 +174,17 @@ struct TypeInfoHelper<std::unique_ptr<T>>
 		}
 	};
 	inline static UniquePtrTypeInfo const  s_TypeInfo;
+};
+
+template<typename T>
+struct TypeInfoHelper<std::shared_ptr<T>>
+{
+	constexpr static auto const NAME = concat("std::shared_ptr<", GetTypeInfoHelper<T>::NAME.str, ">");
+	constexpr static u64 ID = crc64(NAME);
+
+	constexpr static bool s_ConstTarget = std::is_const_v<T>;
+	
+	using Type = std::shared_ptr<T>;
+
+	inline static TPtrTypeInfo<Type> const  s_TypeInfo;
 };

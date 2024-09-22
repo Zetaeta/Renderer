@@ -155,130 +155,6 @@ void DX11Renderer::PrepareShadowMaps()
 //	CreateConstantBuffer<ShadowMapCBuff>(m_ShadowMapCBuff);
 }
 
-
-void DX11Renderer::RenderShadowMap()
-{
-	SetDepthMode(EDepthMode::LESS);
-	m_Ctx.psTextures.UnBind(m_Ctx);
-	// Spotlights
-	m_SpotLightShadows.resize(m_Scene->m_SpotLights.size());
-	for (int i = 0; i < m_SpotLightShadows.size(); ++i)
-	{
-		auto& shadowMap = m_SpotLightShadows[i];
-		if (!shadowMap)
-		{
-			shadowMap.Init(m_Ctx, 1024);
-		}
-
-		auto const& light = m_Scene->m_SpotLights[i];
-
-		float const FAR_PLANE = 1000;
-		float const NEAR_PLANE = .1f;
-		mat4 projection =
-		{ 
-			{ 1/ light.tangle, 0, 0, 0 },
-			{0,	1/ light.tangle, 0,0},
-			{ 0, 0, (FAR_PLANE) / (FAR_PLANE - NEAR_PLANE), -FAR_PLANE * NEAR_PLANE  / (FAR_PLANE - NEAR_PLANE)},
-			{0,			0,		1,0},
-		};
-		projection = glm::transpose(projection);
-		QuatTransform w2ltrans;
-		if (light.comp)
-			w2ltrans = m_Scene->m_SpotLights[i].comp->GetWorldTransform();
-		w2ltrans.SetScale(vec3(1));
-		RenderDepthOnly(shadowMap.GetDSV(), 1024, 1024, glm::inverse(mat4(w2ltrans)), projection, nullptr, &shadowMap.m_World2LightProj);
-	}
-
-	// Directional
-	m_DirLightShadows.resize(m_Scene->m_DirLights.size());
-	for (int i = 0; i < m_DirLightShadows.size(); ++i)
-	{
-		auto& shadowMap = m_DirLightShadows[i];
-		if (!shadowMap)
-		{
-			shadowMap.Init(m_Ctx, 1024);
-		}
-
-		auto const& light = m_Scene->m_DirLights[i];
-
-		float const FAR_PLANE = 1000;
-		float const NEAR_PLANE = .1f;
-		mat4 projection =
-		{ 
-			{ 1.f/m_DirShadowSize, 0, 0, 0 },
-			{0,	1.f/m_DirShadowSize, 0,0},
-			{ 0, 0, 1 / (FAR_PLANE - NEAR_PLANE), -NEAR_PLANE  / (FAR_PLANE - NEAR_PLANE)},
-			{0,			0,		0,1},
-		};
-
-		projection = glm::transpose(projection);
-		QuatTransform w2ltrans;
-		if (light.comp)
-			w2ltrans = light.comp->GetWorldTransform();
-		w2ltrans.SetScale(vec3(1));
-		w2ltrans.SetTranslation(w2ltrans.GetTranslation() - light.dir * 100.f);
-		RenderDepthOnly(shadowMap.GetDSV(), 1024, 1024, glm::inverse(mat4(w2ltrans)), projection, nullptr, &shadowMap.m_World2LightProj);
-	}
-
-	// Point lights
-	m_PointLightShadows.resize(m_Scene->m_PointLights.size());
-	for (int i = 0; i < m_PointLightShadows.size(); ++i)
-	{
-		auto& shadowMap = m_PointLightShadows[i];
-		if (!shadowMap)
-		{
-			shadowMap.Init(m_Ctx, 1024);
-		}
-
-		auto const& light = m_Scene->m_PointLights[i];
-
-		float const FAR_PLANE = 1000;
-		float const NEAR_PLANE = .1f;
-		mat4 projection =
-		{ 
-			{ 1, 0, 0, 0 },
-			{0,	1, 0,0},
-			{ 0, 0, (FAR_PLANE) / (FAR_PLANE - NEAR_PLANE), -FAR_PLANE * NEAR_PLANE  / (FAR_PLANE - NEAR_PLANE)},
-			{0,			0,		1,0},
-		};
-		projection = glm::transpose(projection);
-		//glm::rotat
-		QuatTransform l2wTrans;
-		if (light.comp)
-			l2wTrans = m_Scene->m_PointLights[i].comp->GetWorldTransform();
-		l2wTrans.SetScale(vec3(1));
-
-		mat4 world2Light = glm::inverse(mat4(l2wTrans));
-		shadowMap.m_World2Light = l2wTrans;
-
-		constexpr float ROTVAL = float(M_PI_2);
-		static mat4 rots[] = {
-			glm::rotate(ROTVAL,vec3{0,-1,0}), // +Z -> +X
-			glm::rotate(ROTVAL,vec3{0,1,0}), // +Z -> -X
-			glm::rotate(ROTVAL,vec3{1,0,0}), // +Z -> +Y
-			glm::rotate(ROTVAL,vec3{-1,0,0}), // +Z -> +Y
-			glm::identity<mat4>(),			   // +Z -> +Z
-			glm::rotate(ROTVAL * 2.f,vec3{0,1,0}), // +Z -> -Z
-		};
-
-		PerFrameVertexData PFVD;
-		PFVD.cameraPos = m_Camera->GetPosition();
-		PFVD.world2Light = world2Light;
-		m_VSPerFrameBuff.WriteData(PFVD);
-		//float maxDepth = FAR_PLANE
-		m_PSPerFrameBuff.WriteData(FAR_PLANE);
-		//pContext->PSSetConstantBuffers(0, 1, m_PSPerFrameBuff.GetAddressOf());
-
-
-		for (u32 i=0; i<6; ++i)
-		{
-			mat4 myProj= projection * rots[i];
-			RenderDepthOnly(shadowMap.GetDSV(i), 1024, 1024, world2Light,
-				myProj, &m_MatTypes[MAT_POINT_SHADOW_DEPTH], nullptr);
-		}
-	}
-}
-
 template <typename TFunc>
 void DX11Renderer::ForEachMesh(TFunc&& func)
 {
@@ -299,76 +175,6 @@ void DX11Renderer::ForEachMesh(TFunc&& func)
 }
 
 
-void DX11Renderer::RenderDepthOnly(ID3D11DepthStencilView *dsv, u32 width, u32 height,
-	mat4 const& transform, mat4 const& projection, DX11MaterialType* material, mat4* outFullTrans)
-{
-	pContext->PSSetShaderResources(0,0, nullptr);
-	pContext->OMSetRenderTargets(0, nullptr, dsv);
-	pContext->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH, 1.f, 0);
-	m_Ctx.psTextures.ClearFlags(E_TS_SHADOWMAP);
-
-	D3D11_VIEWPORT viewport = {
-		.TopLeftX = 0,
-		.TopLeftY = 0,
-		.Width = float(width),
-		.Height = float(height),
-		.MinDepth = 0,
-		.MaxDepth = 1,
-	};
-	pContext->RSSetViewports(1, &viewport);
-
-
-	float const FAR_PLANE = 1000;
-	float const NEAR_PLANE = .1f;
-	mat4 projWorld = projection * transform;
-	if (outFullTrans)
-	{
-		*outFullTrans = projWorld; 
-	}
-	if (material != nullptr)
-	{
-		material->Bind(m_Ctx, EShadingLayer::BASE);
-	}
-
-	ForEachMesh([&](MeshPart const& mesh, Transform const& trans)
-	{
-		if (m_Scene->GetMaterial(mesh.material).translucent)
-		{
-			return;
-		}
-		PerInstanceVSData PIVS;
-		PIVS.model2ShadeSpace = mat4(trans);
-		PIVS.model2ShadeDual = transpose(inverse(PIVS.model2ShadeSpace));
-		PIVS.fullTransform = projWorld * PIVS.model2ShadeSpace;
-
-		m_VSPerInstanceBuff.WriteData(PIVS);
-
-		DrawMesh(mesh, EShadingLayer::BASE, material == nullptr);
-	});
-
-	//for (auto const& mi : m_Scene->m_MeshInstances)
-	//{
-	//	if (mi.mesh == -1)
-	//	{
-	//		printf("Mesh instance with no mesh");
-	//		continue;
-	//	}
-	//	Transform const& trans = mi.trans;
-	//	Mesh const&		 mesh = m_Scene->GetMesh(mi.mesh);
-
-	//	PerInstanceVSData PIVS;
-	//	PIVS.model2ShadeSpace = mat4(trans);
-	//	PIVS.model2ShadeDual = transpose(inverse(PIVS.model2ShadeSpace));
-	//	PIVS.fullTransform = projWorld * PIVS.model2ShadeSpace;
-
-	//	WriteCBuffer(m_VSPerInstanceBuff,PIVS);
-
-	//	ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
-	//	pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
-	//	DrawMesh(mi.mesh, EShadingLayer::NONE, material == nullptr);
-	//}
-}
-
 __declspec(align(16))
 struct PerInstancePSData
 {
@@ -385,8 +191,8 @@ struct PerInstancePSData
 };
 DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 
- DX11Renderer::DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context)
-	: m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context), m_Scene(scene)
+ DX11Renderer::DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context, IDXGISwapChain* swapChain)
+	: m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context), m_Scene(scene), pSwapChain(swapChain)
 {
 	Device = this;
 	TextureManager = &m_Ctx.psTextures;
@@ -407,10 +213,16 @@ DX11Renderer::~DX11Renderer()
 	m_Ctx.psTextures = {};
 	m_BG = nullptr;
 	mRCtx = {};
+	m_Background = nullptr;
+	m_EmptyTexture = nullptr;
  }
 
 void DX11Renderer::DrawControls()
 {
+	if (!m_Ctx.mRCtx)
+	{
+		return;
+	}
 	ImGui::Begin("Renderer");
 	ImGui::Checkbox("Refactor", &mUsePasses);
 	ImGui::Checkbox("Pre-refactor shadows", &mRenderShadowMap);
@@ -677,16 +489,17 @@ void DX11Renderer::Render(const Scene& scene)
 
 	if (mRenderShadowMap)
 	{
-		RenderShadowMap();
+//		RenderShadowMap();
 	}
-	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+	ImVec4 clear_color = ImVec4();
 	auto   RTV = m_MainRenderTarget->GetRTV();
 	pContext->OMSetRenderTargets(1, &RTV, NULL_OR(m_MainDepthStencil, GetDSV()));
 
-	const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-	pContext->ClearRenderTargetView(m_MainRenderTarget->GetRTV(), clear_color_with_alpha);
-	pContext->ClearDepthStencilView(m_MainDepthStencil->GetDSV(), D3D11_CLEAR_DEPTH, 1.f, 0);
+	const float clear_color_with_alpha[4] = { 0.45f, 0.55f, 0.60f, 1.00f };
+	//pContext->ClearRenderTargetView(m_MainRenderTarget->GetRTV(), clear_color_with_alpha);
+	//pContext->ClearDepthStencilView(m_MainDepthStencil->GetDSV(), D3D11_CLEAR_DEPTH, 1.f, 0);
 
+	m_Scale = std::min(m_Width, m_Height);
 	m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
 
 	D3D11_VIEWPORT vp = {
@@ -812,11 +625,12 @@ void DX11Renderer::Render(const Scene& scene)
 
 
 
-	pContext->ClearDepthStencilView(m_MainDepthStencil->GetDSV(), D3D11_CLEAR_DEPTH, 1.f, 0);
+	SetDepthMode(EDepthMode::DISABLED);
 	if (m_ViewerTex != nullptr)
 	{
 		DrawTexture(m_ViewerTex);
 	}
+	pContext->OMSetRenderTargets(0, nullptr, nullptr);
 
 	pContext->PSSetShader(nullptr, nullptr, 0);
 	pContext->VSSetShader(nullptr, nullptr, 0);
@@ -907,10 +721,10 @@ void DX11Renderer::LoadShaders(bool reload)
 			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(Vertex, uvs), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 
-		CreateMatType(MAT_PLAIN, "PlainVertexShader","PlainPixelShader",ied,Size(ied), reload);
-		CreateMatType(MAT_TEX, "TexVertexShader","TexPixelShader",ied,Size(ied), reload);
-		CreateMatTypeUnshaded(MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied,Size(ied), reload);
-		CreateMatTypeUnshaded(MAT_SCREEN_ID, "PlainVertexShader", "ScreenId_PS", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "SHADED", "0" } });
+		CreateMatType("Plain", MAT_PLAIN, "PlainVertexShader", "PlainPixelShader", ied, Size(ied), reload);
+		CreateMatType("Textured", MAT_TEX, "TexVertexShader", "TexPixelShader", ied, Size(ied), reload);
+		CreateMatTypeUnshaded("PointShadow", MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied, Size(ied), reload);
+		CreateMatTypeUnshaded("ScreenId", MAT_SCREEN_ID, "PlainVertexShader", "ScreenId_PS", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "SHADED", "0" } });
 		static CBLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
 		m_MatTypes[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;
 	}
@@ -921,10 +735,10 @@ void DX11Renderer::LoadShaders(bool reload)
 			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(BGVert, uv), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
-		CreateMatTypeUnshaded(MAT_2D, "2D_VS", "2D_PS", ied, Size(ied), reload);
-		CreateMatTypeUnshaded(MAT_2D_UINT, "2D_VS", "2D_PS_Uint", ied, Size(ied), reload);
-		CreateMatTypeUnshaded(MAT_BG, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload);
-		CreateMatTypeUnshaded(MAT_CUBE_DEPTH, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "DEPTH_SAMPLE", "1" } });
+		CreateMatTypeUnshaded("2D", MAT_2D, "2D_VS", "2D_PS", ied, Size(ied), reload);
+		CreateMatTypeUnshaded("2D_Uint", MAT_2D_UINT, "2D_VS", "2D_PS_Uint", ied, Size(ied), reload);
+		CreateMatTypeUnshaded("Cubemap", MAT_BG, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload);
+		CreateMatTypeUnshaded("Cubedepth", MAT_CUBE_DEPTH, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "DEPTH_SAMPLE", "1" } });
 	
 	}
 }
@@ -985,7 +799,7 @@ void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 	{
 		pbuff.renderMode = 1;
 	}
-	else if (tex->Desc.format == ETextureFormat::R32_Uint)
+	else if (tex->Desc.Format == ETextureFormat::R32_Uint)
 	{
 		pbuff.renderMode = 2;
 	}
@@ -1099,7 +913,7 @@ IConstantBuffer* DX11Renderer::GetConstantBuffer(ECBFrequency freq, size_t size 
 
 void DX11Renderer::PrepareMesh(MeshPart const& mesh, DX11Mesh& meshData)
 {
-	printf("Creating buffers for mesh %s\n", mesh.name.c_str());
+	printf("Creating buffers for mesh %s\n", mesh.name.ToString().c_str());
 	const UINT stride = Sizeof(mesh.vertices[0]);
 	{
 		D3D11_BUFFER_DESC bd = {};
@@ -1176,7 +990,7 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 	mat.DeviceMat = result.get();
 }
 
-void DX11Renderer::SetMainRenderTarget(ComPtr<ID3D11RenderTargetView> rt, ComPtr<ID3D11DepthStencilView> ds, u32 width, u32 height)
+void DX11Renderer::SetMainRenderTargetAndDS(ComPtr<ID3D11RenderTargetView> rt, ComPtr<ID3D11DepthStencilView> ds, u32 width, u32 height)
 {
 	if (m_MainRenderTarget == nullptr)
 	{
@@ -1188,7 +1002,7 @@ void DX11Renderer::SetMainRenderTarget(ComPtr<ID3D11RenderTargetView> rt, ComPtr
 		m_MainRenderTarget->RenderTargets = {rt};
 		m_MainDepthStencil->DepthStencils = {ds};
 	}
-	mViewport->Resize(width, height, m_MainRenderTarget, m_MainDepthStencil);
+//	mViewport->Resize(width, height, m_MainRenderTarget, m_MainDepthStencil);
 	m_Ctx.mRCtx = mRCtx = mViewport->GetRenderContext();
 	m_MainRenderTarget->Desc.Width = width;
 	m_MainRenderTarget->Desc.Height = height;
@@ -1197,12 +1011,41 @@ void DX11Renderer::SetMainRenderTarget(ComPtr<ID3D11RenderTargetView> rt, ComPtr
 
 }
 
-void DX11Renderer::Resize(u32 width, u32 height, u32* canvas)
+void DX11Renderer::SetBackbuffer(DX11Texture::Ref backBufferTex, u32 width, u32 height)
 {
+	m_MainRenderTarget = static_pointer_cast<DX11RenderTarget>(backBufferTex->GetRT());
+
+	mViewport->Resize(width, height, backBufferTex);
+	m_Ctx.mRCtx = mRCtx = mViewport->GetRenderContext();
+	m_MainRenderTarget->Desc.Width = width;
+	m_MainRenderTarget->Desc.Height = height;
 	m_Width = width;
 	m_Height = height;
-	m_Dirty = true;
-	m_Scale = float(min(width, height));
+	m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
+}
+
+void DX11Renderer::Resize(u32 width, u32 height, u32* canvas)
+{
+	m_MainRenderTarget = nullptr;
+	mViewport->Reset();
+	pSwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+
+	if (width > 0 && height > 0)
+	{
+		ComPtr<ID3D11Texture2D> backBuffer;
+		pSwapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer));
+		DeviceTextureDesc desc;
+		desc.Width = width;
+		desc.Height = height;
+		desc.Flags = TF_RenderTarget;
+		SetBackbuffer(std::make_shared<rnd::dx11::DX11Texture>(m_Ctx,desc, backBuffer.Get()), width, height);
+	}
+}
+
+void DX11Renderer::PreImgui()
+{
+	auto rt = m_MainRenderTarget->GetRTV();
+	pContext->OMSetRenderTargets(1, &rt, nullptr);
 }
 
 MappedResource DX11Renderer::MapResource(ID3D11Resource* resource, u32 subResource, ECpuAccessFlags flags)
@@ -1382,6 +1225,57 @@ void DX11Renderer::SetConstantBuffers(EShaderType shader, IConstantBuffer** buff
 	}
 }
 
+inline u32 GetSubresourceIdx(DeviceSubresource const& Subresource)
+{
+	return Subresource.MipIdx + (Subresource.ArrayIdx * Subresource.Resource->Desc.NumMips);
+}
+
+enum class EDxgiFormatContext : u8
+{
+	RESOURCE,
+	SRV,
+	RENDER_TARGET,
+	StencilSRV
+};
+
+DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, EDxgiFormatContext context = EDxgiFormatContext::RESOURCE)
+{
+	switch (textureFormat)
+	{
+	case ETextureFormat::RGBA8_Unorm:
+		return DXGI_FORMAT_R8G8B8A8_UNORM;
+	case ETextureFormat::R32_Uint:
+		return DXGI_FORMAT_R32_UINT;
+	case ETextureFormat::D24_Unorm_S8_Uint:
+	{
+		switch (context)
+		{
+		case EDxgiFormatContext::RESOURCE:
+			return DXGI_FORMAT_R24G8_TYPELESS;
+		case EDxgiFormatContext::SRV:
+			return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		case EDxgiFormatContext::StencilSRV:
+			return DXGI_FORMAT_X24_TYPELESS_G8_UINT;
+		case EDxgiFormatContext::RENDER_TARGET:
+			return DXGI_FORMAT_D24_UNORM_S8_UINT;
+		}
+	}
+	default:
+		fprintf(stderr, "Invalid format\n");
+		return DXGI_FORMAT_R8G8B8A8_UNORM;
+	}
+}
+
+void DX11Renderer::ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src)
+{
+	DXGI_FORMAT format = GetDxgiFormat(Dest.Resource->Desc.Format, EDxgiFormatContext::RENDER_TARGET);
+	ID3D11Resource* dst = Dest.Resource->GetData<ID3D11Resource>();
+	ID3D11Resource* src = Src.Resource->GetData<ID3D11Resource>();
+	u32				dstIdx = GetSubresourceIdx(Dest);
+	u32				srcIdx = GetSubresourceIdx(Src);
+	pContext->ResolveSubresource(dst, dstIdx, src, srcIdx, format);
+}
+
 struct ShaderVariant
 {
 	ShaderVariant(String const& name, Vector<D3D_SHADER_MACRO>&& defines)
@@ -1413,7 +1307,9 @@ u64 Hash(ID3DBlob* blob)
 	return result;
 }
 
-int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 numVars, char const* shaderType, bool reload = false)
+
+int GetCompiledShaderVariants(const String& shaderName, char const* name, ShaderVariant* variants, u32 numVars, char const* shaderType,
+	bool reload = false)
 {
 	static fs::path const srcDir{ "src\\shaders" };
 	static fs::path const outDir{ "generated\\shaders" };
@@ -1429,7 +1325,7 @@ int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 num
 	for (u32 i=0; i<numVars; ++i)
 	{
 		ShaderVariant& var = variants[i];
-		auto csoName = std::format("{}_{}.cso", name, var.m_Name);
+		auto csoName = std::format("{}_{}.cso", shaderName, var.m_Name);
 		fs::path cso = outDir / csoName;
 		if (reload || var.m_Dirty || !fs::exists(cso) || fs::last_write_time(cso) < lastWrite)
 		{
@@ -1464,7 +1360,10 @@ int GetCompiledShaderVariants(char const* name, ShaderVariant* variants, u32 num
 			else
 			{
 				LPTSTR errorText = NULL;
-				FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, hr, 0, (LPTSTR) & errorText, 0, NULL);
+				FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM
+							| FORMAT_MESSAGE_ALLOCATE_BUFFER
+							| FORMAT_MESSAGE_IGNORE_INSERTS,
+							NULL, hr, 0, (LPTSTR) & errorText, 0, NULL);
 				wprintf(L"Compile error: %s", errorText);
 				if (errBlob != nullptr && errBlob->GetBufferPointer() != nullptr)
 				{
@@ -1513,7 +1412,7 @@ void GetCBInfo(ID3DBlob* shaderCode, DX11MaterialType& matType, ECBFrequency per
 	}
 }
 
-void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload)
+void DX11Renderer::CreateMatType(const String& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload)
 {
 	ShaderVariant variants[] = {
 		{ "base", {
@@ -1533,7 +1432,7 @@ void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psNa
 	DX11MaterialType& matType = m_MatTypes[index];
 	matType.CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = GetLayout<PerInstancePSData>();
 	matType.DebugName = psName;
-	if (GetCompiledShaderVariants(vsName, variants, Size(variants), "vs_5_0", reload) > 0)
+	if (GetCompiledShaderVariants(name + "_VS", vsName, variants, Size(variants), "vs_5_0", reload) > 0)
 	{
 		auto const& vertBlob = variants[0].m_Blob;
 		GetCBInfo(vertBlob.Get(), matType, ECBFrequency::VS_PerFrame, ECBFrequency::VS_PerInstance);
@@ -1547,7 +1446,7 @@ void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psNa
 	}
 	//ComPtr<ID3DBlob> pixBlob;
 	//HR_ERR_CHECK(D3DReadFileToBlob(psName, &pixBlob));
-	int count = GetCompiledShaderVariants(psName, variants, Size(variants), "ps_5_0", reload);
+	int count = GetCompiledShaderVariants(name + "_PS", psName, variants, Size(variants), "ps_5_0", reload);
 	for (int i=0; i<count; ++i )
 	{
 		auto const& pixBlob = variants[i].m_Blob;
@@ -1560,8 +1459,13 @@ void DX11Renderer::CreateMatType(u32 index, char const* vsName, char const* psNa
 	}
 
 }
+//template<>
+//struct std::hash<D3D_SHADER_MACRO>
+//{
+//	size_t operator()(const D3D)
+//};
 
-void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char const* psName,
+void DX11Renderer::CreateMatTypeUnshaded(const String& name, u32 index, char const* vsName, char const* psName,
 										 const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload,
 										 Vector<D3D_SHADER_MACRO>&& defines /* = {}  */)
 {
@@ -1570,7 +1474,7 @@ void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char con
 	};
 
 	DX11MaterialType& matType = m_MatTypes[index];
-	if (GetCompiledShaderVariants(vsName, variants, Size(variants), "vs_5_0", reload) > 0)
+	if (GetCompiledShaderVariants(name + "_VS", vsName, variants, Size(variants), "vs_5_0", reload) > 0)
 	{
 		auto const& vertBlob = variants[0].m_Blob;
 		GetCBInfo(vertBlob.Get(), matType, ECBFrequency::VS_PerFrame, ECBFrequency::VS_PerInstance);
@@ -1584,7 +1488,7 @@ void DX11Renderer::CreateMatTypeUnshaded(u32 index, char const* vsName, char con
 	}
 	//ComPtr<ID3DBlob> pixBlob;
 	//HR_ERR_CHECK(D3DReadFileToBlob(psName, &pixBlob));
-	int count = GetCompiledShaderVariants(psName, variants, Size(variants), "ps_5_0", reload);
+	int count = GetCompiledShaderVariants(name + "_PS", psName, variants, Size(variants), "ps_5_0", reload);
 	for (int i=0; i<count; ++i )
 	{
 		auto const& pixBlob = variants[i].m_Blob;

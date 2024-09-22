@@ -93,7 +93,7 @@ using AssetLoadCallback = std::function<void(AssetRef)>;
 class AssetManager : public BaseObject
 {
 public:
-	AssetManager() { RefreshMeshList(); }
+	AssetManager();
 	~AssetManager();
 	using Meshes = std::vector<Mesh>;
 	
@@ -127,12 +127,12 @@ public:
 
 	Vector<Scenelet>& GetScenelets() { return m_Scenelets; }
 
-	CompoundMesh::Ref GetMesh(AssetPath path);
+	CompoundMesh::Ref GetMesh(AssetPath const& path);
 	CompoundMesh&	  GetMesh(CompoundMesh::Ref mesh) { return *mesh; }
 
 	AssetPath GetMeshPath(MeshRef); 
 
-	MeshRef FindMesh(AssetPath path);
+	MeshRef FindMesh(AssetPath const& path);
 
 	template <typename TAsset>
 	TAsset::Ref LoadAsset(AssetPath path)
@@ -209,7 +209,7 @@ private:
 		
 	Scenelet::Ref AddScenelet(aiScene const* aiscene, AssetPath const& path, bool isImport, String const& importPath, bool loadTextures, bool async);
 	void AddNode(SceneletLoadCtx& ctx, SceneletPart& parent, Vector<MeshPart> const& meshParts, aiNode const* node, aiMatrix4x4 transform);
-	bool LoadMatTexture(String const& path, TextureRef& outTexture, AssetPath const& meshPath, bool isImport);
+	bool LoadMatTexture(String const& path, TextureRef& outTexture, String const& meshPath, bool isImport);
 
 	s32 FindScenelet(AssetPath const& path);
 
@@ -222,6 +222,10 @@ private:
 	std::vector<AssetData> m_AllMeshes;
 
 	Locked<std::unordered_map<AssetPath, TextureRef>> m_LoadedTextures;
+
+//	std::unordered_map<AssetPath, Asset*> mLoadedAssets;
+	
+	std::unordered_map<AssetPath, CompoundMesh::Ref> m_LoadedMeshes;
 
 	bool m_PreTransform = true;
 	OwningPtr<std::thread> m_WorkerThread;

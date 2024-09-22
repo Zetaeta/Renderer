@@ -16,6 +16,7 @@
 #include "RenderManagerDX11.h"
 #include "core/Hash.h"
 #include <editor/Editor.h>
+#include "render/dx11/DX11Texture.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "D3DCompiler.lib")
@@ -188,9 +189,10 @@ int MainDX11(int argc, char** argv)
 	bool   show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	InputImgui input;
-	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input);
+	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input, g_pSwapChain);
 	Editor*			  editor = Editor::Create(&input, &renderMgr);
 	renderMgr.CreateInitialScene();
+//	std::shared_ptr<rnd::dx11::DX11Texture> bbTex = nullptr;
 
 	// Main loop
 	bool done = false;
@@ -212,17 +214,27 @@ int MainDX11(int argc, char** argv)
 		// Handle window resize (we don't resize directly in the WM_SIZE handler)
 		if (g_ResizeWidth != 0 && g_ResizeHeight != 0)
 		{
-			CleanupRenderTarget();
-			g_pSwapChain->ResizeBuffers(0, g_ResizeWidth, g_ResizeHeight, DXGI_FORMAT_UNKNOWN, 0);
+			//CleanupRenderTarget();
+			//g_pSwapChain->ResizeBuffers(0, g_ResizeWidth, g_ResizeHeight, DXGI_FORMAT_UNKNOWN, 0);
 			g_CurrWidth = g_ResizeWidth;
 			g_CurrHeight = g_ResizeHeight;
 			g_ResizeWidth = g_ResizeHeight = 0;
-			CreateRenderTarget();
+			//CreateRenderTarget();
+			//D3D11_TEXTURE2D_DESC td;
+			//g_BackBuffer->GetDesc(&td);
+			//RASSERT(td.Width == g_CurrWidth && td.Height == g_CurrHeight);
+			//DeviceTextureDesc desc;
+			//desc.Width = g_CurrWidth;
+			//desc.Height = g_CurrHeight;
+			//desc.Flags = TF_RenderTarget;
+			//bbTex = std::make_shared<rnd::dx11::DX11Texture>(renderMgr.m_hardwareRenderer->m_Ctx,desc, g_BackBuffer.Get());
 			renderMgr.Resize(g_CurrWidth, g_CurrHeight);
+//			renderMgr.m_hardwareRenderer->Resize(g_CurrWidth, g_CurrHeight);
 			editor->OnWindowResize(g_CurrWidth, g_CurrHeight);
+
+//			renderMgr.m_hardwareRenderer->SetBackbuffer(bbTex, g_CurrWidth, g_CurrHeight);
 		}
 
-		renderMgr.m_hardwareRenderer->SetMainRenderTarget(g_msaaRenderTargetView, dsv, g_CurrWidth, g_CurrHeight);
 
 
 		// Start the Dear ImGui frame
@@ -238,12 +250,12 @@ int MainDX11(int argc, char** argv)
 
 		g_pContext->OMSetRenderTargets(1, g_msaaRenderTargetView.GetAddressOf(), dsv.Get());
 		//g_pContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
-		const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-		g_pContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
-		g_pContext->ClearRenderTargetView(g_msaaRenderTargetView.Get(), clear_color_with_alpha);
-		g_pContext->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
+		//const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
+		//g_pContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
+		//g_pContext->ClearRenderTargetView(g_msaaRenderTargetView.Get(), clear_color_with_alpha);
+		//g_pContext->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-		if (true) {
+		if (g_CurrHeight && g_CurrWidth) {
 			static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
 			// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
@@ -302,7 +314,7 @@ int MainDX11(int argc, char** argv)
 			static int	 counter = 0;
 
 		}
-		g_pContext->ResolveSubresource(g_BackBuffer.Get(), 0, g_msaaRenderTarget.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+		//g_pContext->ResolveSubresource(g_BackBuffer.Get(), 0, g_msaaRenderTarget.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
 
 		// 3. Show another simple window.
 		if (show_another_window)
@@ -314,8 +326,10 @@ int MainDX11(int argc, char** argv)
 			ImGui::End();
 		}
 
-		g_pContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
+//		auto rt = bbTex->GetRT()->GetData<ID3D11RenderTargetView>();
+//		g_pContext->OMSetRenderTargets(1, &rt, nullptr);
 		// Rendering
+		renderMgr.m_hardwareRenderer->PreImgui();
 		ImGui::Render();
 		//DrawTri({ 0, 0, 0,1 }, { .5, 1, 0,1 }, {1,0,0,1});
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -393,7 +407,7 @@ bool CreateDeviceD3D(HWND hWnd)
 		}
 	}
 
-	CreateRenderTarget();
+//	CreateRenderTarget();
 	return true;
 }
 
@@ -420,6 +434,7 @@ void CleanupDeviceD3D()
 void CreateRenderTarget()
 {
 	g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&g_BackBuffer));
+	return;
 	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
 	Zero(rtvDesc);
 	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -441,14 +456,14 @@ void CreateRenderTarget()
 		CD3D11_RENDER_TARGET_VIEW_DESC msaaRTVDesc(D3D11_RTV_DIMENSION_TEXTURE2DMS, msaaRTDesc.Format);
 		HR_ERR_CHECK(g_pd3dDevice->CreateRenderTargetView(g_msaaRenderTarget.Get(), &msaaRTVDesc, &g_msaaRenderTargetView))
 
-		D3D11_DEPTH_STENCIL_DESC dsDesc;
-		Zero(dsDesc);
-		dsDesc.DepthEnable = TRUE;
-		dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-		ComPtr<ID3D11DepthStencilState> pDSState;
-		HR_ERR_CHECK(g_pd3dDevice->CreateDepthStencilState(&dsDesc, &pDSState));
-		g_pContext->OMSetDepthStencilState(pDSState.Get(),0);
+		//D3D11_DEPTH_STENCIL_DESC dsDesc;
+		//Zero(dsDesc);
+		//dsDesc.DepthEnable = TRUE;
+		//dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		//dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
+		//ComPtr<ID3D11DepthStencilState> pDSState;
+		//HR_ERR_CHECK(g_pd3dDevice->CreateDepthStencilState(&dsDesc, &pDSState));
+		//g_pContext->OMSetDepthStencilState(pDSState.Get(),0);
 
 		ComPtr<ID3D11Texture2D> pDepthStencil;
 		D3D11_TEXTURE2D_DESC depthDesc;
@@ -475,6 +490,7 @@ void CreateRenderTarget()
 void CleanupRenderTarget()
 {
 	g_BackBuffer = nullptr;
+	return;
 	if (g_mainRenderTargetView)
 	{
 		g_mainRenderTargetView->Release();

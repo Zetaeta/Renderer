@@ -44,7 +44,7 @@ RotTransform Mat2Trans(aiMatrix4x4 const& mat)
 	return RotTransform(_pos, _scale, _rot);
 }
 
-bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture, AssetPath const& meshPath, bool isImport)
+bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture, String const& meshPath, bool isImport)
 {
 	if (texPath.empty())
 	{
@@ -62,7 +62,7 @@ bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture,
 		}
 		printf("Looking in directory %s\n", ToString( meshDir).c_str());
 			//			fs::path meshDir = meshPath;
-		fs::path textureDirs[] = { "content", "content/textures", meshDir, meshDir / "textures" };
+		fs::path textureDirs[] = { "assets", "assets/textures", meshDir, meshDir / "textures" };
 		for (fs::path const& dir : textureDirs)
 		{
 			auto path = dir / texPath;
@@ -92,7 +92,7 @@ bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture,
 			}
 			printf("Loaded texture %s\n", ToString(path).c_str());
 			m_LoadedTextures.Access([&] (auto& map) {
-				map[ToString(assetPath)] = outTexture;
+				map[AssetPath::ContentFile(assetPath.string())] = outTexture;
 			});
 			
 			return true;
@@ -103,7 +103,7 @@ bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture,
 	{
 		{
 			auto maplock = m_LoadedTextures.Acquire();
-			auto res = maplock.first.find(texPath);
+			auto res = maplock.first.find(isImport ? AssetPath::File(texPath) : AssetPath::ContentFile(texPath));
 			if (res != maplock.first.end())
 			{
 				outTexture = res->second;
@@ -168,7 +168,7 @@ void AssetManager::AddNode(SceneletLoadCtx& ctx, SceneletPart& parent, Vector<Me
 	auto totalTrans =  node->mTransformation * transform;
 	//auto trans = Mat2Trans( totalTrans);
 	SceneletPart& part = parent.children.emplace_back();
-	part.mesh = ctx.m_Meshes.emplace_back(std::make_shared<CompoundMesh>(ctx.m_Scenelet.GetPath() + ":" + node->mName.C_Str(), node->mName.C_Str()));
+	part.mesh = ctx.m_Meshes.emplace_back(std::make_shared<CompoundMesh>(ctx.m_Scenelet.GetPath().WithSubpath(node->mName.C_Str())));
 	for (u32 i=0; i<node->mNumMeshes; ++i)
 	{
 		u32 mesh = node->mMeshes[i];
@@ -366,7 +366,11 @@ Scenelet::Ref AssetManager::AddScenelet(aiScene const* aiscene, AssetPath const&
 			partName += std::format("[{}]", names[partName] - 1);
 		}
 		printf("Loaded mesh part %s\n", partName.c_str());
-		AssetPath smPath = aiscene->mNumMeshes == 1 ? path : (path + ":" + partName);
+		AssetPath smPath = path;
+		if (aiscene->mNumMeshes == 1)
+		{
+			smPath.SubPath = partName;
+		}
 		meshParts.emplace_back(verts, faces, matsLoaded > 0 ? mesh->mMaterialIndex + matStart : 0, smPath);
 		
 	}
@@ -381,11 +385,11 @@ Scenelet::Ref AssetManager::AddScenelet(aiScene const* aiscene, AssetPath const&
 	{
 		SceneletPart temp = std::move(scenelet.m_Root.children[0]);
 		scenelet.m_Root = std::move(temp);
-		if (scenelet.m_Root.children.empty())
-		{
-			auto name = scenelet.m_Root.mesh->GetPath();
-			scenelet.m_Root.mesh->SetPath(name.substr(0, name.find(':')));
-		}
+		//if (scenelet.m_Root.children.empty())
+		//{
+		//	auto name = scenelet.m_Root.mesh->GetPath();
+		//	scenelet.m_Root.mesh->SetPath(name.substr(0, name.find(':')));
+		//}
 	}
 	if (async)
 	{
@@ -400,8 +404,15 @@ Scenelet::Ref AssetManager::AddScenelet(aiScene const* aiscene, AssetPath const&
 
 CompoundMesh::Ref AssetManager::AddMesh(CompoundMesh&& mesh)
 {
-	return m_CompoundMeshes.emplace_back(std::make_shared<CompoundMesh>(std::move(mesh)));
+	auto& result = m_CompoundMeshes.emplace_back(std::make_shared<CompoundMesh>(std::move(mesh)));
+	m_LoadedMeshes[result->GetPath()] = result;
+	return result;
 	//return CompoundMesh::Ref{ static_cast<s32>(m_CompoundMeshes.size() - 1) };
+}
+
+ AssetManager::AssetManager()
+{
+	RefreshMeshList();
 }
 
 AssetManager::~AssetManager()
@@ -412,25 +423,26 @@ AssetManager::~AssetManager()
 	}
 }
 
-Asset::Ref AssetManager::LoadAssetUntyped(AssetPath path)
-{
-	if (path.ends_with(".jpg") || path.ends_with(".png"))
-	{
-	}
-	else if (path.ends_with(".obj") || path.ends_with(".glb"))
-	{
-		return ImportScenelet(path);
-	}
-	return -1;
-}
+//Asset::Ref AssetManager::LoadAssetUntyped(AssetPath path)
+//{
+//	if (path.ends_with(".jpg") || path.ends_with(".png"))
+//	{
+//	}
+//	else if (path.ends_with(".obj") || path.ends_with(".glb"))
+//	{
+//		return ImportScenelet(path);
+//	}
+//	return -1;
+//}
 
-Asset::Ref AssetManager::LoadAssetUntyped(std::filesystem::directory_entry const& file)
-{
-	return LoadAssetUntyped(ToString(file.path().filename()));
-}
+//Asset::Ref AssetManager::LoadAssetUntyped(std::filesystem::directory_entry const& file)
+//{
+//	return LoadAssetUntyped(ToString(file.path().filename()));
+//}
 
 Scenelet::Ref AssetManager::ImportScenelet(String const& path, bool loadTextures, bool async)
 {
+	static const String meshDir = "meshes/";
 	fs::path filePath = path;
 	Assimp::Importer importer;
 	auto flags = aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded
@@ -450,7 +462,7 @@ Scenelet::Ref AssetManager::ImportScenelet(String const& path, bool loadTextures
 	{
 		u32 start = NumCast<u32>(m_Meshes.size());
 		auto assName = filePath.filename();
-		AssetPath assetPath = assName.replace_extension().string();
+		AssetPath assetPath("/Content/" + meshDir + assName.replace_extension().string());
 		u32 end = AddScenelet(aiscene, assetPath, true, path, loadTextures, async);
 
 		for (u32 i=0; i<aiscene->mNumMaterials; ++i)
@@ -462,7 +474,7 @@ Scenelet::Ref AssetManager::ImportScenelet(String const& path, bool loadTextures
 			//aiString newName = aiString {ToString("textures" / old.filename())};
 			//mat->AddProperty(&newName, AI_MATKEY_NAME);
 		}
-		fs::path outDir = "assets/meshes";
+		fs::path outDir = meshDir;
 		assName.replace_extension();
 		fs::path assPath = (outDir / assName).replace_extension("assbin");
 		//auto outDir = assetDir / assPath.parent_path();
@@ -497,18 +509,8 @@ void AssetManager::ImportSceneletAsync(String const& path, bool loadTextures /*=
 
 Scenelet::Ref AssetManager::LoadScenelet(AssetPath const& path, bool loadTextures /*= true*/, bool async)
 {
-	auto	sep = path.find(':');
-	String subMesh;
-	String filePath;
-	if (sep < path.size())
-	{
-		subMesh = path.substr(sep+1);
-		filePath = path.substr(0, sep);
-	}
-	else
-	{
-		filePath = path;
-	}
+	String subMesh = path.SubPath;
+	String filePath = path.ToFilePath();
 	fs::path assetPath = "assets";
 	assetPath /= filePath;
 	assetPath += ".assbin";
@@ -522,7 +524,7 @@ Scenelet::Ref AssetManager::LoadScenelet(AssetPath const& path, bool loadTexture
 	{
 		fprintf(stderr, "Error: %s", importer.GetErrorString());
 	}
-	cout << path << endl;
+	cout << path.ToString() << endl;
 	Assimp::Exporter exporter;
 	//exporter.Export(aiscene, )
 	//for (u32 i = 0; i < exporter.GetExportFormatCount(); ++i)
@@ -534,10 +536,10 @@ Scenelet::Ref AssetManager::LoadScenelet(AssetPath const& path, bool loadTexture
 	if (aiscene != nullptr)
 	{
 		u32 start = NumCast<u32>(m_Meshes.size());
-		u32 end = AddScenelet(aiscene, filePath, false, "", loadTextures, async);
+		u32 end = AddScenelet(aiscene, path.GetAssetRootPath(), false, "", loadTextures, async);
 		if (!subMesh.empty())
 		{
-			for (u32 i=start; i<= end; ++i)
+			for (u32 i=start; i< m_Meshes.size(); ++i)
 			{
 				if (m_Meshes[i].name == subMesh)
 				{
@@ -550,34 +552,28 @@ Scenelet::Ref AssetManager::LoadScenelet(AssetPath const& path, bool loadTexture
 	}
 	else
 	{
-		std::cerr << "Failed to load mesh " << path << endl;
+		std::cerr << "Failed to load mesh " << path.ToString() << endl;
 		return -1;
 	}
 }
 
 void AssetManager::LoadSceneletAsync(AssetPath const& path, bool loadTextures /*= true*/, AssetLoadCallback callback /*= nullptr*/)
 {
-	m_LoadingJobs.push(SceneletLoadingJob{path, false, loadTextures, callback});
+	m_LoadingJobs.push(SceneletLoadingJob{ path.PrimaryPath, false, loadTextures, callback });
 }
 
-CompoundMesh::Ref AssetManager::GetMesh(AssetPath path)
+CompoundMesh::Ref AssetManager::GetMesh(AssetPath const& path)
 {
-	size_t	sep = path.find(':');
-	String subMesh;
-	String filePath;
-	if (sep < path.size())
+	if (auto loadedIt = m_LoadedMeshes.find(path); loadedIt != m_LoadedMeshes.end())
 	{
-		subMesh = path.substr(sep+1);
-		filePath = path.substr(0, sep);
+		return loadedIt->second;
 	}
-	else
-	{
-		filePath = path;
-	}
-	auto sl = FindScenelet(filePath);
+	String subMesh = path.SubPath;
+	auto sceneletPath = path.GetAssetRootPath();
+	auto sl = FindScenelet(sceneletPath);
 	if (!IsValid(sl))
 	{
-		sl = LoadScenelet(filePath);
+		sl = LoadScenelet(sceneletPath);
 	}
 
 	if (!IsValid(sl))
@@ -589,7 +585,7 @@ CompoundMesh::Ref AssetManager::GetMesh(AssetPath path)
 
 }
 
-MeshRef AssetManager::FindMesh(AssetPath path)
+MeshRef AssetManager::FindMesh(AssetPath const& path)
 {
 	int i=0;
 	for (auto& mesh : m_Meshes)
@@ -608,7 +604,7 @@ void AssetManager::RefreshMeshList()
 	m_AllMeshes.clear();
 	for (auto const& dir_entry : fs::directory_iterator("assets/meshes"))
 	{
-		auto assPath = ToString(dir_entry.path().lexically_relative("assets").replace_extension());
+		auto assPath = AssetPath::Content(ToString(dir_entry.path().lexically_relative("assets").replace_extension()));
 		m_AllMeshes.emplace_back(AssetData { assPath, IsValid(FindMesh(assPath)) });
 	}
 }
@@ -630,7 +626,7 @@ void AssetManager::DrawControls()
 	{
 		nfdchar_t *outPath;
 		
-		auto contentDir = (std::filesystem::current_path() / "content");
+		auto contentDir = (std::filesystem::current_path() / "assets");
 		printf("Opening file dialog at %s\n", contentDir.string().c_str());
 		nfdresult_t result = NFD_OpenDialog(NULL, contentDir.string().c_str(), &outPath);
 		if (result == NFD_OKAY)
@@ -670,7 +666,7 @@ void AssetManager::Synchronize()
 	while (!m_LoadedScenelets.IsEmpty())
 	{
 		SceneletLoadCtx ctx = m_LoadedScenelets.pop();
-		printf("Added scenelet %s", ctx.m_Scenelet.GetPath().c_str());
+		printf("Added scenelet %s", ctx.m_Scenelet.GetPath().ToString().c_str());
 		FinishLoad(ctx);
 	}
 }
@@ -694,7 +690,7 @@ void AssetManager::Work()
 			}
 			else
 			{
-				LoadScenelet(slJob.path, slJob.loadTextures, true);
+				LoadScenelet(AssetPath(slJob.path), slJob.loadTextures, true);
 			}
 		}
 		else if (std::holds_alternative<MatLoadingJob>(job))

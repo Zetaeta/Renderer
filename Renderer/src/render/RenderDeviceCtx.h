@@ -2,6 +2,7 @@
 #include "render/Renderer.h"
 #include <core/Utils.h>
 #include "DeviceTexture.h"
+#include <common/Material.h>
 
 struct MeshPart;
 namespace rnd { class IConstantBuffer; }
@@ -111,6 +112,9 @@ public:
 	virtual void DrawMesh(MeshPart const& meshPart, EShadingLayer layer, bool useMaterial = true) = 0;
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) = 0; 
 	virtual void			 SetConstantBuffers(EShaderType shaderType, IConstantBuffer** buffers, u32 numBuffers) = 0;
+	virtual void			 ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src) = 0;
+
+	virtual void PrepareMaterial(MaterialID mid) = 0;
 
 	IRenderDevice* Device;
 	IRenderTextureManager* TextureManager;

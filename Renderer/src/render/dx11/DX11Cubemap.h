@@ -30,6 +30,11 @@ public:
 
 	void* GetTextureHandle() const { return GetSRV(); }
 
+	void* GetData() const override
+	{
+		return nullptr;
+	}
+
 	ComPtr<ID3D11ShaderResourceView> srv;
 	//Vector<ComPtr<ID3D11DepthStencilView>> m_DSVs;
 	DX11DepthStencil::Ref mDepthStencil;

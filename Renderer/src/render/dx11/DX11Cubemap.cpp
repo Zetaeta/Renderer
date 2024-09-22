@@ -15,7 +15,7 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 	ComPtr<ID3D11Texture2D> cubeTex;
 
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-	u32			faceWidth = static_cast<u32>(desc.width);
+	u32			faceWidth = static_cast<u32>(desc.Width);
 	// assert(faceWidth * 3 == tex->height);
 	u32					 faceHeight = faceWidth;
 	D3D11_TEXTURE2D_DESC texDesc;
@@ -39,7 +39,7 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 	srvDesc.TextureCube.MostDetailedMip = 0;
 
 
-	if (desc.flags & TF_DEPTH)
+	if (desc.Flags & TF_DEPTH)
 	{
 		texDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
 		texDesc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
@@ -48,7 +48,7 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 
 	HR_ERR_CHECK(ctx.pDevice->CreateTexture2D(&texDesc, initData, &cubeTex));
 	HR_ERR_CHECK(ctx.pDevice->CreateShaderResourceView(cubeTex.Get(), &srvDesc, &srv));
-	if (desc.flags & TF_DEPTH)
+	if (desc.Flags & TF_DEPTH)
 	{
 		DepthStencilDesc dsDesc{ std::format("{}DS", desc.DebugName), ETextureDimension::TEX_CUBE };
 		dsDesc.Width = faceWidth;
@@ -87,7 +87,7 @@ DX11Cubemap DX11Cubemap::FoldUp(DX11Ctx& ctx, TextureRef tex)
 {
 	ID3D11Device* device = ctx.pDevice;
 	DX11Cubemap			res(ctx);
-	res.Desc.flags = TF_SRGB;
+	res.Desc.Flags = TF_SRGB;
 	constexpr u32 const startPos[6] = {
 		6, 4, 1, 9, 5, 7
 
@@ -155,9 +155,9 @@ void DX11Cubemap::Unmap(u32 subResource)
 void DX11ShadowCube::Init(DX11Ctx& ctx, u32 size)
 {
 	DeviceTextureDesc desc;
-	desc.flags = TF_DEPTH;
-	desc.width = size;
-	desc.height = size;
+	desc.Flags = TF_DEPTH;
+	desc.Width = size;
+	desc.Height = size;
 	m_Cube = std::make_unique<DX11Cubemap>(ctx, desc);
 }
 

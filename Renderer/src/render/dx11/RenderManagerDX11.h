@@ -12,10 +12,10 @@ public:
 	using Super = RenderManager;
 
 
-	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input)
+	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, IDXGISwapChain* swapChain)
 		: Super(input)
 	{
-		m_hardwareRenderer = std::make_unique<DX11Renderer>(&scene, &m_Camera, 0, 0, device, context);
+		m_hardwareRenderer = std::make_unique<DX11Renderer>(&mScene, &m_Camera, 0, 0, device, context, swapChain);
 	}
 	
 	virtual void DrawFrameData() override
@@ -29,7 +29,7 @@ public:
 		Super::OnRenderStart();
 		m_Camera.Tick(m_FrameTime);
 		m_HwTimer.Reset();
-		m_hardwareRenderer->Render(scene);
+		m_hardwareRenderer->Render(mScene);
 		m_HwFrame = m_HwTimer.ElapsedMillis();
 	}
 

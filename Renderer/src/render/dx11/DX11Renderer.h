@@ -95,7 +95,7 @@ struct PFPSSpotLight// : PerFramePSData
 class DX11Renderer : public IRenderer, public rnd::IRenderDeviceCtx, public IRenderDevice
 {
 public:
-	DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context);
+	DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context, IDXGISwapChain* swapChain);
 
 	~DX11Renderer();
 
@@ -120,8 +120,6 @@ public:
 	//void WriteCBuffer(ComPtr<ID3D11Buffer>& buffer, T const& data);
 
 	void PrepareShadowMaps();
-	void RenderShadowMap();
-	void RenderDepthOnly(ID3D11DepthStencilView* dsv, u32 width, u32 height, mat4 const& transform, mat4 const& projection, DX11MaterialType* material = nullptr, mat4* outFullTrans = nullptr);
 
 	void DrawMesh(MeshPart const& meshPart, EShadingLayer layer, bool useMaterial = true);
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size /* = 0 */) override;
@@ -135,7 +133,8 @@ public:
 	void DrawTexture(DX11Texture* tex, ivec2 pos = ivec2(0), ivec2 size = ivec2(-1));
 	void PrepareMesh(MeshPart const& mesh, DX11Mesh& meshData);
 	void PrepareMaterial(MaterialID mid);
-	void SetMainRenderTarget(ComPtr<ID3D11RenderTargetView> rt, ComPtr<ID3D11DepthStencilView> ds, u32 width, u32 height);
+	void SetMainRenderTargetAndDS(ComPtr<ID3D11RenderTargetView> rt, ComPtr<ID3D11DepthStencilView> ds, u32 width, u32 height);
+	void SetBackbuffer(DX11Texture::Ref backBufferTex, u32 width, u32 height);
 
 	// Begin IRenderDeviceCtx overrides
 	void SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int RTArrayIdx = -1, int DSArrayIdx = -1) override;
@@ -145,9 +144,15 @@ public:
 	void ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMode, float depth, u8 stencil /* = 0 */) override;
 	void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) override;
 	void SetConstantBuffers(EShaderType shader, IConstantBuffer** buffers, u32 numBuffers) override;
+	void ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src);
 	// End IRenderDeviceCtx overrides
 
+
+
 	void Resize(u32 width, u32 height, u32* canvas = nullptr) override;
+
+	void PreImgui();
+
 
 	MappedResource MapResource(ID3D11Resource*, u32 subResource, ECpuAccessFlags flags);
 
@@ -212,15 +217,15 @@ private:
 
 protected:
 
-	void CreateMatType(u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload);
-	void CreateMatTypeUnshaded(u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload, Vector<D3D_SHADER_MACRO>&& defines = {});
+	void CreateMatType(String const& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload);
+	void CreateMatTypeUnshaded(String const& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload, Vector<D3D_SHADER_MACRO>&& defines = {});
 
 	UserCamera* m_Camera;
 	//Scene* m_Scene;
 
 	ID3D11Device*		   pDevice;
 	ID3D11DeviceContext*	   pContext;
-
+	IDXGISwapChain* pSwapChain = nullptr;
 
 //	std::vector<DX11Mesh> m_MeshData;
 	std::unordered_map<MeshPart const*, DX11Mesh> m_MeshData;

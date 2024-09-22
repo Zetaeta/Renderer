@@ -11,7 +11,7 @@ Editor* Editor::sSingleton;
 Editor::Editor(Input* input, RenderManager* rmg)
 	: mInput(input), mRmgr(rmg)
 {
-	mScene = &rmg->scene;
+	mScene = &rmg->mScene;
 	mViewports.push_back(static_cast<rnd::dx11::DX11Renderer*>(rmg->Renderer())->GetViewport());
 	mLastSaved = std::chrono::system_clock::now();
 }
@@ -24,21 +24,21 @@ Editor* Editor::Create(Input* input, class RenderManager* rmg)
 
 void Editor::OnClickPoint(ivec2 position)
 {
-	printf("Click(%d,%d)\n", position.x, position.y);
 	Viewport* viewport = GetViewportAt(position);
-	if (!viewport || position.x >= viewport->GetWidth() || position.y >= viewport->GetHeight()
+	if (!viewport || position.x >= (int) viewport->GetWidth() || position.y >= (int) viewport->GetHeight()
 		|| position.x < 0 || position.y < 0)
 	{
 		return;
 	}
 
+	printf("Click(%d,%d)\n", position.x, position.y);
 	CreateScreenIdTex(viewport->GetWidth(), viewport->GetHeight());
 	//viewport->GetRenderContext()->RunSinglePass<rnd::RenderScreenIds>("ScreenIds", viewport->mCamera,
 	//																	mScreenIdTex->GetRT());
 	MappedResource mapped = mScreenIdTex->Map(0, ECpuAccessFlags::Read);
 	const u32* textureData = reinterpret_cast<const u32*>(mapped.Data);
-	const u32 width = mScreenIdTex->Desc.width;
-	const u32 height = mScreenIdTex->Desc.height;
+	const int width = mScreenIdTex->Desc.Width;
+	const int height = mScreenIdTex->Desc.Height;
 	RASSERT(position.x < width);
 	RASSERT(position.y < height);
 	const u32 id = textureData[position.x + position.y * (mapped.RowPitch / 4)];
@@ -119,7 +119,7 @@ void Editor::DrawComponentsWindow()
 		ImGui::Text("Screen id %d", mSelectedComponent->GetScreenId());
 		if (ImGui::TreeNodeEx("Component properties", ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			ImGuiControls(ClassValuePtr::From(mSelectedComponent), false, propertyFilter);
+			ImGuiControls(ClassValuePtr::From(mSelectedComponent.Get()), false, propertyFilter);
 			ImGui::TreePop();
 		}
 	}
@@ -183,6 +183,7 @@ void Editor::Tick(float dt)
 		if (timeSinceSaved > 10)
 		{
 			mRmgr->SaveScene("default.json");
+			mLastSaved = currTime;
 		}
 	}
 	//	mWasMouseDown = isMouseDown;
@@ -190,23 +191,36 @@ void Editor::Tick(float dt)
 
 void Editor::SelectComponent(SceneComponent* Component)
 {
-	mSelectedComponent = Component;
 	SelectObject(Component->GetOwner());
+	mSelectedComponent = Component->shared_from_this();
+}
+
+void Editor::ClickComponent(class SceneComponent* Component)
+{
+	SceneObject* Object = Component->GetOwner();
+	if (GetSelectedObject() == Object)
+	{
+		SelectComponent(Component);
+	}
+	else
+	{
+		SelectObject(Object);
+	}
 }
 
 void Editor::CreateScreenIdTex(u32 width, u32 height)
 {
-	if (mScreenIdTex && mScreenIdTex->Desc.width == width && mScreenIdTex->Desc.height == height)
+	if (mScreenIdTex && mScreenIdTex->Desc.Width == width && mScreenIdTex->Desc.Height == height)
 	{
 		return;
 	}
 
 	DeviceTextureDesc desc;
 	desc.DebugName = "ScreenIds";
-	desc.flags = TF_RenderTarget | TF_CpuReadback;
-	desc.format = ETextureFormat::R32_Uint;
-	desc.width = width;
-	desc.height = height;
+	desc.Flags = TF_RenderTarget | TF_CpuReadback;
+	desc.Format = ETextureFormat::R32_Uint;
+	desc.Width = width;
+	desc.Height = height;
 	mScreenIdTex = mRmgr->Device()->CreateTexture2D(desc);
 }
 
@@ -229,6 +243,7 @@ void Editor::SelectObject(const SceneObject* obj)
 	
 	if (it != mScene->m_Objects.end())
 	{
-		mSelectedSceneObj = it - mScene->m_Objects.begin();
+		mSelectedSceneObj = NumCast<int>(it - mScene->m_Objects.begin());
+		mSelectedComponent = (*it)->GetRoot();
 	}
 }

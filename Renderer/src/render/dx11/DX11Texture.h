@@ -23,6 +23,9 @@ class DX11Texture : public DX11TextureBase
 public:
 	DX11Texture(DX11Ctx& ctx, DeviceTextureDesc const& desc, TextureData textureData);
 
+	// Construct from already created device texture
+	DX11Texture(DX11Ctx& ctx, DeviceTextureDesc const& desc, ID3D11Texture2D* texture);
+
 	RCOPY_MOVE_PROTECT(DX11Texture);
 
 	using Ref = std::shared_ptr<DX11Texture>;
@@ -34,9 +37,16 @@ public:
 		return Create(ctx, u32(tex->width), u32(tex->height), tex->GetData(), flags);
 	}
 
+	void Resize(u32 width, u32 height);
+
 	void* GetHandle()
 	{
 		return m_SRV.Get();
+	}
+
+	void* GetData() const override
+	{
+		return m_Texture.Get();
 	}
 
 	void* GetTextureHandle() const override { return GetSRV(); }
@@ -64,7 +74,11 @@ public:
 	virtual void		   Unmap(u32 subResource) override;
 
  private:
+	void CreateResources(TextureData textureData = {});
+	void CreateRenderTarget(D3D11_TEXTURE2D_DESC const& textureDesc);
+
 	ComPtr<ID3D11ShaderResourceView> m_SRV = nullptr;
+	ComPtr<ID3D11ShaderResourceView> m_StencilSRV = nullptr;
 	ComPtr<ID3D11Texture2D> m_Texture;
 	ComPtr<ID3D11Texture2D> m_CpuTexture;
 

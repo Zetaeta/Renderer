@@ -103,6 +103,11 @@ void SceneComponent::OnUpdate(Scene& scene)
 
 }
 
+StaticMeshComponent::StaticMeshComponent(AssetPath const& path)
+	: m_Mesh(path)
+{
+}
+
 void StaticMeshComponent::OnInitialize()
 {
 	if (!IsValid(m_MeshRef))
@@ -118,7 +123,7 @@ void StaticMeshComponent::OnInitialize()
 	}
 	else
 	{
-		printf("Couldn't find mesh %s", m_Mesh.c_str()); 
+		printf("Couldn't find mesh %s", m_Mesh.ToString().c_str()); 
 	}
 }
 
@@ -128,17 +133,17 @@ void StaticMeshComponent::SetMesh(CompoundMesh::Ref mesh)
 	if (IsValid(mesh))
 	{
 		m_Mesh = GetScene().GetAssetManager()->GetMesh(mesh).GetPath();
-		printf("Set mesh %p with path %s\n", mesh.get(), m_Mesh.c_str());
+		printf("Set mesh %p with path %s\n", mesh.get(), m_Mesh.ToString().c_str());
 		//m_MeshInst = GetScene().AddMesh(mesh);
 	}
 
 	MarkDirty();
 }
 
-void StaticMeshComponent::SetMesh(AssetPath path)
+void StaticMeshComponent::SetMesh(const AssetPath& path)
 {
 	m_Mesh = path;
-	printf("Set mesh (%s)\n", m_Mesh.c_str());
+	printf("Set mesh (%s)\n", m_Mesh.ToString().c_str());
 	if (IsInitialized())
 	{
 		m_MeshRef = GetScene().GetAssetManager()->GetMesh(path);
@@ -161,7 +166,7 @@ void StaticMeshComponent::OnUpdate(Scene& scene)
 
 bool StaticMeshComponent::ImGuiControls()
 {
-	ImGui::Text(m_Mesh.c_str());
+	ImGui::Text(m_Mesh.ToString().c_str());
 	return Super::ImGuiControls();
 }
 

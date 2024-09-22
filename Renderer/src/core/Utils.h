@@ -37,10 +37,19 @@ constexpr auto Denum(TEnum e)
 		return EnumCast<EType>(Denum(a) op Denum(b));      \
 	}
 
+#define DECLARE_ENUM_ASSOP(EType, op, assop)\
+	constexpr EType& operator assop (EType& a, EType b) \
+	{                                 \
+		return (a = a op b);\
+	}
+
 #define FLAG_ENUM(EType)\
 	DECLARE_ENUM_OP(EType, |)\
 	DECLARE_ENUM_OP(EType, &)\
 	DECLARE_ENUM_OP(EType, ^)\
+	DECLARE_ENUM_ASSOP(EType, |, |=)\
+	DECLARE_ENUM_ASSOP(EType, &, &=)\
+	DECLARE_ENUM_ASSOP(EType, ^, ^=)\
 	constexpr bool operator==(EType enumVal, std::underlying_type_t<EType> other)\
 	{\
 		return Denum(enumVal) == other;\
@@ -364,6 +373,23 @@ inline bool IsValid(s32 ref)
 	return ref >= 0;
 }
 
+template<typename T>
+bool IsValid(const std::weak_ptr<T>& weakPtr)
+{
+	return !weakPtr.expired();
+}
+
+template<typename T>
+T* Get(const std::weak_ptr<T>& weakPtr)
+{
+	if (auto strong = weakPtr.lock())
+	{
+		return strong.get();
+	}
+
+	return nullptr;
+}
+
 template<typename TPtr>
 	requires requires(TPtr p) { *p; }
 inline bool IsValid(TPtr const& ptr)
@@ -385,6 +411,9 @@ template<typename Derived, typename Base>
 concept DerivedStrip = std::derived_from<std::remove_cvref_t<Derived>, Base>;
 
 bool FindIgnoreCase(const std::string_view& haystack, const std::string_view& needle);
+
+#define ARRAY_SIZE(arr) sizeof(arr) / sizeof(arr[0])
+#define STR_LEN(str) (ARRAY_SIZE(str) - 1)
 
 //template<typename... Args>
 //using Variant = std::Variant<Args...>;

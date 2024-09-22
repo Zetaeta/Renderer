@@ -185,9 +185,17 @@ void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, m
 	{
 		matArch = mMatOverride->Archetype;
 	}
-	else if (auto& deviceMat = mat.DeviceMat)
+	else 
 	{
-		matArch = deviceMat->Archetype;
+		auto& deviceMat = mat.DeviceMat;
+		if (!deviceMat || mat.NeedsUpdate())
+		{
+			DeviceCtx()->PrepareMaterial(data.mesh->material);
+		}
+		if (deviceMat)
+		{
+			matArch = deviceMat->Archetype;
+		}
 	}
 
 	if (matArch)

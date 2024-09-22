@@ -13,6 +13,7 @@ enum class ETextureFormat : u8
 {
 	RGBA8_Unorm,
 	D24_Unorm_S8_Uint,
+	D32_Float,
 	R32_Uint
 };
 
@@ -81,18 +82,25 @@ enum ETextureFlags
 	TF_SRGB = 0x2,
 	TF_RenderTarget = 0x4,
 	TF_CpuReadback = 0x8,
-	TF_SRV = 0x10
+	TF_SRV = 0x10,
+	TF_StencilSRV = 0x20,
+//	TF_Stencil = 0x80,
 };
+
 
 FLAG_ENUM(ETextureFlags);
 
+//constexpr ETextureFlags TF_DEPTH_STENCIL = TF_DEPTH | TF_Stencil;
+
 struct DeviceTextureDesc : DeviceResourceDesc
 {
-	ETextureFlags flags = TF_SRV;
-	ETextureFormat format = ETextureFormat::RGBA8_Unorm;
-	u32 width;
-	u32 height;
-	u32 numMips = 1;
+	ETextureFlags Flags = TF_SRV;
+	ETextureFormat Format = ETextureFormat::RGBA8_Unorm;
+	u32 Width;
+	u32 Height;
+	u16 ArraySize = 1;
+	u8 NumMips = 1;
+	u8 SampleCount = 1;
 };
 
 enum ECubemapDataFormat
@@ -144,13 +152,31 @@ public:
 	template<typename T>
 	T* GetTextureHandle() { return static_cast<T*>(GetTextureHandle()); }
 
-	bool IsDepthStencil() const { return Desc.flags & TF_DEPTH; }
+	bool IsDepthStencil() const { return Desc.Flags & TF_DEPTH; }
 
+	DEFINE_DEVICE_RESOURCE_GETTER(GetData);
 
 	virtual IRenderTarget::Ref GetRT() = 0;
 	virtual IDepthStencil::Ref GetDS() = 0;
 
 	DeviceTextureDesc Desc;
+};
+
+
+struct DeviceSubresource
+{
+	DeviceSubresource(IDeviceTexture* tex, u16 arrayIdx = 0, u16 mipIdx = 0)
+		: Resource(tex), ArrayIdx(arrayIdx), MipIdx(mipIdx)
+	{
+	}
+
+	DeviceSubresource(IDeviceTexture::Ref tex, u16 arrayIdx = 0, u16 mipIdx = 0)
+		: Resource(tex.get()), ArrayIdx(arrayIdx), MipIdx(mipIdx)
+	{
+	}
+	IDeviceTexture* Resource = nullptr;
+	u16 ArrayIdx = 0;
+	u16 MipIdx = 0;
 };
 
 using IDeviceTextureCube = IDeviceTexture;

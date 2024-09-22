@@ -70,7 +70,7 @@ struct DX11Ctx
 	ID3D11DeviceContext* pContext;
 	DX11RenderTextureManager psTextures;
 	DX11Renderer* m_Renderer;		
-	rnd::RenderContext* mRCtx;
+	rnd::RenderContext* mRCtx = nullptr;
 };
 
 }

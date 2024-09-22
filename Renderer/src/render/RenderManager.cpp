@@ -22,10 +22,19 @@ inline vec2 Vec2(aiVector3D const& v)
 }
 
  RenderManager::RenderManager(Input* input)
-	: m_Camera(input), scene(&m_AssMan)
+	: m_Camera(input), mScene(&m_AssMan)
 {
 
-	ObjReader objReader{ scene.Materials() };
+	ObjReader objReader{ mScene.Materials() };
+	int			   x, y, comp;
+	unsigned char* data = stbi_load("content/Dirt.png", &x, &y, &comp, 4);
+	fprintf(stdout, "width: %d, height: %d, comp: %d\n", x, y, comp);
+	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, "dirt", data) : Texture::EMPTY;
+	stbi_image_free(data);
+	mScene.Materials() = { make_shared<Material>("Red", vec4{ 1.f, 0.f, 0.f, 1.f }, 1.f, 10), make_shared<Material>("Dirt", vec4{ 0.f, 0.f, 0.f, 1.f }, 1.f, 500, 1.f, dirt), make_shared<Material>("Yellow", vec4{ 1.f, 1.f, 0.f, 1.f }) };
+	auto mesh = MeshPart::Cube(1);
+	ComputeNormals(mesh);
+	auto		   cube = m_AssMan.AddMesh({ AssetPath("/Memory/cube"), std::move(mesh) });
 
 
 	for (const auto& file : fs::directory_iterator("content"))
@@ -61,30 +70,25 @@ inline vec2 Vec2(aiVector3D const& v)
 
 void RenderManager::CreateStarterScene()
 {
-	int			   x, y, comp;
-	unsigned char* data = stbi_load("content/Dirt.png", &x, &y, &comp, 4);
-	fprintf(stdout, "width: %d, height: %d, comp: %d\n", x, y, comp);
-	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, "dirt", data) : Texture::EMPTY;
-	stbi_image_free(data);
-	scene.Materials() = { make_shared<Material>("Red", vec4{ 1.f, 0.f, 0.f, 1.f }, 1.f, 10), make_shared<Material>("Dirt", vec4{ 0.f, 0.f, 0.f, 1.f }, 1.f, 500, 1.f, dirt), make_shared<Material>("Yellow", vec4{ 1.f, 1.f, 0.f, 1.f }) };
-	scene.m_Spheres = { Sphere({ 0, 0, 2 }, .5f, 0), { { 0, 1, 2 }, .3f, 1 } };
+	mScene.Teardown();
+	Scene newScene(&m_AssMan);
+	newScene.m_Spheres = { Sphere({ 0, 0, 2 }, .5f, 0), { { 0, 1, 2 }, .3f, 1 } };
 	//scene.m_DirLights = { DirLight({ -1.f, -1.f, 1.f }, 0.5) };
 	//scene.m_PointLights.emplace_back(vec3(1), vec3(1),1.f);
 //	scene.m_SpotLights.emplace_back(vec3(1), vec3{ 0, 0, 1 }, vec3(1), 1.f, 1.f);
 	vector<IndexedTri> inds = { IndexedTri({ 0, 1, 2 }) };
-	scene.m_Objects.emplace_back(make_unique<LightObject<SpotLight>>(&scene));
-	scene.m_Objects.emplace_back(make_unique<LightObject<PointLight>>(&scene));
-	scene.m_Objects.emplace_back(make_unique<LightObject<DirLight>>(&scene));
-	auto mesh = MeshPart::Cube(1);
-	ComputeNormals(mesh);
-	auto		   cube = m_AssMan.AddMesh({ "cube", "cube", std::move(mesh) });
-	StaticMeshComponent& cubeMC = scene.m_Objects.emplace_back(make_unique<SceneObject>(&scene, "cube"))->SetRoot<StaticMeshComponent>();
-	cubeMC.SetMesh(cube);
+	newScene.m_Objects.emplace_back(make_unique<LightObject<SpotLight>>(&mScene));
+	newScene.m_Objects.emplace_back(make_unique<LightObject<PointLight>>(&mScene));
+	newScene.m_Objects.emplace_back(make_unique<LightObject<DirLight>>(&mScene));
+	StaticMeshComponent& cubeMC = newScene.m_Objects.emplace_back(make_unique<SceneObject>(&mScene, "cube"))->SetRoot<StaticMeshComponent>();
+	cubeMC.SetMesh(AssetPath("/Memory/cube"));
 	cubeMC.SetTransform(RotTransform{ { 0, 0, 2 }, { 1, 1, 1 } } );
 		//	scene.m_MeshInstances.emplace_back(MeshInstance{ m_AssMan.AddMesh(Mesh::Cube(1)),  );
 	m_Renderer = make_unique<RastRenderer>(&m_Camera, 0, 0, nullptr);
 
-	scene.Initialize();
+	mScene = std::move(newScene);
+	mScene.Initialize();
+	mScene.Modify(true);
 }
 
 void RenderManager::CreateInitialScene()
@@ -105,10 +109,10 @@ bool RenderManager::LoadScene(String const& path)
 	Scene newScene(&m_AssMan);
 	if (JsonDeserializer::Read(ReflectedValue::From(newScene), path))
 	{
-		scene.Teardown();
-		scene = std::move(newScene);
-		printf("Loaded %s", path.c_str());
-		scene.Initialize();
+		mScene.Teardown();
+		mScene = std::move(newScene);
+		printf("Loaded %s\n", path.c_str());
+		mScene.Initialize();
 		return true;
 	}
 
@@ -120,8 +124,8 @@ void RenderManager::SaveScene(String const& path)
 	fs::path inPath = path;
 	fs::path directory = "saves" / inPath.parent_path();
 	std::filesystem::create_directories(directory);
-	JsonSerializer::Dump(ConstReflectedValue::From(scene), (directory / inPath.filename()).string());
-	printf("Saved to %s", path.c_str());
+	JsonSerializer::Dump(ConstReflectedValue::From(mScene), (directory / inPath.filename()).string());
+	printf("Saved to %s\n", path.c_str());
 }
 
 string savefile;
@@ -132,9 +136,9 @@ void RenderManager::SceneControls()
 	ImGui::Text("Camera pos: (%.2f, %.2f, %.2f)", m_Camera.GetPosition().x, m_Camera.GetPosition().y, m_Camera.GetPosition().z);
 	if (ImGui::TreeNode("Materials"))
 	{
-		for (int m = 0; m < scene.Materials().size(); ++m)
+		for (int m = 0; m < mScene.Materials().size(); ++m)
 		{
-			auto& mat = scene.GetMaterial(m);
+			auto& mat = mScene.GetMaterial(m);
 			ImGui::PushID(&mat);
 			ImGui::Text("Material %d (%s)", m, mat.DebugName.c_str());
 			if (ImGui::TreeNode("Details"))
@@ -168,12 +172,17 @@ void RenderManager::SceneControls()
 	if (ImGui::Button("Save"))
 	{
 		std::filesystem::create_directory("saves");
-		JsonSerializer::Dump(ConstReflectedValue::From(scene), "saves/" + savefile);
+		JsonSerializer::Dump(ConstReflectedValue::From(mScene), "saves/" + savefile);
 	}
 	if (ImGui::Button("Load"))
 	{
 		String path = "saves/" + savefile;
 		LoadScene(path);
+		return;
+	}
+	if (ImGui::Button("Reset scene"))
+	{
+		CreateStarterScene();
 	}
 	
 	if (ImGui::TreeNode("Add Object"))
@@ -182,7 +191,7 @@ void RenderManager::SceneControls()
 		TypeSelector(soType);
 		if (ImGui::Button("Create"))
 		{
-			scene.CreateObject(*m_SelectedSO);
+			mScene.CreateObject(*m_SelectedSO);
 		}
 		ImGui::TreePop();
 	}
@@ -199,9 +208,9 @@ void RenderManager::SceneControls()
 			ImGui::Text(mesh.name.c_str());
 			if (ImGui::Button("Add to scene"))
 			{
-				scene.m_MeshInstances.emplace_back(m, Transform{ { 0, -2, 3 } });
+				mScene.m_MeshInstances.emplace_back(m, Transform{ { 0, -2, 3 } });
 			}
-			ImGui::DragInt("MaterialID", &mesh.material, 1, 0, NumCast<int>(scene.Materials().size() - 1));
+			ImGui::DragInt("MaterialID", &mesh.material, 1, 0, NumCast<int>(mScene.Materials().size() - 1));
 			if (ImGui::TreeNode("Vertices"))
 			{
 				for (auto& vert : mesh.vertices)
@@ -235,10 +244,10 @@ void RenderManager::SceneControls()
 		{
 			ImGui::PushID(m);
 			auto const& scenelet = scenelets[m];
-			ImGui::Text("%s (%s)", scenelet.m_Name.c_str(), scenelet.GetPath().c_str());
+			ImGui::Text("%s (%s)", scenelet.m_Name.c_str(), scenelet.GetPath().ToString().c_str());
 			if (ImGui::Button("Add to scene"))
 			{
-				scene.AddScenelet(scenelet);
+				mScene.AddScenelet(scenelet);
 			}
 			ImGui::PopID();
 		}
@@ -246,15 +255,15 @@ void RenderManager::SceneControls()
 	}
 	if (ImGui::TreeNode("Compound Meshes"))
 	{
-		for (int m = 0; m < scene.CompoundMeshes().size(); ++m)
+		for (int m = 0; m < mScene.CompoundMeshes().size(); ++m)
 		{
 			ImGui::PushID(m);
-			auto const& cmesh = scene.CompoundMeshes()[m];
+			auto const& cmesh = mScene.CompoundMeshes()[m];
 			ImGui::Text(cmesh->name.c_str());
 			ImGui::Text("%d parts", cmesh->components.size());
 			if (ImGui::Button("Add to scene"))
 			{
-				scene.InsertCompoundMesh(cmesh);
+				mScene.InsertCompoundMesh(cmesh);
 				//for (auto mesh : cmesh->components)
 				//{
 				//	//scene.m_MeshInstances.emplace_back(mesh.instance, Transform{ { 0, -2, 3 } });
@@ -275,7 +284,7 @@ void RenderManager::SceneControls()
 			auto const& mesh = m_AssMan.MeshList()[m];
 			ImGui::PushID(m);
 
-			ImGui::Text(mesh.path.c_str());
+			ImGui::Text(mesh.path.ToString().c_str());
 			if (mesh.loaded)
 			{
 				ImGui::Text("Loaded");
@@ -294,15 +303,15 @@ void RenderManager::SceneControls()
 
 	if (ImGui::TreeNode("Mesh instances"))
 	{
-		for (int m = 0; m < scene.m_MeshInstances.size(); ++m)
+		for (int m = 0; m < mScene.m_MeshInstances.size(); ++m)
 		{
 			ImGui::PushID(m);
 			ImGui::Text("Mesh inst %d", m);
 			if (ImGui::Button("Delete"))
 			{
-				scene.m_MeshInstances.erase(scene.m_MeshInstances.begin() + m);
+				mScene.m_MeshInstances.erase(mScene.m_MeshInstances.begin() + m);
 			}
-			auto& mi = scene.m_MeshInstances[m];
+			auto& mi = mScene.m_MeshInstances[m];
 			ImGui::DragInt("index",
 				reinterpret_cast<int*>(&mi.mesh), 1.f, 0, NumCast<int>(m_AssMan.GetMeshes().size()));
 			ImGuiControls(mi.trans);
@@ -313,16 +322,16 @@ void RenderManager::SceneControls()
 	}
 
 	ImGui::Text("Scene objects");
-	for (int o = 0; o < scene.m_Objects.size(); ++o)
+	for (int o = 0; o < mScene.m_Objects.size(); ++o)
 	{
-		auto& so = *scene.m_Objects[o];
+		auto& so = *mScene.m_Objects[o];
 		ImGui::PushID(&so);
 		if (ImGui::TreeNode(so.GetName().c_str()))
 		{
 			ImGuiControls(so);
 			if (ImGui::Button("Delete"))
 			{
-				scene.m_Objects.erase(scene.m_Objects.begin() + o);
+				mScene.m_Objects.erase(mScene.m_Objects.begin() + o);
 			}
 			ImGui::TreePop();
 		}
@@ -330,22 +339,22 @@ void RenderManager::SceneControls()
 	}
 
 	ImGui::Text("Lights");
-	ImGui::DragFloat3("Ambient", &scene.m_AmbientLight.x, 0.01f, 0.f, 1.f);
-	for (int l = 0; l < scene.m_DirLights.size(); ++l)
+	ImGui::DragFloat3("Ambient", &mScene.m_AmbientLight.x, 0.01f, 0.f, 1.f);
+	for (int l = 0; l < mScene.m_DirLights.size(); ++l)
 	{
 		ImGui::PushID(l);
 		ImGui::Text("Directional light %d", l);
-		vec3& dir = scene.m_DirLights[l].dir;
+		vec3& dir = mScene.m_DirLights[l].dir;
 		if (ImGui::DragFloat3("direction", &dir.x, speed))
 		{
-			dir = glm::normalize(scene.m_DirLights[l].dir);
+			dir = glm::normalize(mScene.m_DirLights[l].dir);
 		}
-		ImGui::DragFloat3("intensity", &scene.m_DirLights[l].colour.x, 0.01f, 0.f, 1.f);
+		ImGui::DragFloat3("intensity", &mScene.m_DirLights[l].colour.x, 0.01f, 0.f, 1.f);
 		ImGui::PopID();
 	}
-	for (int l = 0; l < scene.m_SpotLights.size(); ++l)
+	for (int l = 0; l < mScene.m_SpotLights.size(); ++l)
 	{
-		auto& light = scene.m_SpotLights[l];
+		auto& light = mScene.m_SpotLights[l];
 		ImGui::PushID(&light);
 		ImGui::Text("Spotlight %d", l);
 		ImGui::DragFloat3("position", &light.pos.x, speed);
@@ -359,20 +368,20 @@ void RenderManager::SceneControls()
 		ImGui::DragFloat("tan(angle)", &light.tangle, 0.01f);
 		ImGui::PopID();
 	}
-	for (int l = 0; l < scene.m_PointLights.size(); ++l)
+	for (int l = 0; l < mScene.m_PointLights.size(); ++l)
 	{
-		auto& light = scene.m_PointLights[l];
+		auto& light = mScene.m_PointLights[l];
 		ImGui::PushID(&light);
 		ImGui::Text("Point light %d", l);
-		vec3& pos = scene.m_PointLights[l].pos;
+		vec3& pos = mScene.m_PointLights[l].pos;
 		ImGui::DragFloat3("position", &pos.x, speed);
-		ImGui::DragFloat("radius", &scene.m_PointLights[l].radius, 0.02f);
-		ImGui::DragFloat3("intensity", &scene.m_PointLights[l].colour[0], 0.01f);
-		ImGui::DragFloat("falloff", &scene.m_PointLights[l].falloff, 0.02f);
+		ImGui::DragFloat("radius", &mScene.m_PointLights[l].radius, 0.02f);
+		ImGui::DragFloat3("intensity", &mScene.m_PointLights[l].colour[0], 0.01f);
+		ImGui::DragFloat("falloff", &mScene.m_PointLights[l].falloff, 0.02f);
 		ImGui::PopID();
 	}
 	ImGui::Text("Spheres");
-	for (auto& sphere : scene.m_Spheres)
+	for (auto& sphere : mScene.m_Spheres)
 	{
 		ImGui::PushID(i);
 		ImGui::BeginGroup();
@@ -382,7 +391,7 @@ void RenderManager::SceneControls()
 		ImGui::PopID();
 		++i;
 	}
-	for (auto& so : scene.m_Objects)
+	for (auto& so : mScene.m_Objects)
 	{
 		so->Update();
 	}

@@ -20,7 +20,9 @@ public:
 	Viewport(Scene* scene, rnd::IRenderDeviceCtx* rdc, ivec2 size);
 	class ScreenObject* GetObjectAt(ivec2 pos);
 
-	void Resize(u32 width, u32 height, IRenderTarget::Ref rt, IDepthStencil::Ref ds);
+	void Resize(u32 width, u32 height, IDeviceTexture::Ref backbuffer);
+
+	void Reset();
 
 	void Draw();
 

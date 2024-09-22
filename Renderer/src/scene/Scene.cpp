@@ -112,10 +112,11 @@ void Scene::InsertCompoundMesh(CompoundMesh::Ref cmesh)
 
 void Scene::AddScenelet(Scenelet const& scenelet)
 {
-	auto& obj = m_Objects.emplace_back(make_unique<SceneObject>(this,scenelet.m_Path));
+	auto& obj = m_Objects.emplace_back(make_unique<SceneObject>(this,scenelet.m_Path.SubPath));
 	auto& root = obj->SetRoot<StaticMeshComponent>();
 	AddSceneletPart(root, scenelet.m_Root);
 	obj->Initialize();
+	Modify(false);
 }
 
 void Scene::AddSceneletPart(StaticMeshComponent& component, SceneletPart const& part)
@@ -128,15 +129,17 @@ void Scene::AddSceneletPart(StaticMeshComponent& component, SceneletPart const& 
 		auto& childComp = component.AddChild<StaticMeshComponent>(child.mesh->name);
 		AddSceneletPart(childComp, child);
 	}
+	Modify(false);
 }
 
 
 MeshInstanceRef Scene::AddMesh(MeshRef mesh, Transform trans)
 {
-	 auto& mi = m_MeshInstances.emplace_back();
-	 mi.mesh = mesh;
-	 mi.trans = trans;
-	 return NumCast<MeshInstanceRef>(m_MeshInstances.size() - 1);
+	auto& mi = m_MeshInstances.emplace_back();
+	mi.mesh = mesh;
+	mi.trans = trans;
+	Modify(false);
+	return NumCast<MeshInstanceRef>(m_MeshInstances.size() - 1);
 }
 
 void Scene::Initialize()

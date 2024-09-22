@@ -7,7 +7,7 @@
 class Scene;
 class SceneComponent;
 
-class SceneObject : public BaseSerialized
+class SceneObject : public BaseSerialized, public std::enable_shared_from_this<SceneObject>
 {
 	DECLARE_RTTI(SceneObject, BaseSerialized);
 	SceneObject();
@@ -67,7 +67,7 @@ class SceneObject : public BaseSerialized
 	Scene*		m_Scene = nullptr;
 	std::string m_Name;
 	// std::vector<SceneComponent> components;
-	std::unique_ptr<SceneComponent> root;
+	std::shared_ptr<SceneComponent> root;
 	private:
 	void OnSetRoot();
 

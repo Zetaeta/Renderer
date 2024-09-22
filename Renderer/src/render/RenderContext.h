@@ -83,8 +83,11 @@ enum class EShadingDebugMode : u32
 class RenderContext
 {
 public:
-	RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds);
+	RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IDeviceTexture::Ref target);
 	~RenderContext();
+
+	void SetupRenderTarget();
+	void SetupPasses();
 	void RenderFrame(Scene const& scene);
 
 	LightRenderData CreateLightRenderData(ELightType lightType, u32 lightIdx);
@@ -164,8 +167,15 @@ public:
 	IDepthStencil::Ref GetTempDepthStencilFor(IRenderTarget::Ref);
 
 private:
+
+	bool mUseMSAA = true;
+	u32 msaaSampleCount = 4;
+
+	IDeviceTexture::Ref mMsaaTarget;
+	IDeviceTexture::Ref mTarget;
 	IRenderTarget::Ref mMainRT;
 	IDepthStencil::Ref mMainDS;
+	IDeviceTexture::Ref mDSTex;
 	IRenderDevice* mDevice = nullptr;
 	IRenderDeviceCtx* mDeviceCtx = nullptr;
 	Scene const* mScene = nullptr;

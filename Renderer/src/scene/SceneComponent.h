@@ -15,7 +15,7 @@ class SceneComponent;
 
 //#define SC_CONSTRUCTORS()
 
-class SceneComponent : public BaseSerialized
+class SceneComponent : public BaseSerialized, public std::enable_shared_from_this<SceneComponent>
 {
 	DECLARE_RTTI(SceneComponent, BaseSerialized);
 public:
@@ -55,7 +55,8 @@ public:
 		return static_cast<TComp&>(*child);
 	}
 
-	using Owner = std::unique_ptr<SceneComponent>;
+	using Owner = std::shared_ptr<SceneComponent>;
+	using WeakRef = std::weak_ptr<SceneComponent>;
 	Vector<Owner> const& GetChildren() const;
 
 	void SetParent(SceneComponent* parent)
@@ -140,7 +141,7 @@ protected:
 	RefPtr<ScreenObject> mScreenObj;
 	std::string			   m_Name;
 	RotTransform			   m_Transform;
-	std::vector<Owner> m_Children;
+	std::vector<SceneComponent::Owner> m_Children;
 	SceneComponent*		   m_Parent = nullptr;
 	SceneObject*		   m_Object = nullptr;
 	AABB aabb;
@@ -192,7 +193,7 @@ class StaticMeshComponent : public SceneComponent
 public:
 	StaticMeshComponent() {}
 
-	StaticMeshComponent(AssetPath const& path) :m_Mesh(path) {}
+	StaticMeshComponent(AssetPath const& path);
 	
 	template<typename TParent>
 	StaticMeshComponent(TParent* parent)
@@ -215,7 +216,7 @@ public:
 	void OnInitialize() override;
 
 	void SetMesh(CompoundMesh::Ref mesh);
-	void SetMesh(AssetPath path);
+	void SetMesh(AssetPath const& path);
 
 	virtual void	OnUpdate(Scene& scene) override;
 
@@ -233,7 +234,7 @@ protected:
 	EType m_Type = EType::VISIBLE;
 //	MeshInstanceRef m_MeshInst = -1;
 	CompoundMesh::Ref m_MeshRef = CompoundMesh::INVALID_REF;
-	Name m_Mesh;
+	AssetPath m_Mesh;
 };
 DECLARE_CLASS_TYPEINFO(StaticMeshComponent)
 

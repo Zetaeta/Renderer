@@ -75,6 +75,11 @@ CompoundMesh::Ref Scenelet::FindMesh(String const& name)
 		return result;
 	}
 
+	if (m_Root.mesh)
+	{
+		return m_Root.mesh;
+	}
+
 	return CompoundMesh::INVALID_REF;
 }
 
@@ -96,13 +101,13 @@ CompoundMesh::Ref SceneletPart::FindMesh(String const& name)
 	return CompoundMesh::INVALID_REF;
 }
 
-CompoundMesh::CompoundMesh(AssetPath const& path, Name const& name)
-	: Asset(path), name(name)
+CompoundMesh::CompoundMesh(AssetPath const& path)
+	: Asset(path), name(path.SubPath)
 {
 }
 
-CompoundMesh::CompoundMesh(AssetPath const& path, Name const& name, MeshPart&& mesh)
-	: Asset(path), name(name)
+CompoundMesh::CompoundMesh(AssetPath const& path, MeshPart&& mesh)
+	: Asset(path), name(path.SubPath)
 {
 	components.emplace_back(std::move(mesh));
 }

@@ -51,7 +51,7 @@ public:
 		m_Renderer->Resize(m_ViewWidth, m_ViewHeight, &m_ImgData[0]);
 		if (!m_Paused)
 		{
-			m_Renderer->Render(scene);
+			m_Renderer->Render(mScene);
 		}
 		OnRenderFinish();
 		m_FrameTime = m_Timer.ElapsedMillis();

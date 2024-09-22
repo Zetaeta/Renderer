@@ -133,7 +133,7 @@ struct Material
 		return E_MT_OPAQUE;
 	}
 
-	IDeviceMaterial* DeviceMat;
+	IDeviceMaterial* DeviceMat = nullptr;
 private:
 	std::atomic<bool> m_Updated = false;
 	std::mutex m_UpdateMutex;

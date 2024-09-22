@@ -8,6 +8,10 @@
 #define TEXTURED 1
 #endif
 
+#ifndef USE_STENCIL
+#define USE_STENCIL 0
+#endif
+
 #define DEBUG_MODE_ALBEDO 1
 #define DEBUG_MODE_NORMAL 2
 #define DEBUG_MODE_ROUGHNESS 3
@@ -62,6 +66,9 @@ cbuffer PerInstancePSData : register(b1) {
 	bool useNormalMap;
 	bool useEmissiveMap;
 	bool useRoughnessMap;
+#endif
+#if USE_STENCIL
+	uint stencilVal;
 #endif
 };
 
@@ -180,17 +187,21 @@ float3 ComputeLighting(float3 normal, float3 diffuseCol, float3 lightCol, float3
 	return ComputeLighting_BlinnPhong(normal, diffuseCol, lightCol, lightDir, roughness, viewDir, metalness);
 }
 
-float4 main(
+struct PSOut
+{
+	float4 colour : SV_TARGET;
+#if USE_STENCIL
+	uint stencil : SV_StencilRef;
+#endif
+};
+
+float4 CalcColour(
 	#if TEXTURED
 	float2 uv: TexCoord,
 	#endif
 	float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : WorldPos//, float4 lightPos: LightPos
-	) : SV_TARGET
+)
 {
-//	if (debugMode < 0)
-//	{
-//		return float4(1,0,1,1);
-//	}
 	float4 texColour = matColour;
 	#if TEXTURED
 	texColour = diffuse.Sample(splr, float2(uv.x, uv.y));
@@ -342,6 +353,35 @@ float4 main(
 	}
 #endif
 
-
 	return float4(colour, alpha);
+}
+
+#if TEXTURED
+#define IF_TEXTURED(x) x
+#else
+#define IF_TEXTURED(x)
+#endif
+
+PSOut main(
+	#if TEXTURED
+	float2 uv: TexCoord,
+	#endif
+	float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : WorldPos//, float4 lightPos: LightPos
+	)
+{
+//	if (debugMode < 0)
+//	{
+//		return float4(1,0,1,1);
+//	}
+	PSOut result;
+	result.colour = CalcColour(
+        #if TEXTURED
+        uv,
+        #endif
+        normal, tangent, viewDir, shadeSpacePos
+    );
+#if USE_STENCIL
+	result.stencil = stencilVal;
+#endif
+	return result;
 }

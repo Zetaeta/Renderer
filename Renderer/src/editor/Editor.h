@@ -5,6 +5,7 @@
 #include "ScreenObjManager.h"
 #include <render/DeviceTexture.h>
 #include <chrono>
+#include <core/WeakPtr.h>
 
 class Input;
 
@@ -39,6 +40,8 @@ public:
 
 	void SelectComponent(class SceneComponent* Component);
 
+	void ClickComponent(class SceneComponent* Component);
+
 	void CreateScreenIdTex(u32 width, u32 height);
 
 	ScreenObjManager& GetScreenObjManager()
@@ -47,7 +50,7 @@ public:
 	}
 	SceneComponent* GetSelectedComponent()
 	{
-		return mSelectedComponent;
+		return ::Get(mSelectedComponent);
 	}
 	class SceneObject* GetSelectedObject();
 
@@ -64,7 +67,7 @@ private:
 	RenderManager* mRmgr;
 	Editor(Input* input, class RenderManager* rmg);
 	static Editor* sSingleton;
-	class SceneComponent* mSelectedComponent = nullptr;
+	WeakPtr<class SceneComponent> mSelectedComponent = {};
 	ScreenObjManager ScreenObjMgr;
 	int mSelectedSceneObj = 0;
 

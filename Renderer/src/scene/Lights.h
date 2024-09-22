@@ -3,6 +3,7 @@
 #include "core/TypeInfoUtils.h"
 #include "core/Transform.h"
 #include "common/Material.h"
+#include <asset/Asset.h>
 
 class SceneComponent;
 
@@ -77,7 +78,7 @@ struct DirLight : public LightData
 	constexpr static bool const HAS_DIRECTION = true;
 	constexpr static bool const HAS_POSITION = false;
 
-	inline static String const GADGET = "meshes/dirlight";
+	inline static AssetPath const GADGET {"/Content/meshes/dirlight"};
 	inline static RotTransform const GADGET_TRANS = {  };
 	
 };
@@ -101,7 +102,7 @@ struct PointLight : public LightData
 	constexpr static bool const HAS_DIRECTION = false;
 	constexpr static bool const HAS_POSITION = true;
 
-	inline static String const GADGET = "meshes/pointlight";
+	inline static AssetPath const GADGET {"/Content/meshes/pointlight"};
 	inline static RotTransform const GADGET_TRANS = { vec3(0), vec3(0.2f) };
 
 	using Ref = u32;
@@ -144,7 +145,7 @@ struct SpotLight : public LightData
 	constexpr static bool const HAS_DIRECTION = true;
 	constexpr static bool const HAS_POSITION = true;
 
-	inline static String const GADGET = "meshes/spotlight";
+	inline static AssetPath const GADGET {"/Content/meshes/spotlight"};
 	inline static RotTransform const GADGET_TRANS = { vec3(0), vec3(1), Rotator {90.f,0,0} };
 };
 

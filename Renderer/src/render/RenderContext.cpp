@@ -11,19 +11,14 @@
 namespace rnd
 {
 
-RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds)
-		: mCamera(camera), mMainDS(ds), mMainRT(rt)
-	{
-	mDevice = DeviceCtx->Device;
+RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IDeviceTexture::Ref target)
+		: mCamera(camera)
+{
+	mTarget = target;
 	mDeviceCtx = DeviceCtx;
-	mPasses.emplace_back(std::make_unique<ShadowmapsPass>(this));
-	mPasses.emplace_back(std::make_unique<ForwardRenderPass>(this, "ForwardRender", camera, rt, ds));
-	mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::BACK, "Background", static_cast<dx11::DX11Renderer*>(DeviceCtx)->m_BG.get()));
-#if RBUILD_EDITOR
-	mPasses.emplace_back(MakeOwning<HighlightSelectedPass>(this));
-#endif
-	mDebugCubePass = static_cast<RenderCubemap*>(mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::FRONT, "DebugCube")).get());
-	memset(mLayersEnabled, 1, Denum(EShadingLayer::COUNT));
+	mDevice = mDeviceCtx->Device;
+	SetupRenderTarget();
+	SetupPasses();
 }
 
  RenderContext::~RenderContext()
@@ -35,16 +30,64 @@ RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IR
 	}
  }
 
-void RenderContext::RenderFrame(Scene const& scene)
+void RenderContext::SetupRenderTarget()
+ {
+	DeviceTextureDesc dsDesc = mTarget->Desc;
+	if (mUseMSAA)
+	{
+		DeviceTextureDesc msaaRTDesc = mTarget->Desc;
+		msaaRTDesc.DebugName = "MSAA RT";
+		msaaRTDesc.SampleCount = msaaSampleCount;
+		msaaRTDesc.Flags = ETextureFlags::TF_RenderTarget | ETextureFlags::TF_SRGB;
+		mMsaaTarget = mDevice->CreateTexture2D(msaaRTDesc);
+		mMainRT = mMsaaTarget->GetRT();
+
+		dsDesc.SampleCount = msaaSampleCount;
+	}
+	else
+	{
+		mMainRT = mTarget->GetRT();
+	}
+
+	{
+	
+		dsDesc.Flags = ETextureFlags::TF_DEPTH | ETextureFlags::TF_StencilSRV;
+		dsDesc.DebugName = "MainDepthStencil";
+		dsDesc.Format = ETextureFormat::D24_Unorm_S8_Uint;
+		mDSTex = mDeviceCtx->Device->CreateTexture2D(dsDesc);
+		mMainDS = mDSTex->GetDS();
+	}
+ }
+
+ void RenderContext::SetupPasses()
+ {
+	mPasses.emplace_back(std::make_unique<ShadowmapsPass>(this));
+	mPasses.emplace_back(std::make_unique<ForwardRenderPass>(this, "ForwardRender", mCamera, mMainRT, mMainDS));
+	mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::BACK, "Background", static_cast<dx11::DX11Renderer*>(mDeviceCtx)->m_BG.get()));
+#if RBUILD_EDITOR
+	mPasses.emplace_back(MakeOwning<HighlightSelectedPass>(this));
+#endif
+	mDebugCubePass = static_cast<RenderCubemap*>(mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::FRONT, "DebugCube")).get());
+	memset(mLayersEnabled, 1, Denum(EShadingLayer::COUNT));
+ }
+
+ void RenderContext::RenderFrame(Scene const& scene)
 {
 	mScene = &scene;
 	SetupLightData();
+	mDeviceCtx->ClearRenderTarget(mMainRT, { 0.45f, 0.55f, 0.60f, 1.00f });
+	mDeviceCtx->ClearDepthStencil(mMainDS, EDSClearMode::DEPTH_STENCIL, 1.f);
 	for (auto& pass : mPasses)
 	{
 		if (pass->IsEnabled())
 		{
 			pass->RenderFrame(*this);
 		}
+	}
+
+	if (mUseMSAA)
+	{
+		mDeviceCtx->ResolveMultisampled({ mTarget }, {mMsaaTarget});
 	}
 }
 
@@ -65,8 +108,8 @@ LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 l
 		{
 			cameraType = ECameraType::CUBE;
 			DeviceTextureDesc desc;
-			desc.flags = TF_DEPTH;
-			desc.height = desc.width = 1024;
+			desc.Flags = TF_DEPTH;
+			desc.Height = desc.Width = 1024;
 			desc.DebugName = std::format("{} {}", "PointLightShadow", lightIdx);
 			lrd.mShadowMap = mDevice->CreateTextureCube(desc);
 		}
@@ -85,9 +128,10 @@ LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 l
 			}
 
 			DeviceTextureDesc desc;
-			desc.flags = TF_DEPTH;
-			desc.height = desc.width = 1024;
+			desc.Flags = TF_DEPTH;
+			desc.Height = desc.Width = 1024;
 			desc.DebugName = debugName;
+			desc.Format = ETextureFormat::D32_Float;
 			lrd.mShadowMap = mDevice->CreateTexture2D(desc);
 		}
 		lrd.mCamera = std::make_unique<Camera>(cameraType, lightPos);
@@ -192,13 +236,17 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 	{
 		matArch = matOverride->Archetype;
 	}
-	else if (auto& deviceMat = mat.DeviceMat)
+	else 
 	{
-		matArch = deviceMat->Archetype;
-	}
-	else
-	{
-		RASSERT(false);
+		auto& deviceMat = mat.DeviceMat;
+		if (!deviceMat || mat.NeedsUpdate())
+		{
+			DeviceCtx()->PrepareMaterial(primitive->material);
+		}
+		if (deviceMat)
+		{
+			matArch = deviceMat->Archetype;
+		}
 	}
 
 	if (matArch)
@@ -271,10 +319,10 @@ IDepthStencil::Ref RenderContext::GetTempDepthStencilFor(IRenderTarget::Ref rt)
 	if (!tempDS)
 	{
 		DeviceTextureDesc desc;
-		desc.format = ETextureFormat::D24_Unorm_S8_Uint;
-		desc.width = size.x;
-		desc.height = size.y;
-		desc.flags = TF_DEPTH;
+		desc.Format = ETextureFormat::D24_Unorm_S8_Uint;
+		desc.Width = size.x;
+		desc.Height = size.y;
+		desc.Flags = TF_DEPTH;
 		tempDS = mDevice->CreateTexture2D(desc)->GetDS();
 	}
 	return tempDS;

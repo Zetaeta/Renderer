@@ -1,7 +1,61 @@
 #pragma once
 #include "core/BaseObject.h"
+#include "core/Hash.h"
 
-using AssetPath = String;
+enum class EAssetSource : u8
+{
+	Content,
+	File,
+	Memory
+};
+
+struct AssetPath
+{
+	DECLARE_STI_NOBASE(AssetPath);
+	AssetPath() = default;
+	explicit AssetPath(Name primaryPath, Name subPath = {});
+
+	EAssetSource GetSource() const;
+	
+	static String const& GetContentDir();
+
+	constexpr static char const ContentPrefix[] = "/Content/";
+	constexpr static char const FilePrefix[] = "/File/";
+	constexpr static char const MemoryPrefix[] = "/Memory/";
+
+	String ToFilePath() const;
+
+	String ToString() const;
+
+	AssetPath GetAssetRootPath() const;
+
+	AssetPath WithSubpath(Name subPath);
+
+	static AssetPath Content(const String& pathFromContent);
+	static AssetPath ContentFile(const String& filePath);
+
+	static AssetPath File(const String& filePath);
+
+	bool operator==(const AssetPath& other) const
+	{
+		return PrimaryPath == other.PrimaryPath && SubPath == other.SubPath;
+	}
+
+public:
+	Name PrimaryPath;
+	Name SubPath;
+};
+
+template<>
+struct std::hash<AssetPath>
+{
+	size_t operator()(const AssetPath& assetPath) const
+	{
+		std::hash<Name> hasher;
+		return CombineHash(hasher(assetPath.PrimaryPath), assetPath.SubPath);
+	}
+};
+
 class AssetManager;
 
 class Asset : public BaseObject

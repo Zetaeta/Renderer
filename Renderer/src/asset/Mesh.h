@@ -55,7 +55,7 @@ using MeshInstanceRef = s32;
 struct MeshPart
 {
 	template <typename TVert = std::vector<Vertex>, typename TInd = std::vector<IndexedTri>>
-	MeshPart(TVert&& verts, TInd&& tris, MaterialID mat = 0, std::string name = "")
+	MeshPart(TVert&& verts, TInd&& tris, MaterialID mat = 0, AssetPath name = {})
 		: vertices(std::forward<TVert>(verts))
 		, triangles(std::forward<TInd>(tris))
 		, material(mat)
@@ -65,7 +65,7 @@ struct MeshPart
 	std::vector<IndexedTri> triangles;
 	MaterialID				material;
 
-	std::string name;
+	AssetPath name;
 	static MeshPart Cube(MaterialID m = 0);
 };
 
@@ -77,8 +77,8 @@ struct CompoundMesh : public Asset
 {
 	RCOPY_PROTECT(CompoundMesh);
 	RMOVE_DEFAULT(CompoundMesh);
-	CompoundMesh(AssetPath const& path, Name const& name);
-	CompoundMesh(AssetPath const& path, Name const& name, MeshPart&& mesh);
+	CompoundMesh(AssetPath const& path);
+	CompoundMesh(AssetPath const& path, MeshPart&& mesh);
 	Name name;
 	std::vector<MeshPart> components;
 

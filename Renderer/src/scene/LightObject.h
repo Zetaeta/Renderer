@@ -102,8 +102,7 @@ public:
 		SetRoot<LightComponent<T>>();
 		auto& ind = GetRoot()->AddChild<StaticMeshComponent>("Indicator");
 		ind.SetType(StaticMeshComponent::EType::GADGET);
-		String mesh = T::GADGET;
-		ind.SetMesh(mesh);
+		ind.SetMesh(T::GADGET);
 		ind.SetTransform(T::GADGET_TRANS);
 		ind.SetScale(vec3(0.1f));
 	}
