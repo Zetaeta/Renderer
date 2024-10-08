@@ -2,6 +2,7 @@
 
 #include "core/Maths.h"
 #include <string>
+#include "Utils.h"
 /* this file is generated - do not edit */
 
 
@@ -307,3 +308,11 @@ constexpr size_t CombineHash(size_t seedHash, T const& obj)
 {
 	return HashMix(seedHash + 0x9e3779b9 + (Hash{})(obj));
 }
+
+#define START_HASH(T, name)\
+template<>\
+struct std::hash<T>         \
+	{                           \
+		size_t operator()(const T& name) const
+#define END_HASH(...)\
+	};

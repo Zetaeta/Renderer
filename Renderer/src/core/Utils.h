@@ -415,5 +415,7 @@ bool FindIgnoreCase(const std::string_view& haystack, const std::string_view& ne
 #define ARRAY_SIZE(arr) sizeof(arr) / sizeof(arr[0])
 #define STR_LEN(str) (ARRAY_SIZE(str) - 1)
 
+#define AT_START(block) static uint8_t sStaticInitializer##__LINE__ = [] { block }();
+
 //template<typename... Args>
 //using Variant = std::Variant<Args...>;

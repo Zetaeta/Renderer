@@ -16,6 +16,7 @@
 #include "glm/gtx/transform.hpp"
 #include <core/Matrix.h>
 #include <editor/Viewport.h>
+#include "render/Shader.h"
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -1345,7 +1346,7 @@ int GetCompiledShaderVariants(const String& shaderName, char const* name, Shader
 				var.m_Blob = output;
 				printf("Saving to file %s\n", cso.string().c_str());
 				HR_ERR_CHECK(D3DWriteBlobToFile(var.m_Blob.Get(), cso.c_str(), true));
-				#define BLOB_DEBUG
+//				#define BLOB_DEBUG
 				#ifdef BLOB_DEBUG
 				{
 					ComPtr<ID3DBlob> saved;

@@ -7,6 +7,7 @@
 #include "RenderCubemap.h"
 #include <imgui.h>
 #include <editor/HighlightSelectedPass.h>
+#include "Shader.h"
 
 namespace rnd
 {
@@ -89,6 +90,13 @@ void RenderContext::SetupRenderTarget()
 	{
 		mDeviceCtx->ResolveMultisampled({ mTarget }, {mMsaaTarget});
 	}
+
+	Postprocessing();
+}
+
+void RenderContext::Postprocessing()
+{
+	
 }
 
 LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 lightIdx)

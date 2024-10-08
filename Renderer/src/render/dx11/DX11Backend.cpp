@@ -17,6 +17,7 @@
 #include "core/Hash.h"
 #include <editor/Editor.h>
 #include "render/dx11/DX11Texture.h"
+#include "core/Logging.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "D3DCompiler.lib")
@@ -112,11 +113,14 @@ void DrawTri(vec4 a, vec4 b, vec4 c)
 }
 ComPtr<ID3D11DepthStencilView> dsv;
 
+DEFINE_LOG_CATEGORY_STATIC(LogDX11Backend)
 
 
 // Main code
 int MainDX11(int argc, char** argv)
 {
+	LogConsumerThread logThread;
+	logThread.Start();
 	// Create application window
 	// ImGui_ImplWin32_EnableDpiAwareness();
 	WNDCLASSEXW wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
@@ -256,6 +260,7 @@ int MainDX11(int argc, char** argv)
 		//g_pContext->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
 		if (g_CurrHeight && g_CurrWidth) {
+			RLOG(LogDX11Backend, Info, "Frame");
 			static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
 			// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
@@ -343,6 +348,8 @@ int MainDX11(int argc, char** argv)
 		g_pSwapChain->Present(1, 0); // Present with vsync
 									 // g_pSwapChain->Present(0, 0); // Present without vsync
 	}
+	logThread.Flush();
+	logThread.RequestStop();
 
 	// Cleanup
 	ImGui_ImplDX11_Shutdown();
@@ -352,6 +359,7 @@ int MainDX11(int argc, char** argv)
 	CleanupDeviceD3D();
 	::DestroyWindow(hwnd);
 	::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+	logThread.Join();
 
 	return 0;
 }

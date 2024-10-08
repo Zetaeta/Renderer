@@ -90,6 +90,8 @@ public:
 	void SetupPasses();
 	void RenderFrame(Scene const& scene);
 
+	void Postprocessing();
+
 	LightRenderData CreateLightRenderData(ELightType lightType, u32 lightIdx);
 
 	void SetupLightData();

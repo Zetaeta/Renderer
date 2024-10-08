@@ -88,12 +88,7 @@ protected:
 	u64 m_Flags = 0;
 };
 
-enum class EShaderType : u8
-{
-	Vertex,
-	Pixel,
-	Count
-};
+enum class EShaderType : u8;
 
 class IRenderDeviceCtx
 {

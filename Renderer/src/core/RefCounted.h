@@ -13,17 +13,17 @@ public:
 		: mRefCount(0)
 	{
 	}
-	u32 AddRef()
+	u32 AddRef() const
 	{
 		return ++mRefCount;
 	}
-	u32 Release()
+	u32 Release() const
 	{
 		return --mRefCount;
 	}
 
 private:
-	std::atomic<u32> mRefCount;
+	mutable std::atomic<u32> mRefCount;
 };
 
 template<typename T>
