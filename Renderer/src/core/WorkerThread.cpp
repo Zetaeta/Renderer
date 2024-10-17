@@ -15,9 +15,18 @@ void WorkerThread::RequestStop()
 
 void WorkerThread::Join()
 {
+	RequestStop();
 	if (RCHECK(mThread.joinable()))
 	{
 		mThread.join();
+	}
+}
+
+WorkerThread::~WorkerThread()
+{
+	if (mThread.joinable())
+	{
+		Join();
 	}
 }
 
@@ -27,4 +36,10 @@ void WorkerThread::Main()
 	{
 		DoWork();
 	}
+}
+
+void WorkerThread::Sleep(float ms)
+{
+	RCHECK(std::this_thread::get_id() == mThread.get_id());
+	std::this_thread::sleep_for(std::chrono::microseconds(NumCast<s64>(ms * 1000.f)));
 }

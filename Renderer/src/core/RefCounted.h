@@ -39,7 +39,10 @@ public:
 	RefPtr(T* ptr)
 		: Ptr(ptr)
 	{
-		Ptr->AddRef();
+		if (Ptr != nullptr)
+		{
+			Ptr->AddRef();
+		}
 	}
 
 	template<typename U>
@@ -67,12 +70,16 @@ public:
 		return RefPtr<Base>(this->Ptr);
 	}
 
-	template<typename U>
-	RefPtr& operator=(const RefPtr<U>& other)
-		requires(std::derived_from<T,U>)
-		: Ptr(other.Ptr)
+	template<typename Derived>
+	RefPtr& operator =(Derived* derivedPtr)
+		requires(std::derived_from<T, Derived>)
 	{
-		if (Ptr != nullptr)
+		if (Ptr)
+		{
+			Ptr->Release();
+		}
+		Ptr = derivedPtr;
+		if (Ptr)
 		{
 			Ptr->AddRef();
 		}
@@ -80,13 +87,21 @@ public:
 	}
 
 	template<typename U>
-	RefPtr& operator=(RefPtr<U>&& other)
+	RefPtr& operator=(RefPtr<U> other)
 		requires(std::derived_from<T,U>)
-		: Ptr(other.Ptr)
 	{
-		other.Ptr = nullptr;
+		std::swap(Ptr, other.Ptr);
 		return *this;
 	}
+
+	//template<typename U>
+	//RefPtr& operator=(RefPtr<U>&& other)
+	//	requires(std::derived_from<T,U>)
+	//	: Ptr(other.Ptr)
+	//{
+	//	other.Ptr = nullptr;
+	//	return *this;
+	//}
 
 	~RefPtr()
 	{
@@ -110,6 +125,11 @@ public:
 	operator T*() const &
 	{
 		return Ptr;
+	}
+
+	bool IsValid() const
+	{
+		return Ptr != nullptr;
 	}
 
 private:

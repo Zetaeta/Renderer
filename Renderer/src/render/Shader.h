@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <core/Types.h>
 #include <core/Hash.h>
+#include "RndFwd.h"
+#include "VertexAttributes.h"
 
 namespace rnd { class IDeviceShader; }
 
@@ -24,12 +26,12 @@ public:
 class IShaderPermutation
 {
 public:
-	virtual void ModifyCompileEnv(ShaderCompileEnv& env) {}
+	virtual void ModifyCompileEnv(ShaderCompileEnv& env) const {}
 
-	virtual u64 GetUniqueId() = 0;
+	virtual u64 GetUniqueId() const = 0;
 };
 
-class DynamicShaderPermutation : IShaderPermutation
+class DynamicShaderPermutation : public IShaderPermutation
 {
 public:
 	void SetEnv(String const& key, String const& val)
@@ -37,9 +39,9 @@ public:
 		mEnvironment[key] = val;
 	}
 
-	void ModifyCompileEnv(ShaderCompileEnv& env);
+	void ModifyCompileEnv(ShaderCompileEnv& env) const;
 
-	u64 GetUniqueId() override final;
+	u64 GetUniqueId() const override final;
 
 private:
 
@@ -57,6 +59,11 @@ struct ShaderInstanceId
 {
 	u32 ShaderId;
 	u64 PermuatationId;
+	
+	bool operator==(ShaderInstanceId const& other) const
+	{
+		return ShaderId == other.ShaderId && PermuatationId == other.PermuatationId;
+	}
 };
 
 class Shader;
@@ -83,8 +90,8 @@ public:
 	template<typename T>
 	u32 RegisterShaderType(char const* type, char const* shaderFile)
 	{
-		mRegisteredShaders.emplace_back({type, shaderFile});
-		return mRegisteredShaders.size() - 1;
+		mRegisteredShaders.emplace_back(RegisteredShader(type, shaderFile));
+		return NumCast<u32>(mRegisteredShaders.size() - 1);
 	}
 };
 
@@ -99,43 +106,65 @@ enum class EShaderType : u8
 
 class ShaderManager;
 
-class Shader : RefCountedObject
+class Shader : public RefCountedObject
 {
 public:
 	using Permutation = DynamicShaderPermutation;
+	IDeviceShader* GetDeviceShader() const
+	{
+		return DeviceShader.get();
+	}
+
 protected:
 	OwningPtr<IDeviceShader> DeviceShader;
 	friend ShaderManager;
 };
 
 template<EShaderType ShaderType>
-class TShader
+class TShader : public Shader
 {
+public:
 	constexpr static EShaderType Type = ShaderType;
 };
 
-class PixelShader : TShader<EShaderType::Pixel>
+class PixelShader : public TShader<EShaderType::Pixel>
 {
 };
 
-class VertexShader : TShader<EShaderType::Vertex>
+class VertexShader : public TShader<EShaderType::Vertex>
 {
+public:
+	VertexAttributeMask GetInputSignature() const
+	{
+		return InputSigInst;
+	}
+	VertexAttributeMask InputSigInst;
+};
+
+struct ShaderResources
+{
+	Vector<IDeviceTextureRef> SRVs;
 };
 
 #define DECLARE_SHADER(Type)\
 public:\
-	extern static const u32 sRegistryId;
+	static const u32 sRegistryId;
 //	Type(OwningPtr<IDeviceShader>&&)
 
 
 #define DEFINE_SHADER(Type, ShaderFile)\
-	u32 Type::sRegistryId = ShaderRegistry::Get().RegisterShaderType<Type>(#Type, "" ShaderFile);
+	u32 const Type::sRegistryId = ShaderRegistry::Get().RegisterShaderType<Type>(#Type, "" ShaderFile);
 
 }
 
-//START_HASH(rnd::ShaderInstanceId, id)
-//{
-//	return CombineHash(id.PermuatationId, id.ShaderId);
-//}
-//END_HASH(rnd::ShaderInstanceId)
+#define VS_INPUTS(args)\
+public:\
+	constexpr static VertexAttributeMask InputSignature = VertexAttributeMask(args);
+
+
+START_HASH(rnd::ShaderInstanceId, id)
+{
+	return CombineHash(id.PermuatationId, id.ShaderId);
+}
+END_HASH(rnd::ShaderInstanceId)
 

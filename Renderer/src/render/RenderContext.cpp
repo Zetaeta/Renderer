@@ -8,6 +8,8 @@
 #include <imgui.h>
 #include <editor/HighlightSelectedPass.h>
 #include "Shader.h"
+#include "passes/PostProcessPass.h"
+#include "shaders/ShaderDeclarations.h"
 
 namespace rnd
 {
@@ -24,10 +26,10 @@ RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, ID
 
  RenderContext::~RenderContext()
 {
-	 mPasses.clear();
+	mPasses.clear();
 	for (auto& lrds : mLightData)
 	{
-		 lrds.clear();
+		lrds.clear();
 	}
  }
 
@@ -50,6 +52,13 @@ void RenderContext::SetupRenderTarget()
 		mMainRT = mTarget->GetRT();
 	}
 
+	// Second target for postprocess effects
+	{
+		DeviceTextureDesc ppDesc = mTarget->Desc;
+		ppDesc.DebugName = "PostProcess RT";
+		mPPTarget = mDevice->CreateTexture2D(ppDesc);
+	}
+
 	{
 	
 		dsDesc.Flags = ETextureFlags::TF_DEPTH | ETextureFlags::TF_StencilSRV;
@@ -70,6 +79,8 @@ void RenderContext::SetupRenderTarget()
 #endif
 	mDebugCubePass = static_cast<RenderCubemap*>(mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::FRONT, "DebugCube")).get());
 	memset(mLayersEnabled, 1, Denum(EShadingLayer::COUNT));
+
+	SetupPostProcess();
  }
 
  void RenderContext::RenderFrame(Scene const& scene)
@@ -82,7 +93,7 @@ void RenderContext::SetupRenderTarget()
 	{
 		if (pass->IsEnabled())
 		{
-			pass->RenderFrame(*this);
+			pass->Execute(*this);
 		}
 	}
 
@@ -96,7 +107,16 @@ void RenderContext::SetupRenderTarget()
 
 void RenderContext::Postprocessing()
 {
-	
+	int passCount=0;
+	for (auto& pass : mPPPasses)
+	{
+		pass->Execute(*this);
+		++passCount;
+	}
+	if (passCount % 2 == 1)
+	{
+		mDeviceCtx->Copy(mTarget, mPPTarget);
+	}
 }
 
 LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 lightIdx)
@@ -271,7 +291,7 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 			}
 			if (usesPerInstance)
 			{
-				CBLayout::Ref layout = perInstInfo.Layout;
+				DataLayout::Ref layout = perInstInfo.Layout;
 				IConstantBuffer* psPerInst = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, layout->GetSize());
 				psPerInst->SetLayout(layout);
 				ConstantBufferData& cbData = psPerInst->Data();
@@ -318,6 +338,11 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 		DeviceCtx()->SetConstantBuffers(EShaderType::Vertex, cbs, index);
 	}
 	DeviceCtx()->DrawMesh(*primitive, layer, matOverride == nullptr);
+}
+
+void RenderContext::SetupPostProcess()
+{
+	mPPPasses.push_back(MakeOwning<PostProcessPass>(this, GetShader<OutlinePPPS>(), mPPTarget->GetRT(), ShaderResources{{mTarget}}));
 }
 
 IDepthStencil::Ref RenderContext::GetTempDepthStencilFor(IRenderTarget::Ref rt)

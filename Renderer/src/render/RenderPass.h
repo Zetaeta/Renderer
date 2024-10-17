@@ -5,6 +5,7 @@ namespace rnd
 {
 class RenderContext;
 class IRenderDeviceCtx;
+class IRenderDevice;
 
 class RenderPass
 {
@@ -14,7 +15,7 @@ public:
 	{
 	}
 	virtual ~RenderPass() {}
-	virtual void RenderFrame(RenderContext& renderCtx) = 0;
+	virtual void Execute(RenderContext& renderCtx) = 0;
 	bool IsEnabled()
 	{
 		return mEnabled;
@@ -26,6 +27,7 @@ public:
 	}
 
 	IRenderDeviceCtx* DeviceCtx();
+	IRenderDevice* Device();
 
 protected:
 	RenderContext* mRCtx = nullptr;

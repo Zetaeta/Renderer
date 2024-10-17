@@ -15,6 +15,8 @@
 #include "render/ConstantBuffer.h"
 #include "render/RenderDevice.h"
 #include "render/RenderDeviceCtx.h"
+#include "DX11Device.h"
+#include "render/DeviceMesh.h"
 
 class Viewport;
 namespace rnd
@@ -25,12 +27,6 @@ using namespace rnd;
 using namespace rnd::dx11;
 
 using col = vec3; 
-
-struct DX11Mesh
-{
-	ComPtr<ID3D11Buffer> vBuff;
-	ComPtr<ID3D11Buffer> iBuff;
-};
 
 struct PerInstanceVSData
 {
@@ -92,7 +88,7 @@ struct PFPSSpotLight// : PerFramePSData
 	int brdf = 0;
 };
 
-class DX11Renderer : public IRenderer, public rnd::IRenderDeviceCtx, public IRenderDevice
+class DX11Renderer : public IRenderer, public rnd::IRenderDeviceCtx, public DX11Device
 {
 public:
 	DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context, IDXGISwapChain* swapChain);
@@ -131,7 +127,7 @@ public:
 	DX11ConstantBuffer& GetPerInstanceVSCB() { return m_VSPerInstanceBuff; }
 	
 	void DrawTexture(DX11Texture* tex, ivec2 pos = ivec2(0), ivec2 size = ivec2(-1));
-	void PrepareMesh(MeshPart const& mesh, DX11Mesh& meshData);
+	void PrepareMesh(MeshPart const& mesh, DX11IndexedMesh& meshData);
 	void PrepareMaterial(MaterialID mid);
 	void SetMainRenderTargetAndDS(ComPtr<ID3D11RenderTargetView> rt, ComPtr<ID3D11DepthStencilView> ds, u32 width, u32 height);
 	void SetBackbuffer(DX11Texture::Ref backBufferTex, u32 width, u32 height);
@@ -178,10 +174,8 @@ public:
 
 	DX11Material* GetDefaultMaterial(int matType);
 
- IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData) override;
-
-
- IDeviceTexture::Ref CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData) override;
+	IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData) override;
+	IDeviceTexture::Ref CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData) override;
 
  /* inline static Colour_t GetColour(MaterialID mat)
 	{
@@ -208,7 +202,27 @@ public:
 		return mViewport.get();
 	}
 
-private:
+
+	 virtual void SetShaderResources(EShaderType shader, const Vector<IDeviceTexture::Ref>& srvs, u32 startIdx) override;
+	 void SetPixelShader(PixelShader const* shader) override;
+	 void SetVertexShader(VertexShader const* shader) override;
+
+
+	 void DrawMesh(Primitive const& primitive) override;
+	 void SetVertexLayout(VertAttDescHandle attDescHandle) override;
+	 void UpdateInputLayout();
+
+	 VertAttDescHandle mCurrVertexLayoutHdl = -1;
+	VertexAttributeDesc const* mCurrVertexLayout = nullptr;
+	 RefPtr<VertexShader const> mCurrVertexShader = nullptr;
+
+
+ void DrawMesh(IDeviceMesh* mesh) override;
+
+
+void Copy(DeviceResourceRef dst, DeviceResourceRef src) override;
+
+ private:
 	template<typename TFunc>
 	void ForEachMesh(TFunc&& func);
 	DX11Texture::Ref PrepareTexture(Texture const& tex, bool sRGB = false);
@@ -228,7 +242,6 @@ protected:
 	IDXGISwapChain* pSwapChain = nullptr;
 
 //	std::vector<DX11Mesh> m_MeshData;
-	std::unordered_map<MeshPart const*, DX11Mesh> m_MeshData;
 
 	DX11Texture::Ref m_EmptyTexture;
 
@@ -275,6 +288,7 @@ protected:
 	DX11ConstantBuffer m_VS2DCBuff;
 	DX11ConstantBuffer m_PS2DCBuff;
 
+	DX11Device* myDevice = nullptr;
 
 	std::unordered_map<MeshPart const*, PerInstanceVSData> m_PIVS;
 

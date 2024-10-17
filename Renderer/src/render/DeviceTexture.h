@@ -3,10 +3,21 @@
 #include <core/Maths.h>
 #include <core/Utils.h>
 
+namespace rnd
+{
+
 enum class ETextureDimension : u8
 {
 	TEX_2D,
 	TEX_CUBE
+};
+
+enum class EDeviceResourceType : u8
+{
+	Texture1D,
+	Texture2D,
+	Texture3D,
+	Buffer
 };
 
 enum class ETextureFormat : u8
@@ -17,19 +28,19 @@ enum class ETextureFormat : u8
 	R32_Uint
 };
 
-struct DeviceResourceDesc
+struct DeviceChildDesc
 {
 	String DebugName;
 };
 
-struct DepthStencilDesc : DeviceResourceDesc
+struct DepthStencilDesc : DeviceChildDesc
 {
 	ETextureDimension Dimension;
 	u32 Width = 0;
 	u32 Height = 0;
 };
 
-struct RenderTargetDesc : DeviceResourceDesc
+struct RenderTargetDesc : DeviceChildDesc
 {
 	ETextureDimension Dimension;
 	u32 Width = 0;
@@ -92,8 +103,19 @@ FLAG_ENUM(ETextureFlags);
 
 //constexpr ETextureFlags TF_DEPTH_STENCIL = TF_DEPTH | TF_Stencil;
 
-struct DeviceTextureDesc : DeviceResourceDesc
+struct DeviceResourceDesc : public DeviceChildDesc
 {
+	EDeviceResourceType ResourceType;
+};
+
+
+struct DeviceTextureDesc : public DeviceResourceDesc
+{
+	DeviceTextureDesc()
+	{
+		ResourceType = EDeviceResourceType::Texture2D;
+	}
+
 	ETextureFlags Flags = TF_SRV;
 	ETextureFormat Format = ETextureFormat::RGBA8_Unorm;
 	u32 Width;
@@ -139,6 +161,8 @@ public:
 	virtual void Unmap(u32 subResource) = 0;
 };
 
+using DeviceResourceRef = std::shared_ptr<IDeviceResource>;
+
 class IDeviceTexture : public IDeviceResource
 {
 public:
@@ -158,6 +182,8 @@ public:
 
 	virtual IRenderTarget::Ref GetRT() = 0;
 	virtual IDepthStencil::Ref GetDS() = 0;
+
+	virtual void CreateSRV() = 0;
 
 	DeviceTextureDesc Desc;
 };
@@ -184,3 +210,5 @@ using IDeviceTextureCube = IDeviceTexture;
 using DeviceTextureRef = std::shared_ptr<IDeviceTexture>;
 //constexpr DeviceTextureRef INVALID_DEV_TEX = nullptr;
 #define INVALID_DEV_TEX nullptr
+
+}

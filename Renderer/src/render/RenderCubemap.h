@@ -15,7 +15,7 @@ class RenderCubemap : public RenderPass
 {
 public:
 	RenderCubemap(RenderContext* renderCtx, EFlatRenderMode mode, String DebugName = "", IDeviceTexture* texture = nullptr );
-	virtual void RenderFrame(RenderContext& renderCtx) override;
+	virtual void Execute(RenderContext& renderCtx) override;
 
 	void SetCubemap(IDeviceTexture* cubemap);
 

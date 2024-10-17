@@ -24,6 +24,12 @@ DX11Texture::DX11Texture(DX11Ctx& ctx, DeviceTextureDesc const& desc, ID3D11Text
 		dx11Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 		CreateRenderTarget(dx11Desc);
 	}
+	if (desc.Flags & TF_SRV)
+	{
+		D3D11_TEXTURE2D_DESC dx11Desc;
+		texture->GetDesc(&dx11Desc);
+		CreateSRV(dx11Desc);
+	}
 }
 
 DX11Texture::Ref DX11Texture::Create(DX11Ctx* ctx, u32 width, u32 height, u32 const* data, ETextureFlags flags /*= TF_NONE*/)
@@ -124,28 +130,7 @@ void DX11Texture::CreateResources(TextureData textureData /*= {}*/)
 	if (desc.Flags & TF_SRV)
 	{
 		// Create texture view
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		ZeroMemory(&srvDesc, sizeof(srvDesc));
-		srvDesc.Format = textureDesc.Format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = genMips ? -1 : textureDesc.MipLevels;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		
-		switch (desc.Format)
-		{
-		case ETextureFormat::D24_Unorm_S8_Uint:
-			srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-			break;
-		case ETextureFormat::D32_Float:
-			srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-			break;
-		default:
-			break;
-		}
-		
-
-		HR_ERR_CHECK(pDevice->CreateShaderResourceView(m_Texture.Get(), &srvDesc, &m_SRV));
-		SetResourceName(m_SRV, desc.DebugName);
+		CreateSRV(textureDesc);
 	}
 	if (depth && (flags & TF_StencilSRV))
 	{
@@ -238,6 +223,40 @@ void DX11Texture::CreateRenderTarget(D3D11_TEXTURE2D_DESC const& textureDesc)
 	ComPtr<ID3D11RenderTargetView> RT;
 	HR_ERR_CHECK(m_Ctx->pDevice->CreateRenderTargetView(m_Texture.Get(), &rtDesc, &RT));
 	mRenderTarget = std::make_shared<DX11RenderTarget>(myRtDesc, RT);
+}
+
+void DX11Texture::CreateSRV(D3D11_TEXTURE2D_DESC const& textureDesc)
+{
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.Format = textureDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = (Desc.NumMips == 0) ? -1 : textureDesc.MipLevels;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	
+	switch (Desc.Format)
+	{
+	case ETextureFormat::D24_Unorm_S8_Uint:
+		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		break;
+	case ETextureFormat::D32_Float:
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		break;
+	default:
+		break;
+	}
+	
+
+	HR_ERR_CHECK(m_Ctx->pDevice->CreateShaderResourceView(m_Texture.Get(), &srvDesc, &m_SRV));
+	SetResourceName(m_SRV, Desc.DebugName);
+}
+
+void DX11Texture::CreateSRV()
+{
+	Desc.Flags &= TF_SRV;
+	D3D11_TEXTURE2D_DESC dx11Desc;
+	m_Texture->GetDesc(&dx11Desc);
+	CreateSRV(dx11Desc);
 }
 
 void DX11Texture::Resize(u32 width, u32 height)

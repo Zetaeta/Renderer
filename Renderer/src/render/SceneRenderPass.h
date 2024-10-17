@@ -42,7 +42,7 @@ public:
 
 	bool Accepts(SceneComponent const* sceneComp, MeshPart const* mesh) const;
 
-	virtual void RenderFrame(RenderContext& renderCtx) override;
+	virtual void Execute(RenderContext& renderCtx) override;
 	void RenderScene(Scene const& scene);
 
 	virtual void Accept(SceneComponent const* sceneComp, MeshPart const* mesh);

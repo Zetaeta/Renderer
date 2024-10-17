@@ -10,7 +10,7 @@ ShaderRegistry& ShaderRegistry::Get()
 	return sSingleton;
 }
 
-void DynamicShaderPermutation::ModifyCompileEnv(ShaderCompileEnv& env)
+void DynamicShaderPermutation::ModifyCompileEnv(ShaderCompileEnv& env) const
 {
 	for (auto const& pair : mEnvironment)
 	{
@@ -18,7 +18,7 @@ void DynamicShaderPermutation::ModifyCompileEnv(ShaderCompileEnv& env)
 	}
 }
 
-u64 DynamicShaderPermutation::GetUniqueId()
+u64 DynamicShaderPermutation::GetUniqueId() const
 {
 	u64 hash = 0;
 	for (auto const pair : mEnvironment)

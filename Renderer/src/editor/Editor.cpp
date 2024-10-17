@@ -35,6 +35,7 @@ void Editor::OnClickPoint(ivec2 position)
 	CreateScreenIdTex(viewport->GetWidth(), viewport->GetHeight());
 	//viewport->GetRenderContext()->RunSinglePass<rnd::RenderScreenIds>("ScreenIds", viewport->mCamera,
 	//																	mScreenIdTex->GetRT());
+	using namespace rnd;
 	MappedResource mapped = mScreenIdTex->Map(0, ECpuAccessFlags::Read);
 	const u32* textureData = reinterpret_cast<const u32*>(mapped.Data);
 	const int width = mScreenIdTex->Desc.Width;
@@ -215,6 +216,7 @@ void Editor::CreateScreenIdTex(u32 width, u32 height)
 		return;
 	}
 
+	using namespace rnd;
 	DeviceTextureDesc desc;
 	desc.DebugName = "ScreenIds";
 	desc.Flags = TF_RenderTarget | TF_CpuReadback;

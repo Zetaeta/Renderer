@@ -20,7 +20,7 @@ void DX11ConstantBuffer::CreateDeviceResource()
 	HR_ERR_CHECK(mCtx->pDevice->CreateBuffer(&cbDesc, &srData, &mDeviceBuffer))
 }
 
-DX11ConstantBuffer::DX11ConstantBuffer(DX11Ctx* ctx, u32 size, CBLayout::Ref layout /*= nullptr*/)
+DX11ConstantBuffer::DX11ConstantBuffer(DX11Ctx* ctx, u32 size, DataLayout::Ref layout /*= nullptr*/)
 	:mCtx(ctx), IConstantBuffer(size, layout)
 {
 	CreateDeviceResource();

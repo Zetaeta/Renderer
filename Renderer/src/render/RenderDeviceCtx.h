@@ -3,6 +3,7 @@
 #include <core/Utils.h>
 #include "DeviceTexture.h"
 #include <common/Material.h>
+#include "Shader.h"
 
 struct MeshPart;
 namespace rnd { class IConstantBuffer; }
@@ -90,6 +91,8 @@ protected:
 
 enum class EShaderType : u8;
 
+using Primitive = MeshPart;
+
 class IRenderDeviceCtx
 {
 public:
@@ -105,9 +108,18 @@ public:
 	virtual void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) = 0;
 	virtual void DrawCubemap(IDeviceTextureCube* cubemap) = 0;
 	virtual void DrawMesh(MeshPart const& meshPart, EShadingLayer layer, bool useMaterial = true) = 0;
+	virtual void DrawMesh(Primitive const& primitive) = 0;
+	virtual void DrawMesh(IDeviceMesh* mesh) = 0;
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) = 0; 
 	virtual void			 SetConstantBuffers(EShaderType shaderType, IConstantBuffer** buffers, u32 numBuffers) = 0;
 	virtual void			 ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src) = 0;
+	virtual void					 Copy(DeviceResourceRef dst, DeviceResourceRef src) = 0;
+
+	virtual void SetShaderResources(EShaderType shader, const Vector<IDeviceTexture::Ref>& srvs, u32 startIdx = 0) = 0;
+	virtual void SetPixelShader(PixelShader const* shader) = 0;
+	virtual void SetVertexShader(VertexShader const* shader) = 0;
+
+	virtual void SetVertexLayout(VertAttDescHandle attDescHandle) = 0;
 
 	virtual void PrepareMaterial(MaterialID mid) = 0;
 

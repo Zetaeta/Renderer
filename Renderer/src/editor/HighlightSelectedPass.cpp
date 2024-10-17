@@ -8,7 +8,7 @@
 namespace rnd
 {
 
-void HighlightSelectedPass::RenderFrame(RenderContext& renderCtx)
+void HighlightSelectedPass::Execute(RenderContext& renderCtx)
 {
 	auto* selectedPrimComp = Cast<PrimitiveComponent>(Editor::Get()->GetSelectedComponent());
 

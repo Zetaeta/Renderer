@@ -18,7 +18,7 @@ struct DX11Ctx;
 
 using Microsoft::WRL::ComPtr;
 
-class DX11Texture : public DX11TextureBase
+class DX11Texture final : public DX11TextureBase
 {
 public:
 	DX11Texture(DX11Ctx& ctx, DeviceTextureDesc const& desc, TextureData textureData);
@@ -61,6 +61,11 @@ public:
 		return mDepthStencil->GetDSV();
 	}
 
+	ID3D11Texture2D* GetTexture()
+	{
+		return m_Texture.Get();
+	}
+
 	void Init(u32 width, u32 height, u32 const* data, ETextureFlags flags);
 
 	~DX11Texture();
@@ -73,9 +78,13 @@ public:
 	virtual MappedResource Map(u32 subResource, ECpuAccessFlags flags) override;
 	virtual void		   Unmap(u32 subResource) override;
 
+public:
+	void CreateSRV() override;
+
  private:
 	void CreateResources(TextureData textureData = {});
 	void CreateRenderTarget(D3D11_TEXTURE2D_DESC const& textureDesc);
+	void CreateSRV(D3D11_TEXTURE2D_DESC const& textureDesc);
 
 	ComPtr<ID3D11ShaderResourceView> m_SRV = nullptr;
 	ComPtr<ID3D11ShaderResourceView> m_StencilSRV = nullptr;

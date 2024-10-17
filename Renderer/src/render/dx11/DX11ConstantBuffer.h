@@ -18,7 +18,7 @@ public:
 	DX11ConstantBuffer(DX11Ctx* ctx, T const& initialData, u32 size = sizeof(T))
 		: mCtx(ctx)
 	{
-		CBLayout::Ref layout = nullptr;
+		DataLayout::Ref layout = nullptr;
 		if constexpr (HasClassTypeInfo<std::remove_cvref_t<T>>)
 		{
 			layout = GetLayout<T>();
@@ -55,12 +55,12 @@ public:
 
 	ConstantBufferData& GetCBData() { return mData; }
 
-	DX11ConstantBuffer(DX11Ctx* ctx, u32 size, CBLayout::Ref layout = nullptr);
+	DX11ConstantBuffer(DX11Ctx* ctx, u32 size, DataLayout::Ref layout = nullptr);
 
 	ID3D11Buffer* GetDeviceBuffer() { return mDeviceBuffer.Get(); }
 	ID3D11Buffer* Get() { return mDeviceBuffer.Get(); }
 
-	void SetLayout(CBLayout::Ref layout) override
+	void SetLayout(DataLayout::Ref layout) override
 	{
 		u64 currentSize = mData.GetSize();
 		if (layout->GetSize() > mData.GetSize())

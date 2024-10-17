@@ -260,7 +260,6 @@ int MainDX11(int argc, char** argv)
 		//g_pContext->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
 		if (g_CurrHeight && g_CurrWidth) {
-			RLOG(LogDX11Backend, Info, "Frame");
 			static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
 			// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
@@ -378,7 +377,7 @@ bool CreateDeviceD3D(HWND hWnd)
 	sd.BufferDesc.RefreshRate.Numerator = 60;
 	sd.BufferDesc.RefreshRate.Denominator = 1;
 	sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
 	sd.OutputWindow = hWnd;
 	sd.SampleDesc.Count = 1;
 	sd.SampleDesc.Quality = 0;

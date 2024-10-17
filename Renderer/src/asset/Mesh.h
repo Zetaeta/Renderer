@@ -61,6 +61,15 @@ struct MeshPart
 		, material(mat)
 		, name(name) {}
 
+	u32 GetVertCount() const
+	{
+		return NumCast<u32>(vertices.size());
+	}
+
+	u32 GetTriCount() const
+	{
+		return NumCast<u32>(triangles.size());
+	}
 	std::vector<Vertex>		vertices;
 	std::vector<IndexedTri> triangles;
 	MaterialID				material;

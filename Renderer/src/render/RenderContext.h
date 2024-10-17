@@ -6,6 +6,7 @@
 #include "RenderDeviceCtx.h"
 #include <scene/ScreenObject.h>
 #include "render/ConstantBuffer.h"
+#include "ShaderManager.h"
 
 template<>
 struct std::hash<u32vec2>
@@ -92,6 +93,12 @@ public:
 
 	void Postprocessing();
 
+	template<typename T>
+	T const* GetShader(T::Permutation const& permutation = {})
+	{
+		return DeviceCtx()->Device->ShaderMgr->GetCompiledShader<T>(permutation);
+	}
+
 	LightRenderData CreateLightRenderData(ELightType lightType, u32 lightIdx);
 
 	void SetupLightData();
@@ -119,7 +126,7 @@ public:
 	template<typename TPass, typename... Args>
 	void RunSinglePass(Args... args)
 	{
-		MakeOwning<TPass>(this, std::forward<Args>(args)...)->RenderFrame(*this);
+		MakeOwning<TPass>(this, std::forward<Args>(args)...)->Execute(*this);
 	}
 
 	const Scene& GetScene() { return *mScene; }
@@ -142,6 +149,8 @@ public:
 	{
 		mCurrentId = id;
 	}
+
+	void SetupPostProcess();
 
 	const Camera& GetCamera()
 	{
@@ -168,6 +177,11 @@ public:
 
 	IDepthStencil::Ref GetTempDepthStencilFor(IRenderTarget::Ref);
 
+	ShaderManager& GetShaderManager()
+	{
+		return *mDevice->ShaderMgr;
+	}
+
 private:
 
 	bool mUseMSAA = true;
@@ -175,6 +189,7 @@ private:
 
 	IDeviceTexture::Ref mMsaaTarget;
 	IDeviceTexture::Ref mTarget;
+	IDeviceTexture::Ref mPPTarget;
 	IRenderTarget::Ref mMainRT;
 	IDepthStencil::Ref mMainDS;
 	IDeviceTexture::Ref mDSTex;
@@ -183,6 +198,7 @@ private:
 	Scene const* mScene = nullptr;
 	Vector<OwningPtr<RenderPass>> mPasses;
 	RenderCubemap* mDebugCubePass;
+	Vector<OwningPtr<RenderPass>> mPPPasses;
 	Camera::Ref mCamera = nullptr;
 	// Vector<LightRenderData> mSpotLightData;
 	// Vector<LightRenderData> mDirLightData;

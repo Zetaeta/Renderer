@@ -103,11 +103,17 @@ const char* Verbosities[] = {
 
 void LogConsumerThread::DoWork()
 {
-	LogPrivate::sLogQueue.Wait();
-	LogPrivate::sLogQueue.ConsumeAll([](LogMessage const& msg)
+	if (LogPrivate::sLogQueue.IsEmpty())
 	{
-//		const std::time_t time = std::chrono::system_clock::to_time_t(msg.Time);
-		std::cout << std::format("[{:%F %T}] {}: [{}] {}\n", std::chrono::floor<std::chrono::milliseconds>(msg.Time),
-			msg.Category->GetName(), Verbosities[Denum(msg.Verbosity)], msg.Message);
-	});
+		Sleep(1);
+	}
+	else
+	{
+		LogPrivate::sLogQueue.ConsumeAll([](LogMessage const& msg)
+		{
+	//		const std::time_t time = std::chrono::system_clock::to_time_t(msg.Time);
+			std::cout << std::format("[{:%F %T}] {}: [{}] {}\n", std::chrono::floor<std::chrono::milliseconds>(msg.Time),
+				msg.Category->GetName(), Verbosities[Denum(msg.Verbosity)], msg.Message);
+		});
+	}
 }

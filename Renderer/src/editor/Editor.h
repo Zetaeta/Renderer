@@ -62,7 +62,7 @@ private:
 
 	Vector<Viewport*> mViewports;
 	Scene* mScene = nullptr;
-	IDeviceTexture::Ref mScreenIdTex;
+	rnd::IDeviceTexture::Ref mScreenIdTex;
 
 	RenderManager* mRmgr;
 	Editor(Input* input, class RenderManager* rmg);

@@ -200,7 +200,7 @@ void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, m
 
 	if (matArch)
 	{
-		if (CBLayout::Ref layout = matArch->CBData[Denum(ECBFrequency::PS_PerInstance)].Layout)
+		if (DataLayout::Ref layout = matArch->CBData[Denum(ECBFrequency::PS_PerInstance)].Layout)
 		{
 			IConstantBuffer* psPerInst = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, layout->GetSize());
 			ConstantBufferData& cbData = psPerInst->Data();
@@ -229,7 +229,7 @@ void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, m
 	DeviceCtx()->DrawMesh(*data.mesh, mLayer, mMatOverride == nullptr);
 }
 
-void SceneRenderPass::RenderFrame(RenderContext& renderCtx)
+void SceneRenderPass::Execute(RenderContext& renderCtx)
 {
 	RenderScene(renderCtx.GetScene());
 }

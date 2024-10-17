@@ -17,6 +17,8 @@
 #include <core/Matrix.h>
 #include <editor/Viewport.h>
 #include "render/Shader.h"
+#include "render/VertexTypes.h"
+#include "../VertexAttributes.h"
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -38,13 +40,6 @@ namespace fs = std::filesystem;
 
 
 using DX11Bool = u32;
-
-struct BGVert
-{
-	vec3 pos;
-	vec2 uv;
-};
-
 
 __declspec(align(16))
 struct VS2DCBuff
@@ -193,9 +188,10 @@ struct PerInstancePSData
 DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 
  DX11Renderer::DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context, IDXGISwapChain* swapChain)
-	: m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context), m_Scene(scene), pSwapChain(swapChain)
+	: DX11Device(device), m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context), m_Scene(scene), pSwapChain(swapChain)
 {
 	Device = this;
+	myDevice = this;
 	TextureManager = &m_Ctx.psTextures;
 	m_Ctx.pDevice = pDevice;
 	m_Ctx.pContext = pContext;
@@ -426,7 +422,7 @@ void DX11Renderer::Setup()
 		
 
 		float const Z = -0.f;
-		BGVert const verts[] = {
+		FlatVert const verts[] = {
 			{ {-1,-1.f, Z}, {0,1} },
 			{ {-1,1.f, Z}, {0,0} },
 			{ {1,-1.f, Z}, {1,1} },
@@ -456,7 +452,7 @@ void DX11Renderer::Setup()
 void DX11Renderer::PrepareBG()
 {
 	float const Z = 0.9999f;
-	BGVert const verts[3] = {
+	FlatVert const verts[3] = {
 		{ {-1,-1.f, Z}, {0,2} },
 		{ {-1,3.f, Z}, {0,0} },
 		{ {3,-1.f, Z}, {2,2} },
@@ -500,7 +496,7 @@ void DX11Renderer::Render(const Scene& scene)
 	//pContext->ClearRenderTargetView(m_MainRenderTarget->GetRTV(), clear_color_with_alpha);
 	//pContext->ClearDepthStencilView(m_MainDepthStencil->GetDSV(), D3D11_CLEAR_DEPTH, 1.f, 0);
 
-	m_Scale = std::min(m_Width, m_Height);
+	m_Scale = float(std::min(m_Width, m_Height));
 	m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
 
 	D3D11_VIEWPORT vp = {
@@ -726,7 +722,7 @@ void DX11Renderer::LoadShaders(bool reload)
 		CreateMatType("Textured", MAT_TEX, "TexVertexShader", "TexPixelShader", ied, Size(ied), reload);
 		CreateMatTypeUnshaded("PointShadow", MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied, Size(ied), reload);
 		CreateMatTypeUnshaded("ScreenId", MAT_SCREEN_ID, "PlainVertexShader", "ScreenId_PS", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "SHADED", "0" } });
-		static CBLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
+		static DataLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
 		m_MatTypes[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;
 	}
 
@@ -734,7 +730,7 @@ void DX11Renderer::LoadShaders(bool reload)
 		const D3D11_INPUT_ELEMENT_DESC ied[] =
 		{
 			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(BGVert, uv), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FlatVert, uv), D3D11_INPUT_PER_VERTEX_DATA, 0 },
 		};
 		CreateMatTypeUnshaded("2D", MAT_2D, "2D_VS", "2D_PS", ied, Size(ied), reload);
 		CreateMatTypeUnshaded("2D_Uint", MAT_2D_UINT, "2D_VS", "2D_PS_Uint", ied, Size(ied), reload);
@@ -751,7 +747,7 @@ void DX11Renderer::DrawBG()
 
 void DX11Renderer::DrawCubemap(ID3D11ShaderResourceView* srv, bool depth)
 {
-	const UINT stride = sizeof(BGVert);
+	const UINT stride = sizeof(FlatVert);
 	const UINT offset = 0;
 	pContext->IASetVertexBuffers(0, 1, m_BGVBuff.GetAddressOf(), &stride, &offset);
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -808,7 +804,7 @@ void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 	pbuff.exponent = m_TexViewExp;
 	m_PS2DCBuff.WriteData(pbuff);
 
-	const UINT stride = sizeof(BGVert);
+	const UINT stride = sizeof(FlatVert);
 	const UINT offset = 0;
 
 	SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
@@ -869,30 +865,51 @@ void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useM
 		m_Materials[mesh.material]->Bind(m_Ctx, layer);
 	}
 
-	//PerInstancePSData PIPS;
-	//Material const& mat = m_Scene->GetMaterial(mesh.material);
-	//PIPS.colour = mat.colour;
-	//PIPS.emissiveColour = mat.emissiveColour;
-	//PIPS.roughness = mat.roughness;
-	//PIPS.metalness = mat.metalness;
-	//PIPS.ambdiffspec = {1, mat.diffuseness, mat.specularity};
-	//PIPS.useNormalMap = mat.normal->IsValid();
-	//PIPS.useEmissiveMap = mat.emissiveMap->IsValid();
-	//PIPS.useRoughnessMap = mat.roughnessMap->IsValid();
-	//PIPS.alphaMask = mat.mask;
-	//m_PSPerInstanceBuff.WriteData(PIPS);
-
 	const UINT stride = Sizeof(mesh.vertices[0]);
 	const UINT offset = 0;
 
-	//ID3D11Buffer* pbuffs[] = { m_PSPerFrameBuff.Get(), m_PSPerInstanceBuff.Get() };
-	//pContext->PSSetConstantBuffers(0, Size(pbuffs), pbuffs);
 
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	pContext->IASetVertexBuffers(0, 1, meshData.vBuff.GetAddressOf(), &stride, &offset);
 	pContext->IASetIndexBuffer(meshData.iBuff.Get(),DXGI_FORMAT_R16_UINT, 0);
 	pContext->DrawIndexed(Size(mesh.triangles) * 3,0,0);
 	m_Materials[mesh.material]->UnBind(m_Ctx);
+}
+
+void DX11Renderer::DrawMesh(IDeviceMesh* mesh)
+{
+	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
+	pContext->PSSetSamplers(0, 2, samplers );
+	if (mesh->MeshType == EDeviceMeshType::DIRECT)
+	{
+		DX11DirectMesh* mesh11 = static_cast<DX11DirectMesh*>(mesh);
+		ZE_REQUIRE(mCurrVertexLayout);
+		const UINT		stride = mCurrVertexLayout->GetSize();
+		const UINT offset = 0;
+		pContext->IASetVertexBuffers(0, 1, mesh11->vBuff.GetAddressOf(), &stride, &offset);
+		pContext->Draw(mesh11->VertexCount, 0);
+	}
+}
+
+void DX11Renderer::Copy(DeviceResourceRef dst, DeviceResourceRef src)
+{
+	// Invalid cast, but ResourceType will always be in the same place
+	switch (static_cast<IDeviceTexture*>(src.get())->Desc.ResourceType)
+	{
+	case EDeviceResourceType::Texture2D:
+	{
+		DX11Texture* src11 = static_cast<DX11Texture*>(src.get());
+		DX11Texture* dst11 = static_cast<DX11Texture*>(dst.get());
+		RCHECK(dst11->Desc.ResourceType == EDeviceResourceType::Texture2D);
+		pContext->CopyResource(dst11->GetTexture(), src11->GetTexture());
+		break;
+	}
+	default:
+		ZE_ENSURE(false);
+		break;
+	}
 }
 
 IConstantBuffer* DX11Renderer::GetConstantBuffer(ECBFrequency freq, size_t size /* = 0 */)
@@ -912,7 +929,7 @@ IConstantBuffer* DX11Renderer::GetConstantBuffer(ECBFrequency freq, size_t size 
 	}
 }
 
-void DX11Renderer::PrepareMesh(MeshPart const& mesh, DX11Mesh& meshData)
+void DX11Renderer::PrepareMesh(MeshPart const& mesh, DX11IndexedMesh& meshData)
 {
 	printf("Creating buffers for mesh %s\n", mesh.name.ToString().c_str());
 	const UINT stride = Sizeof(mesh.vertices[0]);
@@ -946,6 +963,9 @@ void DX11Renderer::PrepareMesh(MeshPart const& mesh, DX11Mesh& meshData)
 
 		HR_ERR_CHECK(pDevice->CreateBuffer(&bd, &sd, &meshData.iBuff));
 	}
+
+	meshData.IndexCount = mesh.GetTriCount() * 3;
+	meshData.VertexCount = mesh.GetVertCount();
 }
 
 void DX11Renderer::PrepareMaterial(MaterialID mid)
@@ -1038,7 +1058,7 @@ void DX11Renderer::Resize(u32 width, u32 height, u32* canvas)
 		DeviceTextureDesc desc;
 		desc.Width = width;
 		desc.Height = height;
-		desc.Flags = TF_RenderTarget;
+		desc.Flags = TF_RenderTarget | TF_SRV;
 		SetBackbuffer(std::make_shared<rnd::dx11::DX11Texture>(m_Ctx,desc, backBuffer.Get()), width, height);
 	}
 }
@@ -1103,6 +1123,84 @@ IDeviceTexture::Ref DX11Renderer::CreateTexture2D(DeviceTextureDesc const& desc,
 //	return DX11Cubemap::FoldUp(m_Ctx, )
 //	return DX11Texture::Create(&m_Ctx, desc.width, desc.height, reinterpret_cast<u32 const*>(initialData), TF_DEPTH);
 	return std::make_shared<DX11Texture>(m_Ctx, desc, initialData);
+}
+
+void DX11Renderer::SetShaderResources(EShaderType shader, const Vector<IDeviceTexture::Ref>& srvs, u32 startIdx)
+{
+	Vector<ID3D11ShaderResourceView*> views(srvs.size());
+	for (int i=0;i<srvs.size(); ++i)
+	{
+		views[i] = srvs[i] ? static_cast<DX11Texture*>(srvs[i].get())->GetSRV() : nullptr;
+	}
+	
+	switch (shader)
+	{
+		case rnd::EShaderType::Vertex:
+			pContext->VSSetShaderResources(startIdx, NumCast<u32>(views.size()), Addr(views));
+			break;
+		case rnd::EShaderType::Pixel:
+			pContext->PSSetShaderResources(startIdx, NumCast<u32>(views.size()), Addr(views));
+			break;
+		case rnd::EShaderType::Geometry:
+			pContext->GSSetShaderResources(startIdx, NumCast<u32>(views.size()), Addr(views));
+			break;
+		case rnd::EShaderType::Compute:
+			pContext->CSSetShaderResources(startIdx, NumCast<u32>(views.size()), Addr(views));
+			break;
+		default:
+			break;
+	}
+}
+
+void DX11Renderer::SetPixelShader(PixelShader const* shader)
+{
+	DX11PixelShader* dx11Shader = shader ? static_cast<DX11PixelShader*>(shader->GetDeviceShader()) : nullptr;
+	pContext->PSSetShader(dx11Shader ? dx11Shader->GetShader() : nullptr, nullptr, 0);
+}
+
+void DX11Renderer::SetVertexShader(VertexShader const* shader)
+{
+	mCurrVertexShader = shader;
+	DX11VertexShader* dx11Shader = shader ? static_cast<DX11VertexShader*>(shader->GetDeviceShader()) : nullptr;
+	pContext->VSSetShader(dx11Shader ? dx11Shader->GetShader() : nullptr, nullptr, 0);
+	if (mCurrVertexLayoutHdl >= 0)
+	{
+		UpdateInputLayout();
+	}
+}
+
+void DX11Renderer::DrawMesh(Primitive const& primitive)
+{
+	auto& meshData = m_MeshData[&primitive];
+	if (!meshData.vBuff)
+	{
+		PrepareMesh(primitive, meshData);
+	}
+	assert(meshData.iBuff);
+
+	const UINT stride = Sizeof(primitive.vertices[0]);
+	const UINT offset = 0;
+
+	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pContext->IASetVertexBuffers(0, 1, meshData.vBuff.GetAddressOf(), &stride, &offset);
+	pContext->IASetIndexBuffer(meshData.iBuff.Get(),DXGI_FORMAT_R16_UINT, 0);
+	pContext->DrawIndexed(Size(primitive.triangles) * 3,0,0);
+}
+
+void DX11Renderer::SetVertexLayout(VertAttDescHandle attDescHandle)
+{
+	mCurrVertexLayoutHdl = attDescHandle;
+	mCurrVertexLayout = &VertexAttributeDesc::GetRegistry().Get(attDescHandle);
+	if (mCurrVertexShader)
+	{
+		UpdateInputLayout();
+	}
+}
+
+void DX11Renderer::UpdateInputLayout()
+{
+	ID3D11InputLayout* inputLayout = GetOrCreateInputLayout(mCurrVertexLayoutHdl, mCurrVertexShader->GetInputSignature());
+	pContext->IASetInputLayout(inputLayout);
 }
 
 void DX11Renderer::SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int RTArrayIdx, int DSArrayIdx)
@@ -1202,7 +1300,7 @@ void DX11Renderer::SetConstantBuffers(EShaderType shader, IConstantBuffer** buff
 {
 	constexpr u32 MAX_CONSTANT_BUFFERS = 16;
 	ID3D11Buffer* dx11Buffers[MAX_CONSTANT_BUFFERS];
-	for (u32 i = 0; i < min(MAX_CONSTANT_BUFFERS, numBuffers); ++i)
+	for (u32 i = 0; i < std::min(MAX_CONSTANT_BUFFERS, numBuffers); ++i)
 	{
 		if (!buffers[i])
 		{

@@ -13,7 +13,7 @@ RenderCubemap::RenderCubemap(RenderContext* renderCtx, EFlatRenderMode mode, Str
 	SetEnabled(texture != nullptr);
 }
 
-void RenderCubemap::RenderFrame(RenderContext& renderCtx)
+void RenderCubemap::Execute(RenderContext& renderCtx)
 {
 	renderCtx.DeviceCtx()->SetDepthMode(mMode == EFlatRenderMode::BACK ? EDepthMode::LESS : EDepthMode::DISABLED);
 	renderCtx.DeviceCtx()->SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);

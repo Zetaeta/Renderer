@@ -14,25 +14,35 @@ public:
 	{}
 
 	template <typename ShaderType>
-	RefPtr<ShaderType const> GetCompiledShader(ShaderType::Permutation const& permutation) const
+	ShaderType const* GetCompiledShader(ShaderType::Permutation const& permutation = {})
 	{
 		ShaderInstanceId instanceId{ ShaderType::sRegistryId, permutation.GetUniqueId() };
-		if (auto it = mCompiledShaders.find(); it != mCompiledShaders.end())
+		if (auto it = mCompiledShaders.find(instanceId); it != mCompiledShaders.end())
 		{
-			return it->second;
+			return static_cast<ShaderType*>(it->second.Get());
 		}
 
 		ShaderCompileEnv env;
 		permutation.ModifyCompileEnv(env);
 		auto& shaderInfo = ShaderRegistry::Get().GetRegisteredShader(ShaderType::sRegistryId);
-		auto deviceShader = mCompiler->CompileShader(shaderInfo.Name, env, ShaderType::Type);
-		auto& shader = mCompiledShaders[instanceId];
-		shader = MakeOwning<ShaderType>();
+		OwningPtr<IDeviceShader> deviceShader;
+		ShaderType* shader = new ShaderType;
+		if constexpr (ShaderType::Type == EShaderType::Vertex)
+		{
+			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo.File, env, ShaderType::Type, ShaderType::InputSignature);
+			shader->InputSigInst = ShaderType::InputSignature;
+		}
+		else
+		{
+			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo.File, env, ShaderType::Type);
+		}
 		shader->DeviceShader = std::move(deviceShader);
+		mCompiledShaders[instanceId] = shader;
+		return shader;
 
 	}
 protected:
-	std::unordered_map<ShaderInstanceId, OwningPtr<Shader>> mCompiledShaders;
+	std::unordered_map<ShaderInstanceId, RefPtr<Shader>> mCompiledShaders;
 
 	IShaderCompiler* mCompiler = nullptr;
 };

@@ -7,7 +7,7 @@ namespace rnd
 namespace dx11
 {
 
-OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId const& id, const String& file, const ShaderCompileEnv& env, EShaderType shaderType, bool forceRecompile)
+OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId const& id, const String& file, const ShaderCompileEnv& env, EShaderType shaderType, VertexAttributeMask inputMask, bool forceRecompile)
 {
 	Vector<D3D_SHADER_MACRO> macros;
 	macros.reserve(env.Defines.size());
@@ -19,6 +19,10 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 	fs::create_directories(mOutDir);
 	auto			 srcName = std::format("{}.hlsl", file);
 	fs::path		 src = mSrcDir / srcName;
+	if (!ZE_ENSURE(fs::exists(src)))
+	{
+		return nullptr;
+	}
 	auto			 lastWrite = fs::last_write_time(src);
 	ComPtr<ID3DBlob> outBlob;
 	ComPtr<ID3DBlob> errBlob;
@@ -55,7 +59,7 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 	}
 	else
 	{
-		RLOG(LogGlobal, Info, "Reading precompiled shader %s from %s\n", file, cso.string().c_str());
+		RLOG(LogGlobal, Info, "Reading precompiled shader %s from %s\n", file.c_str(), cso.string().c_str());
 		HR_ERR_CHECK(D3DReadFileToBlob(cso.c_str(), &outBlob));
 	}
 
@@ -65,6 +69,7 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 		{
 			auto result = MakeOwning<DX11VertexShader>();
 			HR_ERR_CHECK(mDevice->CreateVertexShader(outBlob->GetBufferPointer(), outBlob->GetBufferSize(), nullptr, &result->Shader));
+			mShadersForCIL[inputMask] = outBlob;
 			return result;
 		}
 		case EShaderType::Pixel:
@@ -90,6 +95,7 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 		default:
 			break;
 	}
+	return nullptr;
 }
 
 char const* DX11ShaderCompiler::GetShaderTypeString(EShaderType shaderType)

@@ -289,6 +289,12 @@ constexpr u64 operator ""_hash(char const* s, size_t size)
 	return crc64(std::string_view(s, size));
 }
 
+template<typename T>
+constexpr size_t Hash(T const& val)
+{
+	return (std::hash<T>{})(val);
+}
+
 // Stolen from boost
 constexpr size_t HashMix(size_t x)
 {

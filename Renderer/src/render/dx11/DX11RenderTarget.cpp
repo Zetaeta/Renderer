@@ -1,5 +1,9 @@
 #include "DX11RenderTarget.h"
 
+namespace rnd
+{
+namespace dx11
+{
 DX11DepthStencil::~DX11DepthStencil()
 {
 	//for (auto& ds : DepthStencils)
@@ -13,4 +17,6 @@ DX11RenderTarget::DX11RenderTarget(RenderTargetDesc const& desc, ComPtr<ID3D11Re
 	: IRenderTarget(desc), RenderTargets({ rt }), DepthStencil(dsv)
 {
 	rnd::dx11::SetResourceName(rt, desc.DebugName);
+}
+}
 }

@@ -5,22 +5,11 @@
 #include <core/Maths.h>
 #include <core/MovableContiguousBumpAllocator.h>
 #include <limits>
+#include "DataLayout.h"
 
 namespace rnd
 {
 class CBDataSource;
-struct CBLEntry
-{
-	TypeInfo const* mType;
-	Name mName;
-	size_t mOffset = 0;
-};
-
-template<typename T>
-CBLEntry Entry(Name name)
-{
-	return CBLEntry { &GetTypeInfo<T>(), name };
-}
 
 enum class ECBFrequency : u8
 {
@@ -38,7 +27,7 @@ using GPUBoolType = u32;
 struct CBAccessor
 {
 	ConstantBufferData* mCBuffer;
-	CBLEntry const* mEntry;
+	DataLayoutEntry const* mEntry;
 
 	ReflectedValue Access();
 	bool		   Exists() const { return mEntry != nullptr; }
@@ -59,31 +48,13 @@ struct CBAccessor
 	T const&  operator|=(T const& val);
 };
 
-struct CBLayout
-{
-	CBLayout()
-		: mAlignment(0), mSize(0) {}
-	CBLayout(size_t alignment, Vector<CBLEntry>&& entries);
-
-	size_t mAlignment;
-	Vector<CBLEntry> Entries;
-	size_t mSize;
-
-	size_t GetSize()
-	{
-		return mSize;
-	}
-
-	using Ref = CBLayout*;
-};
-
-CBLayout MakeCBLayout(ClassTypeInfo const& classType, size_t alignment = 16);
+DataLayout MakeCBLayout(ClassTypeInfo const& classType, size_t alignment = 16);
 
 template<typename T>
-CBLayout* GetLayout()
+DataLayout* GetLayout()
 	requires HasTypeInfo<T> && std::is_class_v<T>
 {
-	static CBLayout result = MakeCBLayout(GetClassTypeInfo<T>());
+	static DataLayout result = MakeCBLayout(GetClassTypeInfo<T>());
 
 	return &result;
 }
@@ -93,13 +64,13 @@ class ConstantBufferData
 public:
 
 	ConstantBufferData() :Layout(nullptr) {}
-	ConstantBufferData(CBLayout::Ref layout)
+	ConstantBufferData(DataLayout::Ref layout)
 		: Layout(layout), DataSize(layout->GetSize())
 	{
 		Data = std::make_unique<u8[]>(DataSize);
 	}
 
-	ConstantBufferData(size_t size, CBLayout::Ref layout = nullptr)
+	ConstantBufferData(size_t size, DataLayout::Ref layout = nullptr)
 		: Layout(layout), DataSize(size)
 	{
 		Data = std::make_unique<u8[]>(size);
@@ -111,10 +82,10 @@ public:
 		DataSize = size;
 	}
 
-	void SetLayout(CBLayout::Ref layout);
+	void SetLayout(DataLayout::Ref layout);
 
 	u8* GetData(){ return Data.get(); }
-	CBLayout::Ref			  Layout;
+	DataLayout::Ref			  Layout;
 
 	CBAccessor operator[](Name const& name)
 	{
@@ -197,7 +168,7 @@ public:
 		: mData(std::forward<Args>(args)...) {}
 	ConstantBufferData& Data() { return mData; }
 	virtual void		Update() = 0;
-	virtual void		SetLayout(CBLayout::Ref layout) = 0;
+	virtual void		SetLayout(DataLayout::Ref layout) = 0;
 protected:
 	ConstantBufferData mData;
 };

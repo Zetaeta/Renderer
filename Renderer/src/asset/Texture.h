@@ -67,8 +67,8 @@ public:
 	size_type const width;
 	size_type const height;
 
-	DeviceTextureRef const& GetDeviceTexture() const { return m_DeviceTex; }
-	void SetDeviceTexture(DeviceTextureRef const& dt) const { m_DeviceTex = dt; }
+	rnd::DeviceTextureRef const& GetDeviceTexture() const { return m_DeviceTex; }
+	void SetDeviceTexture(rnd::DeviceTextureRef const& dt) const { m_DeviceTex = dt; }
 
 	char const* GetName() const { return m_Name.c_str(); }
 
@@ -81,7 +81,7 @@ private:
 
 	std::vector<u32> m_Data;
 	std::string m_Name;
-	mutable DeviceTextureRef m_DeviceTex = INVALID_DEV_TEX;
+	mutable rnd::DeviceTextureRef m_DeviceTex = INVALID_DEV_TEX;
 };
 
 class TextureRef

@@ -3,33 +3,16 @@
 namespace rnd
 {
 
-CBLayout::CBLayout(size_t alignment, Vector<CBLEntry>&& entries)
-	: mAlignment(alignment), Entries(std::move(entries))
+DataLayout MakeCBLayout(ClassTypeInfo const& classType, size_t alignment)
 {
-	for (auto& entry : Entries)
-	{
-		auto currAlign = mSize % mAlignment;
-		auto nextSize = entry.mType->GetSize();
-		if (currAlign > 0 && currAlign + nextSize > mAlignment)
-		{
-			mSize += mAlignment - currAlign;
-		}
-
-		entry.mOffset = mSize;
-		mSize += nextSize;
-	}
-}
-
-CBLayout MakeCBLayout(ClassTypeInfo const& classType, size_t alignment)
-{
-	Vector<CBLEntry> entries;
+	Vector<DataLayoutEntry> entries;
 	classType.ForEachProperty([&entries](PropertyInfo const& prop) {
-		entries.emplace_back(CBLEntry{ &prop.GetType(), prop.GetName(), static_cast<size_t>(prop.GetOffset()) });
+		entries.emplace_back(DataLayoutEntry{ &prop.GetType(), prop.GetName(), static_cast<size_t>(prop.GetOffset()) });
 	});
-	return CBLayout(alignment, std::move(entries));
+	return DataLayout(alignment, std::move(entries));
 }
 
-void ConstantBufferData::SetLayout(CBLayout::Ref layout)
+void ConstantBufferData::SetLayout(DataLayout::Ref layout)
 {
 	if (layout != nullptr)
 	{
@@ -49,7 +32,7 @@ void ConstantBufferData::FillFromSource(const CBDataSource& source)
 		return;
 	}
 
-	for (CBLEntry const& entry : Layout->Entries)
+	for (DataLayoutEntry const& entry : Layout->Entries)
 	{
 		if (ConstReflectedValue sourceEntry = source.Get(entry.mName))
 		{

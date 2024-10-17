@@ -40,7 +40,13 @@ using String = std::string;
 //	}
 //};
 
+
 using Name = String;
+
+inline const char* GetNameData(Name const& name)
+{
+	return name.c_str();
+}
 
 template<typename T>
 using OwningPtr = std::unique_ptr<T>;

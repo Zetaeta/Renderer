@@ -52,7 +52,7 @@ enum class EShadingLayer : u8
 
 struct ShaderCBData
 {
-	rnd::CBLayout::Ref Layout{};
+	rnd::DataLayout::Ref Layout{};
 	bool IsUsed = false;
 };
 

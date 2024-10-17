@@ -2,6 +2,11 @@
 #include <render/DeviceTexture.h>
 #include "SharedD3D11.h"
 
+namespace rnd
+{
+namespace dx11
+{
+
 class DX11RenderTarget : public IRenderTarget
 {
 public:
@@ -57,3 +62,6 @@ public:
 	using Ref = std::shared_ptr<DX11DepthStencil>;
 
 };
+
+}
+}

@@ -8,9 +8,9 @@
 
 #define RCOPY_PROTECT(ClassName) ClassName(ClassName const& other) = delete;\
 								ClassName& operator=(ClassName const& other) = delete;
-#define RMOVE_PROTECT(ClassName) ClassName(ClassName&& other) = delete;\
+#define ZE_MOVE_PROTECT(ClassName) ClassName(ClassName&& other) = delete;\
 								ClassName& operator=(ClassName&& other) = delete;
-#define RCOPY_MOVE_PROTECT(ClassName) RCOPY_PROTECT(ClassName) RMOVE_PROTECT(ClassName)
+#define RCOPY_MOVE_PROTECT(ClassName) RCOPY_PROTECT(ClassName) ZE_MOVE_PROTECT(ClassName)
 
 #define RCOPY_DEFAULT(ClassName) ClassName(ClassName const& other) = default;\
 								ClassName& operator=(ClassName const& other) = default;
@@ -21,7 +21,13 @@
 #define RASSERT_IMPL(expr, stringexpr, ...) assert(expr)
 
 #define RASSERT(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
-#define RCHECK(expr, ...) (expr || ([&] { RASSERT_IMPL(false, #expr); return false; })())
+#define RCHECK(expr, ...) ((expr) || ([&] { RASSERT_IMPL(false, #expr); return false; })())
+#define ZE_ENSURE(expr, ...) RCHECK(expr, __VA_ARGS__)
+#define ZE_REQUIRE(expr, ...) \
+	if (!ZE_ENSURE(expr))              \
+	{                         \
+		return __VA_ARGS__;\
+	}
 
 #define NULL_OR(ptr, expr) (((ptr) == nullptr) ? nullptr : ((ptr)->expr))
 
