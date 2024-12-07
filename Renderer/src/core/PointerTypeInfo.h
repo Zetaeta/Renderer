@@ -40,7 +40,7 @@ public:
 	virtual bool		  IsNull(ConstReflectedValue ptr) const = 0;
 	virtual ConstReflectedValue GetConst(ConstReflectedValue ptr) const = 0;
 	virtual ReflectedValue	  Get(ConstReflectedValue ptr) const {
-		RASSERT(!IsConst());
+		ZE_ASSERT(!IsConst());
 		return GetConst(ptr).ConstCast();
 	}
 
@@ -77,13 +77,13 @@ public:
 
 	ConstReflectedValue GetConst(ConstReflectedValue ptr) const override
 	{
-		RASSERT(ptr.GetType() == *this);
+		ZE_ASSERT(ptr.GetType() == *this);
 		return ConstReflectedValue::From ( **static_cast<TPtr const*>(ptr.GetPtr()) );
 	}
 
 	bool New(ReflectedValue holder, TypeInfo const& newType) const override
 	{
-		RASSERT(holder.GetType().IsDefaultConstructible());
+		ZE_ASSERT(holder.GetType().IsDefaultConstructible());
 		void* storage = new u8[newType.GetSize()];
 		newType.Construct(storage);
 		TPtr& uptr = holder.GetAs<TPtr>();
@@ -99,7 +99,7 @@ public:
 		}
 		else
 		{
-			RASSERT(false, "Can't copy %s", TypeInfoHelper<T>::Name.str);
+			ZE_ASSERT(false, "Can't copy %s", TypeInfoHelper<T>::Name.str);
 		}
 	}
 
@@ -111,7 +111,7 @@ public:
 
 	void Move(ReflectedValue const& from, ReflectedValue const& to) const override
 	{
-		RASSERT(from.GetType() == *this && to.GetType() == *this);
+		ZE_ASSERT(from.GetType() == *this && to.GetType() == *this);
 		to.GetAs<TPtr>() = std::move(from.GetAs<TPtr>());
 	}
 };
@@ -142,13 +142,13 @@ struct TypeInfoHelper<std::unique_ptr<T>>
 
 		ConstReflectedValue GetConst(ConstReflectedValue ptr) const override
 		{
-			RASSERT(ptr.GetType() == *this);
+			ZE_ASSERT(ptr.GetType() == *this);
 			return ConstReflectedValue::From ( **static_cast<UPtr const*>(ptr.GetPtr()) );
 		}
 
 		bool New(ReflectedValue holder, TypeInfo const& newType) const override
 		{
-			RASSERT(holder.GetType().IsDefaultConstructible());
+			ZE_ASSERT(holder.GetType().IsDefaultConstructible());
 			void* storage = new u8[newType.GetSize()];
 			newType.Construct(storage);
 			UPtr& uptr = holder.GetAs<UPtr>();
@@ -158,7 +158,7 @@ struct TypeInfoHelper<std::unique_ptr<T>>
 
 		void Copy(ConstReflectedValue const& from, ReflectedValue const& to) const override
 		{
-			RASSERT(false, "Can't copy unique ptr");
+			ZE_ASSERT(false, "Can't copy unique ptr");
 		}
 
 		ReflectedValue Construct(void* location) const override
@@ -169,7 +169,7 @@ struct TypeInfoHelper<std::unique_ptr<T>>
 
 		void Move(ReflectedValue const& from, ReflectedValue const& to) const override
 		{
-			RASSERT(from.GetType() == *this && to.GetType() == *this);
+			ZE_ASSERT(from.GetType() == *this && to.GetType() == *this);
 			to.GetAs<UPtr>() = std::move(from.GetAs<UPtr>());
 		}
 	};

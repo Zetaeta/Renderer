@@ -104,7 +104,7 @@ public:
 private:
 	constexpr void Set(Datum&& datum)
 	{
-		RASSERT(!IsSet(datum.m_Type));
+		ZE_ASSERT(!IsSet(datum.m_Type));
 
 		m_Data[Denum(datum.m_Type)] = std::move(datum);
 	}
@@ -187,7 +187,7 @@ public:
 	TClassValuePtr(TReflectedValue<IsConst> val)
 		:TClassValuePtr ( val.GetPtr(), static_cast<ClassTypeInfo const&>(val.GetType()) )
 	{
-		RASSERT(val.GetType().GetTypeCategory() == ETypeCategory::CLASS);
+		ZE_ASSERT(val.GetType().GetTypeCategory() == ETypeCategory::CLASS);
 	}
 
 	ClassTypeInfo const& GetType() const
@@ -228,7 +228,7 @@ public:
 		{
 			return InvokeHelper<TClass,TRetVal, Args...>(object.GetAs<TClass>(), m_Function, std::index_sequence_for<Args...>{}, arguments);
 		};
-		RASSERT(arguments.size() == sizeof...(Args), "Wrong number of arguments");
+		ZE_ASSERT(arguments.size() == sizeof...(Args), "Wrong number of arguments");
 		if constexpr (std::is_same_v<void, TRetVal>)
 		{
 			call();
@@ -307,7 +307,7 @@ public:
 
 	ClassTypeInfo const& GetRuntimeType(ConstReflectedValue val) const override
 	{
-		RASSERT(val.GetType() == *this);
+		ZE_ASSERT(val.GetType() == *this);
 		return ConstClassValuePtr(val).GetRuntimeType();
 	}
 
@@ -377,34 +377,34 @@ public:
 		}
 		else
 		{
-			RASSERT(false);
+			ZE_ASSERT(false);
 			return ReflectedValue {nullptr, this};
 		}
 	}
 
 	void Move(ReflectedValue const& from, ReflectedValue const& to) const override
 	{
-		RASSERT(from.GetType().GetTypeCategory() == ETypeCategory::CLASS && static_cast<ClassTypeInfo const&>(from.GetType()).InheritsFrom(*this) && to.GetType() == *this, "Incompatible types");
+		ZE_ASSERT(from.GetType().GetTypeCategory() == ETypeCategory::CLASS && static_cast<ClassTypeInfo const&>(from.GetType()).InheritsFrom(*this) && to.GetType() == *this, "Incompatible types");
 		if constexpr (std::movable<TClass>)
 		{
 			to.GetAs<TClass>() = std::move(from.GetAs<TClass>());
 		}
 		else
 		{
-			RASSERT(false, "Not movable");
+			ZE_ASSERT(false, "Not movable");
 		}
 	}
 
 	void Copy(ConstReflectedValue const& from, ReflectedValue const& to) const override
 	{
-		RASSERT(from.GetType().GetTypeCategory() == ETypeCategory::CLASS && static_cast<ClassTypeInfo const&>(from.GetType()).InheritsFrom(*this) && to.GetType() == *this, "Incompatible types");
+		ZE_ASSERT(from.GetType().GetTypeCategory() == ETypeCategory::CLASS && static_cast<ClassTypeInfo const&>(from.GetType()).InheritsFrom(*this) && to.GetType() == *this, "Incompatible types");
 		if constexpr (std::copyable<TClass>)
 		{
 			to.GetAs<TClass>() = from.GetAs<TClass>();
 		}
 		else
 		{
-			RASSERT(false, "Not copyable");
+			ZE_ASSERT(false, "Not copyable");
 		}
 	}
 };

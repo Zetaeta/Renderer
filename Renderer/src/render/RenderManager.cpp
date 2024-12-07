@@ -11,16 +11,6 @@ using std::string;
 using std::make_shared;
 using namespace rnd;
 
-inline vec3 Vec3(aiVector3D const& v)
-{
-	return {v.x, v.y, v.z};
-}
-
-inline vec2 Vec2(aiVector3D const& v)
-{
-	return {v.x, v.y};
-}
-
  RenderManager::RenderManager(Input* input)
 	: m_Camera(input), mScene(&m_AssMan)
 {
@@ -29,7 +19,7 @@ inline vec2 Vec2(aiVector3D const& v)
 	int			   x, y, comp;
 	unsigned char* data = stbi_load("content/Dirt.png", &x, &y, &comp, 4);
 	fprintf(stdout, "width: %d, height: %d, comp: %d\n", x, y, comp);
-	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, "dirt", data) : Texture::EMPTY;
+	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, "dirt", data, ETextureFormat::RGBA8_Unorm_SRGB) : Texture::EMPTY;
 	stbi_image_free(data);
 	mScene.Materials() = { make_shared<Material>("Red", vec4{ 1.f, 0.f, 0.f, 1.f }, 1.f, 10), make_shared<Material>("Dirt", vec4{ 0.f, 0.f, 0.f, 1.f }, 1.f, 500, 1.f, dirt), make_shared<Material>("Yellow", vec4{ 1.f, 1.f, 0.f, 1.f }) };
 	auto mesh = MeshPart::Cube(1);
@@ -77,14 +67,14 @@ void RenderManager::CreateStarterScene()
 	//scene.m_PointLights.emplace_back(vec3(1), vec3(1),1.f);
 //	scene.m_SpotLights.emplace_back(vec3(1), vec3{ 0, 0, 1 }, vec3(1), 1.f, 1.f);
 	vector<IndexedTri> inds = { IndexedTri({ 0, 1, 2 }) };
-	newScene.m_Objects.emplace_back(make_unique<LightObject<SpotLight>>(&mScene));
-	newScene.m_Objects.emplace_back(make_unique<LightObject<PointLight>>(&mScene));
-	newScene.m_Objects.emplace_back(make_unique<LightObject<DirLight>>(&mScene));
-	StaticMeshComponent& cubeMC = newScene.m_Objects.emplace_back(make_unique<SceneObject>(&mScene, "cube"))->SetRoot<StaticMeshComponent>();
+	newScene.m_Objects.emplace_back(std::make_unique<LightObject<SpotLight>>(&mScene));
+	newScene.m_Objects.emplace_back(std::make_unique<LightObject<PointLight>>(&mScene));
+	newScene.m_Objects.emplace_back(std::make_unique<LightObject<DirLight>>(&mScene));
+	StaticMeshComponent& cubeMC = newScene.m_Objects.emplace_back(std::make_unique<SceneObject>(&mScene, "cube"))->SetRoot<StaticMeshComponent>();
 	cubeMC.SetMesh(AssetPath("/Memory/cube"));
 	cubeMC.SetTransform(RotTransform{ { 0, 0, 2 }, { 1, 1, 1 } } );
 		//	scene.m_MeshInstances.emplace_back(MeshInstance{ m_AssMan.AddMesh(Mesh::Cube(1)),  );
-	m_Renderer = make_unique<RastRenderer>(&m_Camera, 0, 0, nullptr);
+	m_Renderer = std::make_unique<RastRenderer>(&m_Camera, 0, 0, nullptr);
 
 	mScene = std::move(newScene);
 	mScene.Initialize();

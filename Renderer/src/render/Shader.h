@@ -68,29 +68,31 @@ struct ShaderInstanceId
 
 class Shader;
 
+struct ShaderDesc
+{
+	String Name;
+	String File;
+	String EntryPoint = "main";
+};
+
 class ShaderRegistry
 {
 public:
-	struct RegisteredShader
-	{
-		String Name;
-		String File;
-	};
 
-	const RegisteredShader& GetRegisteredShader(u32 idx) const
+	const ShaderDesc& GetRegisteredShader(u32 idx) const
 	{
 		return mRegisteredShaders[idx];
 	}
 
 	static ShaderRegistry& Get();
 
-	std::vector<RegisteredShader> mRegisteredShaders;
+	std::vector<ShaderDesc> mRegisteredShaders;
 
 
 	template<typename T>
-	u32 RegisterShaderType(char const* type, char const* shaderFile)
+	u32 RegisterShaderType(char const* type, char const* shaderFile, char const* entryPoint)
 	{
-		mRegisteredShaders.emplace_back(RegisteredShader(type, shaderFile));
+		mRegisteredShaders.emplace_back(ShaderDesc(type, shaderFile, entryPoint));
 		return NumCast<u32>(mRegisteredShaders.size() - 1);
 	}
 };
@@ -141,10 +143,10 @@ public:
 	VertexAttributeMask InputSigInst;
 };
 
-struct ShaderResources
-{
-	Vector<IDeviceTextureRef> SRVs;
-};
+//struct ShaderResources
+//{
+//	Vector<ResourceView> SRVs;
+//};
 
 #define DECLARE_SHADER(Type)\
 public:\
@@ -152,9 +154,8 @@ public:\
 //	Type(OwningPtr<IDeviceShader>&&)
 
 
-#define DEFINE_SHADER(Type, ShaderFile)\
-	u32 const Type::sRegistryId = ShaderRegistry::Get().RegisterShaderType<Type>(#Type, "" ShaderFile);
-
+#define DEFINE_SHADER(Type, ShaderFile, EntryPoint)\
+	u32 const Type::sRegistryId = ShaderRegistry::Get().RegisterShaderType<Type>(#Type, "" ShaderFile, "" EntryPoint);
 }
 
 #define VS_INPUTS(args)\

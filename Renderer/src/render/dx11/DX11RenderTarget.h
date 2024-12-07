@@ -48,12 +48,12 @@ public:
 
 	ID3D11DepthStencilView* GetDSV() const
 	{
-		RASSERT(Desc.Dimension == ETextureDimension::TEX_2D);
+		ZE_ASSERT(Desc.Dimension == ETextureDimension::TEX_2D);
 		return DepthStencils[0].Get();
 	}
 	ID3D11DepthStencilView* GetDSV(u32 idx) const
 	{
-		RASSERT(Desc.Dimension != ETextureDimension::TEX_2D);
+		ZE_ASSERT(Desc.Dimension != ETextureDimension::TEX_2D);
 		return DepthStencils[idx].Get();
 	}
 

@@ -11,6 +11,7 @@ namespace dx11
 	: DX11TextureBase(ctx, desc)
 {
 	CreateResources(textureData);
+	printf("%p\n", m_Texture.Get());
 }
 
 DX11Texture::DX11Texture(DX11Ctx& ctx, DeviceTextureDesc const& desc, ID3D11Texture2D* texture)
@@ -21,7 +22,10 @@ DX11Texture::DX11Texture(DX11Ctx& ctx, DeviceTextureDesc const& desc, ID3D11Text
 	{
 		D3D11_TEXTURE2D_DESC dx11Desc;
 		texture->GetDesc(&dx11Desc);
-		dx11Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		if (desc.Flags & TF_SRGB)
+		{
+			dx11Desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+		}
 		CreateRenderTarget(dx11Desc);
 	}
 	if (desc.Flags & TF_SRV)
@@ -30,19 +34,21 @@ DX11Texture::DX11Texture(DX11Ctx& ctx, DeviceTextureDesc const& desc, ID3D11Text
 		texture->GetDesc(&dx11Desc);
 		CreateSRV(dx11Desc);
 	}
+	printf("%p\n", texture);
 }
 
-DX11Texture::Ref DX11Texture::Create(DX11Ctx* ctx, u32 width, u32 height, u32 const* data, ETextureFlags flags /*= TF_NONE*/)
+DX11Texture::Ref DX11Texture::CreateFrom(TextureRef tex, DX11Ctx* ctx, ETextureFlags flags /*= TF_SRV*/)
 {
 	u32 mips = 0;
 	if (flags & TF_DEPTH) mips = 1;
 	DeviceTextureDesc desc;
 	desc.Flags = flags;
-	desc.Width = width;
-	desc.Height = height;
+	desc.Width = tex->width;
+	desc.Height = tex->height;
 	desc.NumMips = mips;
+	desc.DebugName = tex->GetName();
 	desc.Format = ETextureFormat::RGBA8_Unorm;
-	auto			result = std::make_shared<DX11Texture>(*ctx, desc, data);
+	auto			result = std::make_shared<DX11Texture>(*ctx, desc, tex->GetData());
 	//		result->Init(width, height, data, flags);
 	return result;
 }
@@ -81,23 +87,24 @@ void DX11Texture::CreateResources(TextureData textureData /*= {}*/)
 		textureDesc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 	}
 
-	switch (desc.Format)
-	{
-	case ETextureFormat::RGBA8_Unorm:
-		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		break;
-	case ETextureFormat::R32_Uint:
-		textureDesc.Format = DXGI_FORMAT_R32_UINT;
-		break;
-	case ETextureFormat::D24_Unorm_S8_Uint:
-		textureDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-		break;
-	case ETextureFormat::D32_Float:
-		textureDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-		break;
-	default:
-		break;
-	}
+	textureDesc.Format = GetDxgiFormat(desc.Format, EDxgiFormatContext::Resource);
+	//switch (desc.Format)
+	//{
+	//case ETextureFormat::RGBA8_Unorm:
+	//	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	//	break;
+	//case ETextureFormat::R32_Uint:
+	//	textureDesc.Format = DXGI_FORMAT_R32_UINT;
+	//	break;
+	//case ETextureFormat::D24_Unorm_S8_Uint:
+	//	textureDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	//	break;
+	//case ETextureFormat::D32_Float:
+	//	textureDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+	//	break;
+	//default:
+	//	break;
+	//}
 
 	if (genMips)
 	{
@@ -208,7 +215,6 @@ void DX11Texture::CreateResources(TextureData textureData /*= {}*/)
 	{
 		CreateRenderTarget(textureDesc);
 	}
-
 	m_Ctx->m_Renderer->RegisterTexture(this);
 }
 
@@ -230,6 +236,10 @@ void DX11Texture::CreateSRV(D3D11_TEXTURE2D_DESC const& textureDesc)
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
 	srvDesc.Format = textureDesc.Format;
+	if (srvDesc.Format == DXGI_FORMAT_R8G8B8A8_UNORM && (Desc.Flags & TF_SRGB))
+	{
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	}
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = (Desc.NumMips == 0) ? -1 : textureDesc.MipLevels;
 	srvDesc.Texture2D.MostDetailedMip = 0;
@@ -259,6 +269,27 @@ void DX11Texture::CreateSRV()
 	CreateSRV(dx11Desc);
 }
 
+void DX11Texture::DestroyResources()
+{
+	mRenderTarget = nullptr;
+	m_SRV = m_StencilSRV = nullptr;
+	m_Texture = m_CpuTexture = nullptr;
+}
+
+void* DX11Texture::GetShaderResource(ShaderResourceId id)
+{
+	switch (id)
+	{
+	case SRV_StencilBuffer:
+		return m_StencilSRV.Get();
+	case SRV_Texture:
+		return m_SRV.Get();
+	default:
+		ZE_ENSURE(false);
+		return nullptr;
+	}
+}
+
 void DX11Texture::Resize(u32 width, u32 height)
 {
 	if (width != Desc.Width || height != Desc.Height)
@@ -274,11 +305,11 @@ DX11Texture::~DX11Texture()
 	//if (m_Texture)
 	//{
 	//	m_Texture->AddRef();
-	//	RASSERT(m_Texture->Release() == 1);
+	//	ZE_ASSERT (m_Texture->Release() == 1);
 	//}
 	if (mDepthStencil)
 	{
-//		RASSERT(mDepthStencil.use_count() == 1);
+//		ZE_ASSERT (mDepthStencil.use_count() == 1);
 	}
 
 	CHECK_COM_REF(m_CpuTexture);
@@ -323,7 +354,7 @@ void DX11Texture::Unmap(u32 subResource)
 
 void DX11ShadowMap::Init(DX11Ctx& ctx, u32 size)
 {
-	m_Texture = DX11Texture::Create(&ctx, size, size, nullptr, TF_DEPTH);
+	//m_Texture = DX11Texture::Create(&ctx, size, size, nullptr, TF_DEPTH);
 } 
 
 }

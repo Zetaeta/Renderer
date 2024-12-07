@@ -18,7 +18,7 @@ public:
 		SceneRenderPass::BeginRender();
 		DeviceCtx()->ClearDepthStencil(mDepthStencil, EDSClearMode::DEPTH, 1.f);
 		DeviceCtx()->ClearRenderTarget(mRenderTarget, {0,0,0,0});
-		DeviceCtx()->SetDepthMode(EDepthMode::LESS);
+		DeviceCtx()->SetDepthStencilMode(EDepthMode::Less);
 		DeviceCtx()->SetBlendMode(EBlendState::NONE);
 	}
 };

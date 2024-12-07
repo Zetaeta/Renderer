@@ -7,6 +7,7 @@
 #include <scene/ScreenObject.h>
 #include "render/ConstantBuffer.h"
 #include "ShaderManager.h"
+#include "RenderGraph.h"
 
 template<>
 struct std::hash<u32vec2>
@@ -90,6 +91,8 @@ public:
 	void SetupRenderTarget();
 	void SetupPasses();
 	void RenderFrame(Scene const& scene);
+
+	void BuildGraph();
 
 	void Postprocessing();
 
@@ -188,6 +191,7 @@ private:
 	u32 msaaSampleCount = 4;
 
 	IDeviceTexture::Ref mMsaaTarget;
+	IDeviceTexture::Ref mPrimaryTarget;
 	IDeviceTexture::Ref mTarget;
 	IDeviceTexture::Ref mPPTarget;
 	IRenderTarget::Ref mMainRT;
@@ -206,6 +210,9 @@ private:
 	ScreenObjectId mCurrentId = SO_NONE;
 	CBDataSource mCBOverrides;
 	std::unordered_map<u32vec2, IDepthStencil::Ref> mTempDepthStencils;
+
+	RGBuilder mRGBuilder;
+	RGResourceHandle mPingPongHandle; 
 };
 
 class ScopedCBOverride

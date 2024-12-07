@@ -26,7 +26,7 @@ inline EShadingLayer GetLightLayer(ELightType lightType)
 
 inline ELightType GetLightFromLayer(EShadingLayer layer)
 {
-	RASSERT(layer < EShadingLayer::SHADING_COUNT && layer >= EShadingLayer::LIGHTS_START);
+	ZE_ASSERT(layer < EShadingLayer::SHADING_COUNT && layer >= EShadingLayer::LIGHTS_START);
 	return EnumCast<ELightType>(Denum(layer) - Denum(EShadingLayer::LIGHTS_START));
 }
 

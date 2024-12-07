@@ -58,13 +58,18 @@ bool SceneObject::ImGuiControls()
 	}
 }
 
-void SceneObject::Modify(bool bAllChildren)
+void SceneObject::Modify(bool bAllChildren, bool modified)
 {
-	m_Scene->Modify(false);
-	if (bAllChildren)
+	if (modified)
 	{
-		root->Modify(true);
+		m_Scene->Modify(false);
+		if (bAllChildren)
+		{
+			root->Modify(true);
+		}
 	}
+
+	Super::Modify(bAllChildren, modified);
 }
 
 void SceneObject::Update()

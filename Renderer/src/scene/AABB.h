@@ -10,7 +10,7 @@ public:
 	AABB(pos3 origin, vec3 radius = vec3(0))
 		: Min(origin - radius), Max(origin + radius)
 	{
-		RASSERT((radius >= 0));
+		ZE_ASSERT((radius >= 0));
 	}
 
 	void AddPoint(pos3 point)

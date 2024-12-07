@@ -59,6 +59,7 @@ struct ShaderCBData
 class MaterialArchetype : public RefCountedObject
 {
 public:
+//	virtual ~MaterialArchetype() {}
 	std::array<ShaderCBData, Denum(rnd::ECBFrequency::Count)> CBData;
 	ShaderCBData const& GetCBData(rnd::ECBFrequency freq) const
 	{
@@ -81,6 +82,8 @@ class IDeviceMaterial
 public:
 	IDeviceMaterial(RefPtr<MaterialArchetype> matType)
 		: Archetype(matType){}
+
+	virtual ~IDeviceMaterial() {}
 
 	const RefPtr<MaterialArchetype> Archetype;
 	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) = 0;

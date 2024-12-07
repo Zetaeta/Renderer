@@ -6,15 +6,24 @@
 class BaseSerialized : public BaseObject
 {
 	DECLARE_RTTI(BaseSerialized, BaseObject);
-	void Modify(bool allChildren = false, bool modified = true);
+#if ZE_BUILD_EDITOR
+public:
+	virtual void Modify(bool allChildren = false, bool modified = true);
+
+	void ClearModified(bool bAllChildren = true);
 	bool IsModified()
 	{
 		return mModified;
 	}
 
+protected:
+	bool mModified = false;
+#endif ZE_BUILD_EDITOR
+
+	BaseSerialized* mOuter = nullptr;
+public:
 	virtual void ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive = false);
 
-	bool mModified = false;
 };
 
 DECLARE_CLASS_TYPEINFO(BaseSerialized);

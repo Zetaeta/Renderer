@@ -70,7 +70,7 @@ public:
 
 	void SetFOVs(float horizontal, float vertical)
 	{
-		RASSERT(CameraType == ECameraType::PERSPECTIVE, "Setting FOV for non-perspective camera");
+		ZE_ASSERT(CameraType == ECameraType::PERSPECTIVE, "Setting FOV for non-perspective camera");
 		HorizExtent = tan(horizontal);
 		VertiExtent = tan(vertical);
 		Dirty = true;
@@ -78,7 +78,7 @@ public:
 
 	void SetHFOVAndAspect(float horizontalFOV, float aspectRatio)
 	{
-		RASSERT(CameraType == ECameraType::PERSPECTIVE, "Setting FOV for non-perspective camera");
+		ZE_ASSERT(CameraType == ECameraType::PERSPECTIVE, "Setting FOV for non-perspective camera");
 		HorizExtent = tan(horizontalFOV);
 		VertiExtent = HorizExtent / aspectRatio;
 		Dirty = true;
@@ -86,7 +86,7 @@ public:
 
 	void SetViewExtent(float horizontal, float vertical)
 	{
-	//	RASSERT(CameraType == ECameraType::ORTHOGRAPHIC, "Setting view extent for non-orthographic camera");
+	//	ZE_ASSERT (CameraType == ECameraType::ORTHOGRAPHIC, "Setting view extent for non-orthographic camera");
 		Dirty = Dirty || (horizontal != HorizExtent) || (vertical != VertiExtent);
 		HorizExtent = horizontal;
 		VertiExtent = vertical;
@@ -127,7 +127,7 @@ public:
 
 	Vector<mat4> const& GetCubeProjections() const
 	{
-		RASSERT(CameraType == ECameraType::CUBE);
+		ZE_ASSERT(CameraType == ECameraType::CUBE);
 		if (Dirty)
 		{
 			Recompute();

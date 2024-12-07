@@ -17,6 +17,8 @@
 #include "render/RenderDeviceCtx.h"
 #include "DX11Device.h"
 #include "render/DeviceMesh.h"
+#include "container/EnumArray.h"
+#include "DX11CBPool.h"
 
 class Viewport;
 namespace rnd
@@ -129,18 +131,22 @@ public:
 	void DrawTexture(DX11Texture* tex, ivec2 pos = ivec2(0), ivec2 size = ivec2(-1));
 	void PrepareMesh(MeshPart const& mesh, DX11IndexedMesh& meshData);
 	void PrepareMaterial(MaterialID mid);
-	void SetMainRenderTargetAndDS(ComPtr<ID3D11RenderTargetView> rt, ComPtr<ID3D11DepthStencilView> ds, u32 width, u32 height);
 	void SetBackbuffer(DX11Texture::Ref backBufferTex, u32 width, u32 height);
 
 	// Begin IRenderDeviceCtx overrides
 	void SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int RTArrayIdx = -1, int DSArrayIdx = -1) override;
+	void SetRTAndDS(Span<IRenderTarget::Ref> rts, IDepthStencil::Ref ds) override;
 	void SetViewport(float width, float height, float TopLeftX /* = 0 */, float TopLeftY /* = 0 */) override;
+	void SetDepthStencilMode(EDepthMode mode, StencilState stencil = {}) override;
 	void SetDepthMode(EDepthMode mode) override;
+	void SetStencilState(StencilState state) override;
 	void SetBlendMode(EBlendState mode) override;
 	void ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMode, float depth, u8 stencil /* = 0 */) override;
 	void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) override;
 	void SetConstantBuffers(EShaderType shader, IConstantBuffer** buffers, u32 numBuffers) override;
+	void SetConstantBuffers(EShaderType shaderType, std::span<CBHandle> handles);
 	void ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src);
+	void	 UpdateConstantBuffer(CBHandle handle, std::span<const byte> data);
 	// End IRenderDeviceCtx overrides
 
 
@@ -157,20 +163,14 @@ public:
 		m_TextureRegistry.push_back(tex);
 	}
 
-	void UnregisterTexture(DX11Texture* tex)
-	{
-		std::erase_if(m_TextureRegistry, [tex] (DX11Texture* other) {return other == tex;});
-	}
+	void UnregisterTexture(DX11Texture* tex);
 
 	void RegisterTexture(DX11Cubemap* tex)
 	{
 		m_CubemapRegistry.push_back(tex);
 	}
 
-	void UnregisterTexture(DX11Cubemap* tex)
-	{
-		std::erase_if(m_CubemapRegistry, [tex] (auto* other) {return other == tex;});
-	}
+	void UnregisterTexture(DX11Cubemap* tex);
 
 	DX11Material* GetDefaultMaterial(int matType);
 
@@ -203,18 +203,18 @@ public:
 	}
 
 
-	 virtual void SetShaderResources(EShaderType shader, const Vector<IDeviceTexture::Ref>& srvs, u32 startIdx) override;
-	 void SetPixelShader(PixelShader const* shader) override;
-	 void SetVertexShader(VertexShader const* shader) override;
+	virtual void SetShaderResources(EShaderType shader, Vector<ResourceView> const& srvs, u32 startIdx) override;
+	void SetPixelShader(PixelShader const* shader) override;
+	void SetVertexShader(VertexShader const* shader) override;
 
 
-	 void DrawMesh(Primitive const& primitive) override;
-	 void SetVertexLayout(VertAttDescHandle attDescHandle) override;
-	 void UpdateInputLayout();
+	void DrawMesh(Primitive const& primitive) override;
+	void SetVertexLayout(VertAttDescHandle attDescHandle) override;
+	void UpdateInputLayout();
 
-	 VertAttDescHandle mCurrVertexLayoutHdl = -1;
+	VertAttDescHandle mCurrVertexLayoutHdl = -1;
 	VertexAttributeDesc const* mCurrVertexLayout = nullptr;
-	 RefPtr<VertexShader const> mCurrVertexShader = nullptr;
+	RefPtr<VertexShader const> mCurrVertexShader = nullptr;
 
 
  void DrawMesh(IDeviceMesh* mesh) override;
@@ -234,12 +234,15 @@ protected:
 	void CreateMatType(String const& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload);
 	void CreateMatTypeUnshaded(String const& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload, Vector<D3D_SHADER_MACRO>&& defines = {});
 
+	void CreateDepthStencilState(ComPtr<ID3D11DepthStencilState>& state, EDepthMode depth, StencilState stencil);
+
 	UserCamera* m_Camera;
 	//Scene* m_Scene;
 
 	ID3D11Device*		   pDevice;
 	ID3D11DeviceContext*	   pContext;
 	IDXGISwapChain* pSwapChain = nullptr;
+	DX11CBPool mCBPool;
 
 //	std::vector<DX11Mesh> m_MeshData;
 
@@ -265,7 +268,7 @@ protected:
 	ComPtr<ID3D11BlendState> m_BlendState;
 	ComPtr<ID3D11BlendState> m_AlphaBlendState;
 	ComPtr<ID3D11BlendState> m_AlphaLitBlendState;
-	std::array<ComPtr<ID3D11DepthStencilState>, Denum(EDepthMode::COUNT)> m_DSStates;
+	EnumArray<EnumArray<ComPtr<ID3D11DepthStencilState>, EStencilMode>, EDepthMode> m_DSStates;
 
 	ComPtr<ID3D11SamplerState> m_ShadowSampler;
 
@@ -294,7 +297,6 @@ protected:
 
 	DX11Texture* m_ViewerTex = nullptr;
 
-	//Vector<ComPtr<ID3D11
 
 	float m_Scale;
 	u32 m_Width;
@@ -313,11 +315,15 @@ protected:
 	float m_TexViewExp = 1.f;
 	float m_DirShadowSize = 10;
 	float m_PointShadowFactor = 0.5f;
-	
-	bool mRenderShadowMap = true;
 
+	StencilState mStencilState;
+	EDepthMode mDepthMode = EDepthMode::Less;
+	
 	bool mUsePasses = true;
+
 };
+
+using DX11DeviceCtx = DX11Renderer;
 
 }
 }

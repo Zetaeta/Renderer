@@ -4,6 +4,9 @@
 #include <render/RenderScreenIds.h>
 #include <common/ImguiControls.h>
 #include <scene/SceneObject.h>
+#include "core/Logging.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogEditor);
 
 
 Editor* Editor::sSingleton;
@@ -18,8 +21,13 @@ Editor::Editor(Input* input, RenderManager* rmg)
 
 Editor* Editor::Create(Input* input, class RenderManager* rmg)
 {
-	RASSERT(sSingleton == nullptr);
+	ZE_ASSERT(sSingleton == nullptr);
 	return (sSingleton = new Editor(input, rmg));
+}
+
+void Editor::Destroy()
+{
+	delete sSingleton;
 }
 
 void Editor::OnClickPoint(ivec2 position)
@@ -40,8 +48,8 @@ void Editor::OnClickPoint(ivec2 position)
 	const u32* textureData = reinterpret_cast<const u32*>(mapped.Data);
 	const int width = mScreenIdTex->Desc.Width;
 	const int height = mScreenIdTex->Desc.Height;
-	RASSERT(position.x < width);
-	RASSERT(position.y < height);
+	ZE_ASSERT(position.x < width);
+	ZE_ASSERT(position.y < height);
 	const u32 id = textureData[position.x + position.y * (mapped.RowPitch / 4)];
 	mScreenIdTex->Unmap(0);
 	printf("Id: %u\n", id);
@@ -59,6 +67,7 @@ void Editor::OnLeftClick()
 
 void Editor::OnEndLeftClick()
 {
+	RLOG(LogGlobal, Info, "End left click");
 }
 
 void Editor::OnWindowResize(u32 width, u32 height)
@@ -163,16 +172,23 @@ void Editor::Tick(float dt)
 	}
 	DrawControls();
 	bool isMouseDown = mInput->IsMouseDown(Input::MouseButton::LEFT);
+	//&& !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)
+	;
 	if (isMouseDown != mWasMouseDown)
 	{
-		if (isMouseDown)
+		if (!ImGui::GetIO().WantCaptureMouse)
 		{
-			OnLeftClick();
+			if (isMouseDown)
+			{
+				OnLeftClick();
+			}
+			else
+			{
+				OnEndLeftClick();
+			}
+		
 		}
-		else
-		{
-			OnEndLeftClick();
-		}
+		mWasMouseDown = isMouseDown;
 	}
 
 	// Autosave
@@ -185,6 +201,7 @@ void Editor::Tick(float dt)
 		{
 			mRmgr->SaveScene("default.json");
 			mLastSaved = currTime;
+			mScene->ClearModified(true);
 		}
 	}
 	//	mWasMouseDown = isMouseDown;
@@ -192,8 +209,19 @@ void Editor::Tick(float dt)
 
 void Editor::SelectComponent(SceneComponent* Component)
 {
+	
+	if (IsValid(mSelectedComponent))
+	{
+		mSelectedComponent->Selected = false;
+	}
 	SelectObject(Component->GetOwner());
+
+	ForEachCompRecursive(*Component->GetOwner()->GetRoot(), [](SceneComponent& comp)
+	{
+		comp.Selected = false;
+	});
 	mSelectedComponent = Component->shared_from_this();
+	Component->Selected = true;
 }
 
 void Editor::ClickComponent(class SceneComponent* Component)
@@ -242,10 +270,22 @@ void Editor::SelectObject(const SceneObject* obj)
 	{
 		return so.get() == obj;
 	}) ;
+
+	if (SceneObject* old = GetSelectedObject(); old && old != obj)
+	{
+		ForEachCompRecursive(*old->GetRoot(), [](SceneComponent& comp)
+		{
+			comp.Selected = false;
+		});
+	}
 	
 	if (it != mScene->m_Objects.end())
 	{
 		mSelectedSceneObj = NumCast<int>(it - mScene->m_Objects.begin());
 		mSelectedComponent = (*it)->GetRoot();
+		ForEachCompRecursive(*obj->GetRoot(), [](SceneComponent& comp)
+		{
+			comp.Selected = true;
+		});
 	}
 }

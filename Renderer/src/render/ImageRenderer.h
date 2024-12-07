@@ -62,7 +62,7 @@ public:
 	virtual void OnRenderFinish() {}
 
 	float m_FrameTime = 0;
-	vector<u32> m_ImgData;
+	std::vector<u32> m_ImgData;
 	u32 m_ViewWidth;
 	u32 m_ViewHeight;
 	Walnut::Timer m_Timer;

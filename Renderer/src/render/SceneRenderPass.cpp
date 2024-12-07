@@ -9,8 +9,8 @@ namespace rnd
  SceneRenderPass::SceneRenderPass(RenderContext* ctx, Name passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil,
 						EMatType accepts /*= E_MT_ALL*/, EShadingLayer layer /*= EShadingLayer::NONE*/,
 						ERenderPassMode mode /*= ERenderPassMode::IMMEDIATE*/)
-		: RenderPass(ctx), mAcceptedMatTypes(accepts), mLayer(layer), mRenderTarget(renderTarget), mDepthStencil(depthStencil)
-		, mViewCam(camera), mMode(mode), mPassName(passName)
+		: RenderPass(ctx, std::move(passName)), mAcceptedMatTypes(accepts), mLayer(layer), mRenderTarget(renderTarget), mDepthStencil(depthStencil)
+		, mViewCam(camera), mMode(mode)
 	{
 }
 
@@ -103,7 +103,7 @@ void SceneRenderPass::SetupShading()
 
 void SceneRenderPass::SetCubeRTAndDS(u8 face)
 {
-	RASSERT(mViewCam->GetCameraType() == ECameraType::CUBE);
+	ZE_ASSERT(mViewCam->GetCameraType() == ECameraType::CUBE);
 	u32 rtFace = 0;
 	u32 dsFace = 0;
 	if (mRenderTarget != nullptr && (mRenderTarget->GetDesc().Dimension == ETextureDimension::TEX_CUBE))
@@ -175,58 +175,21 @@ void SceneRenderPass::Draw(DrawData const& data)
 void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, mat4 const& projWorld)
 {
 	mRCtx->SetScreenObjId(data.component->GetScreenId());
+#if ZE_BUILD_EDITOR
+	if (data.component->Selected)
+	{
+		DeviceCtx()->SetStencilState({EStencilMode::Overwrite | EStencilMode::IgnoreDepth | EStencilMode::UseBackFace, 250});
+	}
+#endif
 	mRCtx->DrawPrimitive(data.mesh, data.component->GetWorldTransform(), projWorld,
 						mMatOverride ? mMatOverride : nullptr, mLayer);
+#if ZE_BUILD_EDITOR
+	if (data.component->Selected)
+	{
+		DeviceCtx()->SetStencilState({EStencilMode::Disabled, 0});
+	}
+#endif
 	return;
-	MaterialArchetype* matArch = nullptr;
-
-	Material const& mat = mRCtx->GetScene().GetMaterial(data.mesh->material);
-	if (mMatOverride)
-	{
-		matArch = mMatOverride->Archetype;
-	}
-	else 
-	{
-		auto& deviceMat = mat.DeviceMat;
-		if (!deviceMat || mat.NeedsUpdate())
-		{
-			DeviceCtx()->PrepareMaterial(data.mesh->material);
-		}
-		if (deviceMat)
-		{
-			matArch = deviceMat->Archetype;
-		}
-	}
-
-	if (matArch)
-	{
-		if (DataLayout::Ref layout = matArch->CBData[Denum(ECBFrequency::PS_PerInstance)].Layout)
-		{
-			IConstantBuffer* psPerInst = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, layout->GetSize());
-			ConstantBufferData& cbData = psPerInst->Data();
-			cbData.SetLayout(layout);
-			cbData[CB::colour] |= mat.colour;
-			cbData[CB::emissiveColour] |= mat.emissiveColour;
-			cbData[CB::roughness] |= mat.roughness;
-			cbData[CB::metalness] |= mat.metalness;
-			cbData[CB::ambdiffspec] |= vec3 {1, mat.diffuseness, mat.specularity};
-			cbData[CB::useNormalMap] |= mat.normal->IsValid();
-			cbData[CB::useEmissiveMap] |= mat.emissiveMap->IsValid();
-			cbData[CB::useRoughnessMap] |= mat.roughnessMap->IsValid();
-			cbData[CB::alphaMask] |= mat.mask;
-			cbData[CB::screenObjectId] |= data.component->GetScreenId();
-			psPerInst->Update();
-		}
-	}
-
-	Transform const& trans = data.component->GetWorldTransform();
-	dx11::PerInstanceVSData PIVS;
-	PIVS.model2ShadeSpace = mat4(trans);
-	PIVS.model2ShadeDual = transpose(inverse(PIVS.model2ShadeSpace));
-	PIVS.fullTransform = projWorld * PIVS.model2ShadeSpace;
-
-	static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerInstanceVSCB().WriteData(PIVS);
-	DeviceCtx()->DrawMesh(*data.mesh, mLayer, mMatOverride == nullptr);
 }
 
 void SceneRenderPass::Execute(RenderContext& renderCtx)

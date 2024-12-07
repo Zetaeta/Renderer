@@ -10,7 +10,7 @@ AssetPath::AssetPath(Name primaryPath, Name subPath /*= {}*/)
 	if (SubPath.empty() && !PrimaryPath.empty())
 	{
 		auto lastSlash = primaryPath.find_last_of('/');	
-		RASSERT(lastSlash < primaryPath.size());
+		ZE_ASSERT(lastSlash < primaryPath.size());
 		SubPath = primaryPath.substr(lastSlash + 1);
 	}
 }
@@ -25,7 +25,7 @@ EAssetSource AssetPath::GetSource() const
 	{
 		return EAssetSource::File;
 	}
-	RASSERT(PrimaryPath.starts_with("/Memory/"));
+	ZE_ASSERT(PrimaryPath.starts_with("/Memory/"));
 	return EAssetSource::Memory;
 }
 
@@ -71,7 +71,7 @@ AssetPath AssetPath::Content(const String& pathFromContent)
 AssetPath AssetPath::ContentFile(const String& filePath)
 {
 	fs::path path = fs::relative(filePath, GetContentDir());
-	RASSERT(path.string()[0] != '.');
+	ZE_ASSERT(path.string()[0] != '.');
 	return AssetPath(ContentPrefix + fs::path(path).replace_extension().string());
 }
 

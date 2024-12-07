@@ -1,3 +1,4 @@
+#include "core/BaseDefines.h"
 #include <stdio.h>
 #include <windows.h>
 #include <windowsx.h>
@@ -9,6 +10,8 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <tchar.h>
+#include <dxgi1_3.h>
+#include <dxgidebug.h>
 
 #include "render/dx11/DX11Backend.h"
 #include "ImageRenderMgrDX11.h"
@@ -20,6 +23,7 @@
 #include "core/Logging.h"
 
 #pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "D3DCompiler.lib")
 //#pragma comment(lib, "d3dx11.lib")
 
@@ -193,6 +197,8 @@ int MainDX11(int argc, char** argv)
 	bool   show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	InputImgui input;
+	{
+
 	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input, g_pSwapChain);
 	Editor*			  editor = Editor::Create(&input, &renderMgr);
 	renderMgr.CreateInitialScene();
@@ -226,7 +232,7 @@ int MainDX11(int argc, char** argv)
 			//CreateRenderTarget();
 			//D3D11_TEXTURE2D_DESC td;
 			//g_BackBuffer->GetDesc(&td);
-			//RASSERT(td.Width == g_CurrWidth && td.Height == g_CurrHeight);
+			//ZE_ASSERT (td.Width == g_CurrWidth && td.Height == g_CurrHeight);
 			//DeviceTextureDesc desc;
 			//desc.Width = g_CurrWidth;
 			//desc.Height = g_CurrHeight;
@@ -275,7 +281,7 @@ int MainDX11(int argc, char** argv)
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 			window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-			window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+			window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoMouseInputs;
 
 			// When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
 			// and handle the pass-thru hole, so we ask Begin() to not render a background.
@@ -288,7 +294,7 @@ int MainDX11(int argc, char** argv)
 			// We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
 			// any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+			ImGui::Begin("My DockSpace", nullptr, window_flags);
 			ImGui::PopStyleVar();
 
 			ImGui::PopStyleVar(2);
@@ -346,6 +352,8 @@ int MainDX11(int argc, char** argv)
 
 		g_pSwapChain->Present(1, 0); // Present with vsync
 									 // g_pSwapChain->Present(0, 0); // Present without vsync
+	}
+	Editor::Destroy();
 	}
 	logThread.Flush();
 	logThread.RequestStop();
@@ -411,6 +419,7 @@ bool CreateDeviceD3D(HWND hWnd)
 			filter.DenyList.NumIDs = NumCast<u32>(std::size(hide));
 			filter.DenyList.pIDList = hide;
 			d3dInfoQueue->AddStorageFilterEntries(&filter);
+//			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
 		}
 	}
 
@@ -434,6 +443,13 @@ void CleanupDeviceD3D()
 	if (g_pd3dDevice)
 	{
 		g_pd3dDevice = nullptr;
+	}
+	{
+		ComPtr<IDXGIDebug1> debug;
+		if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug))))
+		{
+			debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+		}
 	}
 }
 

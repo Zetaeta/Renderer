@@ -20,7 +20,7 @@
 
 #define RASSERT_IMPL(expr, stringexpr, ...) assert(expr)
 
-#define RASSERT(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
+#define ZE_ASSERT(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
 #define RCHECK(expr, ...) ((expr) || ([&] { RASSERT_IMPL(false, #expr); return false; })())
 #define ZE_ENSURE(expr, ...) RCHECK(expr, __VA_ARGS__)
 #define ZE_REQUIRE(expr, ...) \
@@ -63,6 +63,10 @@ constexpr auto Denum(TEnum e)
 	constexpr bool operator!=(EType enumVal, std::underlying_type_t<EType> other)\
 	{\
 		return Denum(enumVal) != other;\
+	}\
+	constexpr bool operator !(EType enumVal)\
+	{\
+		return enumVal == 0;\
 	}
 
 #define DECLARE_ENUM_UNOP(EType, op, valop)\
@@ -396,9 +400,22 @@ T* Get(const std::weak_ptr<T>& weakPtr)
 	return nullptr;
 }
 
-template<typename TPtr>
-	requires requires(TPtr p) { *p; }
-inline bool IsValid(TPtr const& ptr)
+//template<typename TPtr>
+//	requires requires(TPtr p) { *p; }
+template<typename T>
+inline bool IsValid(T* const ptr)
+{
+	return ptr != nullptr;
+}
+
+template<typename T>
+inline bool IsValid(std::shared_ptr<T> const& ptr)
+{
+	return ptr != nullptr;
+}
+
+template<typename T>
+inline bool IsValid(std::unique_ptr<T> const& ptr)
 {
 	return ptr != nullptr;
 }

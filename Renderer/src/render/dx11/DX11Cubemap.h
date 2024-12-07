@@ -55,6 +55,12 @@ public:
 	 throw std::logic_error("The method or operation is not implemented.");
  }
 
+
+ void* GetShaderResource(ShaderResourceId id) override
+ {
+	 return srv.Get();
+ }
+
  private:
 	DX11Cubemap(DX11Ctx& ctx);
 };

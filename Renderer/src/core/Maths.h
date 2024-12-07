@@ -7,6 +7,7 @@
 #include <glm/gtx/matrix_operation.hpp>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <bit>
 
 
 #define ASSERT(...) assert(__VA_ARGS__)
@@ -17,6 +18,8 @@ using s32 = i32;
 using s64 = i64;
 using s16 = i16;
 using s8 = i8;
+
+using byte = u8;
 
 template<typename T, int N, qualifier Q>
 constexpr auto operator,(const vec<N,T,Q>& v1, const vec<N,T,Q>& v2)
@@ -143,4 +146,32 @@ template<typename TTo, typename TFrom>
 inline TTo NumCast(TFrom from)
 {
 	return static_cast<TTo>(from);
+}
+
+namespace bits
+{
+constexpr u64 Mask32 = std::numeric_limits<u32>::max();
+}
+
+template<typename Unsigned>
+constexpr Unsigned RoundUpLog2(Unsigned value)
+{
+	return sizeof(Unsigned) * 8 - std::countl_zero(value - 1);
+} 
+
+template<typename Unsigned>
+constexpr Unsigned RoundUpToPowerOf2(Unsigned value)
+{
+	if (value == 0)
+	{
+		return 0;
+	}
+
+	return 1 << RoundUpLog2(value);
+} 
+
+template<typename Unsigned>
+constexpr Unsigned Pow2(Unsigned value)
+{
+	return 1 << value;
 }

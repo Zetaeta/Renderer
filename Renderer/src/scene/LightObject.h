@@ -28,7 +28,7 @@ public:
 
 	void OnInitialize()
 	{
-		RASSERT(!IsInitialized());
+		ZE_ASSERT(!IsInitialized());
 		m_LightData.comp = this;
 		m_Light = GetScene().AddLight<TLight>();
 		OnUpdate(GetScene());

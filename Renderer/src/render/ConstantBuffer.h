@@ -89,7 +89,7 @@ public:
 
 	CBAccessor operator[](Name const& name)
 	{
-		RASSERT(Layout != nullptr);
+		ZE_ASSERT(Layout != nullptr);
 		for (auto& entry: Layout->Entries)
 		{
 			if (entry.mName == name)
@@ -110,7 +110,7 @@ public:
 	template<typename T>
 	T& GetAs()
 	{
-		RASSERT(sizeof(T) <= GetSize());
+		ZE_ASSERT(sizeof(T) <= GetSize());
 		return *reinterpret_cast<T*>(GetData());
 	}
 
@@ -136,7 +136,7 @@ public:
 
 inline ReflectedValue CBAccessor::Access()
 {
-	RASSERT(mEntry != nullptr);
+	ZE_ASSERT(mEntry != nullptr);
 	u8* data = mCBuffer->GetData() + mEntry->mOffset;
 	return ReflectedValue(data, mEntry->mType);
 }
@@ -144,8 +144,8 @@ inline ReflectedValue CBAccessor::Access()
 template <HasTypeInfo T>
 T const& CBAccessor::operator=(T const& val)
 {
-	RASSERT(mEntry != nullptr, "Assigning to invalid entry");
-	RASSERT(mEntry->mType == &GetTypeInfo(val), "type mismatch");
+	ZE_ASSERT(mEntry != nullptr, "Assigning to invalid entry");
+	ZE_ASSERT(mEntry->mType == &GetTypeInfo(val), "type mismatch");
 	mEntry->mType->Copy(ConstReflectedValue::From(val), Access());
 	return val;
 }
@@ -210,7 +210,7 @@ public:
 		}
 		else
 		{
-			RASSERT(GetTypeInfo<T>() == *entry.Type);
+			ZE_ASSERT(GetTypeInfo<T>() == *entry.Type);
 		}
 		entry.Enabled = true;
 		*reinterpret_cast<T*>(mData[entry.Pos]) = value;

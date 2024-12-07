@@ -5,6 +5,11 @@
 void BaseSerialized::Modify(bool allChildren /*= false*/, bool modified /*= true*/)
 {
 	mModified = modified;
+	if (mOuter)
+	{
+		mOuter->Modify(false, modified);
+	}
+
 	if (allChildren)
 	{
 		ForAllChildren([modified](BaseSerialized* child)
@@ -14,10 +19,19 @@ void BaseSerialized::Modify(bool allChildren /*= false*/, bool modified /*= true
 	}
 }
 
+void BaseSerialized::ClearModified(bool bAllChildren /*= true*/)
+{
+	mModified = false;
+	ForAllChildren([](BaseSerialized* child)
+	{
+		child->mModified = false;
+	}, true);
+}
+
 void BaseSerialized::ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive /*= false*/)
 {
 	ClassTypeInfo const& thisClass = GetTypeInfo();
-	auto				 handleChild = [&callback, recursive](BaseSerialized* child)
+	auto handleChild = [&callback, recursive](BaseSerialized* child)
 	{
 		callback(child);
 		if (recursive)

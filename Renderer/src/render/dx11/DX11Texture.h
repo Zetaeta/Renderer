@@ -31,11 +31,7 @@ public:
 	using Ref = std::shared_ptr<DX11Texture>;
 
 	//template<template<typename T> typename TPtr>
-	static Ref Create(DX11Ctx* ctx, u32 width, u32 height, u32 const* data, ETextureFlags flags = TF_SRV);
-	static Ref CreateFrom(TextureRef tex, DX11Ctx* ctx, ETextureFlags flags = TF_SRV)
-	{
-		return Create(ctx, u32(tex->width), u32(tex->height), tex->GetData(), flags);
-	}
+	static Ref CreateFrom(TextureRef tex, DX11Ctx* ctx, ETextureFlags flags = TF_SRV);
 
 	void Resize(u32 width, u32 height);
 
@@ -81,10 +77,14 @@ public:
 public:
 	void CreateSRV() override;
 
+	void DestroyResources();
+
  private:
 	void CreateResources(TextureData textureData = {});
 	void CreateRenderTarget(D3D11_TEXTURE2D_DESC const& textureDesc);
 	void CreateSRV(D3D11_TEXTURE2D_DESC const& textureDesc);
+
+	void* GetShaderResource(ShaderResourceId id) override;
 
 	ComPtr<ID3D11ShaderResourceView> m_SRV = nullptr;
 	ComPtr<ID3D11ShaderResourceView> m_StencilSRV = nullptr;

@@ -17,7 +17,6 @@
 #include <assimp/scene.h>		// Output data structure
 #include <assimp/postprocess.h> // Post processing flags
 
-using namespace std;
 using namespace glm;
 namespace fs = std::filesystem;
 
@@ -78,7 +77,7 @@ protected:
 	ClassTypeInfo const* m_SelectedSO = nullptr;
 
 	UserCamera m_Camera;
-	unique_ptr<IRenderer> m_Renderer;
+	std::unique_ptr<IRenderer> m_Renderer;
 	AssetManager m_AssMan;
 	float m_FrameTime = 0;
 	Timer m_Timer;

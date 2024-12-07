@@ -10,6 +10,8 @@
 #include "Shader.h"
 #include "passes/PostProcessPass.h"
 #include "shaders/ShaderDeclarations.h"
+#include "WavyEffectPPPass.h"
+#include "passes/GBufferPass.h"
 
 namespace rnd
 {
@@ -36,6 +38,12 @@ RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, ID
 void RenderContext::SetupRenderTarget()
  {
 	DeviceTextureDesc dsDesc = mTarget->Desc;
+
+	DeviceTextureDesc primaryRTDesc = mTarget->Desc;
+	primaryRTDesc.DebugName = "Primary RT";
+	primaryRTDesc.Flags = ETextureFlags::TF_RenderTarget | ETextureFlags::TF_SRGB | ETextureFlags::TF_SRV;
+	mPrimaryTarget = mDevice->CreateTexture2D(primaryRTDesc);
+
 	if (mUseMSAA)
 	{
 		DeviceTextureDesc msaaRTDesc = mTarget->Desc;
@@ -49,12 +57,15 @@ void RenderContext::SetupRenderTarget()
 	}
 	else
 	{
-		mMainRT = mTarget->GetRT();
+		mMainRT = mPrimaryTarget->GetRT();
+		mMsaaTarget = nullptr;
+		//mMainRT = mTarget->GetRT();
 	}
 
 	// Second target for postprocess effects
 	{
 		DeviceTextureDesc ppDesc = mTarget->Desc;
+		ppDesc.Flags |= TF_SRGB;
 		ppDesc.DebugName = "PostProcess RT";
 		mPPTarget = mDevice->CreateTexture2D(ppDesc);
 	}
@@ -71,17 +82,43 @@ void RenderContext::SetupRenderTarget()
 
  void RenderContext::SetupPasses()
  {
+	mPasses.clear();
+	mPPPasses.clear();
 	mPasses.emplace_back(std::make_unique<ShadowmapsPass>(this));
 	mPasses.emplace_back(std::make_unique<ForwardRenderPass>(this, "ForwardRender", mCamera, mMainRT, mMainDS));
 	mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::BACK, "Background", static_cast<dx11::DX11Renderer*>(mDeviceCtx)->m_BG.get()));
-#if RBUILD_EDITOR
-	mPasses.emplace_back(MakeOwning<HighlightSelectedPass>(this));
+
+	DeviceTextureDesc gbAlbedoDesc = mTarget->Desc;
+	gbAlbedoDesc.DebugName = "GBuffer";
+	gbAlbedoDesc.Flags = TF_RenderTarget | TF_SRV;
+	gbAlbedoDesc.Format = ETextureFormat::RGBA8_Unorm_SRGB;
+	auto gbAlbedo = mDeviceCtx->Device->CreateTexture2D(gbAlbedoDesc);
+
+	DeviceTextureDesc gbNormalDesc = mTarget->Desc;
+	gbNormalDesc.DebugName = "GBuffer Normal";
+	gbNormalDesc.Flags = TF_RenderTarget | TF_SRV;
+	gbNormalDesc.Format = ETextureFormat::RGBA8_Unorm;
+	auto gbNormal = mDeviceCtx->Device->CreateTexture2D(gbAlbedoDesc);
+//	mPasses.emplace_back(std::make_unique<GBufferPass>(this, "GBuffer", mCamera, gbAlbedo->GetRT(), gbNormal->GetRT(), mMainDS));
+#if ZE_BUILD_EDITOR
+//	mPasses.emplace_back(MakeOwning<HighlightSelectedPass>(this));
 #endif
 	mDebugCubePass = static_cast<RenderCubemap*>(mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::FRONT, "DebugCube")).get());
 	memset(mLayersEnabled, 1, Denum(EShadingLayer::COUNT));
 
 	SetupPostProcess();
+
+	BuildGraph();
  }
+
+void RenderContext::SetupPostProcess()
+{
+	mPingPongHandle = mRGBuilder.MakeFlipFlop(mPrimaryTarget, mPPTarget);
+	auto stencilHdl = mRGBuilder.AddFixedSRV({mDSTex, SRV_StencilBuffer});
+	mPPPasses.push_back(MakeOwning<PostProcessPass>(this, GetShader<OutlinePPPS>(), mPingPongHandle, RGShaderResources({mPingPongHandle, stencilHdl}), "Outline"));
+	mPPPasses.emplace_back(MakeOwning<WavyEffectPPPass>(this, mPingPongHandle, RGShaderResources({mPingPongHandle})))->SetEnabled(false);
+}
+
 
  void RenderContext::RenderFrame(Scene const& scene)
 {
@@ -99,23 +136,50 @@ void RenderContext::SetupRenderTarget()
 
 	if (mUseMSAA)
 	{
-		mDeviceCtx->ResolveMultisampled({ mTarget }, {mMsaaTarget});
+		mDeviceCtx->ResolveMultisampled({ mPrimaryTarget }, {mMsaaTarget});
 	}
 
 	Postprocessing();
 }
 
-void RenderContext::Postprocessing()
+void RenderContext::BuildGraph()
 {
-	int passCount=0;
+	mRGBuilder.Reset();
+
+	for (auto& pass : mPasses)
+	{
+		if (pass->IsEnabled())
+		{
+			pass->Build(mRGBuilder);
+		}
+	}
+
 	for (auto& pass : mPPPasses)
 	{
-		pass->Execute(*this);
-		++passCount;
+		if (pass->IsEnabled())
+		{
+			pass->Build(mRGBuilder);
+		}
 	}
-	if (passCount % 2 == 1)
+}
+
+void RenderContext::Postprocessing()
+{
+	for (auto& pass : mPPPasses)
+	{
+		if (pass->IsEnabled())
+		{
+			pass->Execute(*this);
+		}
+	}
+
+	if (static_cast<RGFlipFlop*>(mRGBuilder[mPingPongHandle])->IsOdd())
 	{
 		mDeviceCtx->Copy(mTarget, mPPTarget);
+	}
+	else
+	{
+		mDeviceCtx->Copy(mTarget, mPrimaryTarget);
 	}
 }
 
@@ -156,7 +220,7 @@ LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 l
 			}
 
 			DeviceTextureDesc desc;
-			desc.Flags = TF_DEPTH;
+			desc.Flags = TF_DEPTH | TF_SRV;
 			desc.Height = desc.Width = 1024;
 			desc.DebugName = debugName;
 			desc.Format = ETextureFormat::D32_Float;
@@ -241,6 +305,45 @@ void RenderContext::DrawControls()
 {
 	static char const* const BRDFs[] = { "Blinn-Phong", "GGX" };
 	ImGui::Combo("BRDF", &mBrdf, BRDFs, 2, 2);
+
+	bool needsRebuild = false;
+	auto passBox = [&needsRebuild, this](RenderPass& pass)
+	{
+		bool enabled = pass.IsEnabled();
+		ImGui::PushID(&pass);
+		if (ImGui::Checkbox(pass.GetName().c_str(), &enabled))
+		{
+			needsRebuild = true;
+			pass.SetEnabled(enabled);
+		}
+		ImGui::PopID();
+	};
+
+	for (auto& pass : mPasses)
+	{
+		passBox(*pass);
+	}
+
+	for (auto& pass : mPPPasses)
+	{
+		passBox(*pass);
+	}
+
+	bool needsFullRebuild = false;
+	if (ImGui::Checkbox("MSAA", &mUseMSAA))
+	{
+		needsFullRebuild = true;
+	}
+
+	if (needsFullRebuild)
+	{
+		SetupRenderTarget();
+		SetupPasses();
+	}
+	else if (needsRebuild)
+	{
+		BuildGraph();
+	}
 }
 
 void RenderContext::DrawPrimComp(const PrimitiveComponent* component, const IDeviceMaterial* matOverride /*= nullptr*/, EShadingLayer layer /*= EShadingLayer::BASE*/)
@@ -338,11 +441,6 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 		DeviceCtx()->SetConstantBuffers(EShaderType::Vertex, cbs, index);
 	}
 	DeviceCtx()->DrawMesh(*primitive, layer, matOverride == nullptr);
-}
-
-void RenderContext::SetupPostProcess()
-{
-	mPPPasses.push_back(MakeOwning<PostProcessPass>(this, GetShader<OutlinePPPS>(), mPPTarget->GetRT(), ShaderResources{{mTarget}}));
 }
 
 IDepthStencil::Ref RenderContext::GetTempDepthStencilFor(IRenderTarget::Ref rt)

@@ -23,6 +23,6 @@ using Microsoft::WRL::ComPtr;
 	if (resource)\
 	{                           \
 		resource->AddRef();\
-		RASSERT(resource->Release() == 1);\
+		ZE_ASSERT (resource->Release() == 1);\
 	}
 

@@ -35,7 +35,7 @@ class DX11ShaderCompiler final : public IShaderCompiler
 public:
 	DX11ShaderCompiler(ID3D11Device* device)
 		: mDevice(device) {}
-	OwningPtr<IDeviceShader> CompileShader(ShaderInstanceId const& id, const String& file, const ShaderCompileEnv& env,
+	OwningPtr<IDeviceShader> CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc, const ShaderCompileEnv& env,
 		EShaderType ShaderType, VertexAttributeMask vsInputMask, bool forceRecompile) override final;
 
 	char const* GetShaderTypeString(EShaderType shaderType);

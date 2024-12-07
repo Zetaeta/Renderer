@@ -8,7 +8,7 @@ namespace rnd
 
 void ShadowmapsPass::OnCollectFinished()
 {
-	DeviceCtx()->SetDepthMode(EDepthMode::LESS);
+	DeviceCtx()->SetDepthStencilMode(EDepthMode::Less);
 	for (ELightType lightType = ELightType::START; lightType < ELightType::COUNT; ++lightType)
 	{
 		auto const& lrd = mRCtx->GetLightData(lightType);

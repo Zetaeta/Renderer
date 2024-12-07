@@ -28,7 +28,7 @@ class SceneObject : public BaseSerialized, public std::enable_shared_from_this<S
 
 	bool ImGuiControls();
 
-	SceneComponent* GetRoot()
+	SceneComponent* GetRoot() const
 	{
 		return root.get();
 	}
@@ -43,7 +43,7 @@ class SceneObject : public BaseSerialized, public std::enable_shared_from_this<S
 		m_Scene = scene;
 	}
 
-	void Modify(bool bAllChildren);
+	void Modify(bool bAllChildren = false, bool modified = true) override;
 
 	void Update();
 

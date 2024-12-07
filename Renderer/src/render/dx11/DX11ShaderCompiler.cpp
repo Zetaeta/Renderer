@@ -2,13 +2,16 @@
 #include "D3Dcompiler.h"
 #include "core/WinUtils.h"
 #include "core/Logging.h"
+#include "SharedD3D11.h"
 namespace rnd
 {
 namespace dx11
 {
 
-OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId const& id, const String& file, const ShaderCompileEnv& env, EShaderType shaderType, VertexAttributeMask inputMask, bool forceRecompile)
+OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc,
+	const ShaderCompileEnv& env, EShaderType shaderType, VertexAttributeMask inputMask, bool forceRecompile)
 {
+	const String& file = desc.File;
 	Vector<D3D_SHADER_MACRO> macros;
 	macros.reserve(env.Defines.size());
 	for (auto const& pair : env.Defines)
@@ -36,11 +39,15 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 	if (forceRecompile || !fs::exists(cso) || fs::last_write_time(cso) < lastWrite)
 	{
 		RLOG(LogGlobal, Info, "Compiling shader in file %s\n", src.string().c_str());
-		HRESULT hr = D3DCompileFromFile(src.wstring().c_str(), Addr(macros), D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", GetShaderTypeString(shaderType), flags, 0, &outBlob, &errBlob);
+		HRESULT hr = D3DCompileFromFile(src.wstring().c_str(), Addr(macros), D3D_COMPILE_STANDARD_FILE_INCLUDE, desc.EntryPoint.c_str(), GetShaderTypeString(shaderType), flags, 0, &outBlob, &errBlob);
 		if (SUCCEEDED(hr))
 		{
 			RLOG(LogGlobal, Info, "Saving to file %s\n", cso.string().c_str());
 			HR_ERR_CHECK(D3DWriteBlobToFile(outBlob.Get(), cso.c_str(), true));
+			if (errBlob != nullptr && errBlob->GetBufferPointer() != nullptr)
+			{
+				RLOG(LogGlobal, Info, "Compile warning: %s\n", (const char*) errBlob->GetBufferPointer());
+			}
 		}
 		else
 		{
@@ -70,29 +77,32 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 			auto result = MakeOwning<DX11VertexShader>();
 			HR_ERR_CHECK(mDevice->CreateVertexShader(outBlob->GetBufferPointer(), outBlob->GetBufferSize(), nullptr, &result->Shader));
 			mShadersForCIL[inputMask] = outBlob;
+			SetResourceName(result->Shader, desc.Name);
 			return result;
 		}
 		case EShaderType::Pixel:
 		{
 			auto result = MakeOwning<DX11PixelShader>();
 			HR_ERR_CHECK(mDevice->CreatePixelShader(outBlob->GetBufferPointer(), outBlob->GetBufferSize(), nullptr, &result->Shader));
+			SetResourceName(result->Shader, desc.Name);
 			return result;
 		}
 		case EShaderType::Geometry:
 		{
 			auto result = MakeOwning<DX11GeometryShader>();
 			HR_ERR_CHECK(mDevice->CreateGeometryShader(outBlob->GetBufferPointer(), outBlob->GetBufferSize(), nullptr, &result->Shader));
+			SetResourceName(result->Shader, desc.Name);
 			return result;
 		}
 		case EShaderType::Compute:
 		{
 			auto result = MakeOwning<DX11ComputeShader>();
 			HR_ERR_CHECK(mDevice->CreateComputeShader(outBlob->GetBufferPointer(), outBlob->GetBufferSize(), nullptr, &result->Shader));
+			SetResourceName(result->Shader, desc.Name);
 			return result;
 		}
-		case EShaderType::Count:
-			break;
 		default:
+			ZE_ASSERT(false);
 			break;
 	}
 	return nullptr;

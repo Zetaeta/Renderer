@@ -1,17 +1,58 @@
 #include "DX11Device.h"
+#include "container/Vector.h"
+#include "asset/Texture.h"
 
 namespace rnd
 {
 namespace dx11
 {
 
- DX11Device::DX11Device(ID3D11Device* pDevice)
-		: IRenderDevice(&mShaderMgr), mDevice(pDevice), mCompiler(pDevice), mShaderMgr(&mCompiler)
+DX11Device::DX11Device(ID3D11Device* pDevice)
+	: IRenderDevice(&mShaderMgr), mDevice(pDevice), mCompiler(pDevice), mShaderMgr(&mCompiler)
 {
 	mSemanticsToMask["Position"] = VA_Position;
 	mSemanticsToMask["Normal"] = VA_Normal;
 	mSemanticsToMask["Tangent"] = VA_Tangent;
 	mSemanticsToMask["TexCoord"] = VA_TexCoord;
+	OnDevicesReady();
+}
+
+DX11Device::~DX11Device()
+{
+	OnDevicesShutdown();
+}
+
+void DX11Device::ProcessTextureCreations()
+{
+	std::scoped_lock lock(mCreateDestroyMtx);
+	for (Texture* tex : mCreateCommands)
+	{
+		DeviceTextureDesc desc;
+		desc.Flags = TF_SRV;
+		desc.Width = tex->width;
+		desc.Height = tex->height;
+		desc.NumMips = 0;
+		desc.DebugName = tex->GetName();
+		desc.Format = tex->Format;
+		if (desc.Format == ETextureFormat::RGBA8_Unorm_SRGB)
+		{
+			desc.Flags |= TF_SRGB;
+		}
+		auto			result = std::make_shared<DX11Texture>(*mCtx, desc, tex->GetData());
+	#if !MULTI_RENDER_BACKEND
+		tex.SetDeviceTexture(result);
+	#endif
+		mTextures[tex->Id] = result;
+	}
+	mCreateCommands.clear();
+#if MULTI_RENDER_BACKEND
+	for (auto& destroyCmd : mDestroyCommands)
+	{
+		mTextures.erase(destroyCmd.TexId);
+		destroyCmd.DevTex = nullptr;
+	}
+#endif
+	mDestroyCommands.clear();
 }
 
 DeviceMeshRef DX11Device::CreateDirectMesh(VertexAttributeDesc::Handle vertAtts, u32 numVerts, u32 vertSize, void const* data)
@@ -92,9 +133,48 @@ DXGI_FORMAT DX11Device::GetFormatForType(TypeInfo const* type)
 	{
 		return DXGI_FORMAT_R32G32B32_FLOAT;
 	}
-	RASSERT(false);
+	ZE_ASSERT(false);
 	return DXGI_FORMAT_R32_FLOAT;
 }
+
+void DX11Device::CreateRenderTexture(class Texture* texture)
+{
+	std::scoped_lock lock(mCreateDestroyMtx);
+	mCreateCommands.push_back(texture);
+}
+
+void DX11Device::DestroyRenderTexture(class Texture* texture)
+{
+	std::scoped_lock lock(mCreateDestroyMtx);
+	if (!Remove(mCreateCommands, texture))
+	{
+		mDestroyCommands.push_back({texture->Id, GetRenderTexture(texture)});
+		#if !MULTI_RENDER_BACKEND
+		texture->SetDeviceTexture(nullptr);
+		#endif
+		return;
+	}
+
+}
+
+rnd::DeviceTextureRef DX11Device::GetDeviceTexture(const Texture* texture)
+{
+	return static_pointer_cast<IDeviceTexture>(GetRenderTexture(texture));
+}
+
+#if MULTI_RENDER_BACKEND
+rnd::dx11::DX11TextureRef DX11Device::GetRenderTexture(const Texture* texture)
+{
+	if (auto it = mTextures.find(texture->Id); it != mTextures.end())
+	{
+		return it->second;
+	}
+	ZE_ASSERT(false);
+	return nullptr;
+	//ZE_ASSERT(texture != Texture::EMPTY.get());
+	//return GetRenderTexture(Texture::EMPTY.get());
+}
+#endif
 
 }
 }

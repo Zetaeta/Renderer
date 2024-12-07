@@ -19,7 +19,7 @@ public:
 	{
 		HandleType handle = GetNewHandle();
 		auto it = mObjects.insert({handle, T{std::forward<Args>(args)...}});
-		RASSERT(it.second);
+		ZE_ASSERT(it.second);
 		return {handle, &it.first->second};
 	}
 

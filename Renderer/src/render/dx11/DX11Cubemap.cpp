@@ -47,7 +47,9 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 	}
 
 	HR_ERR_CHECK(ctx.pDevice->CreateTexture2D(&texDesc, initData, &cubeTex));
+	SetResourceName(cubeTex, desc.DebugName);
 	HR_ERR_CHECK(ctx.pDevice->CreateShaderResourceView(cubeTex.Get(), &srvDesc, &srv));
+	SetResourceName(srv, desc.DebugName);
 	if (desc.Flags & TF_DEPTH)
 	{
 		DepthStencilDesc dsDesc{ std::format("{}DS", desc.DebugName), ETextureDimension::TEX_CUBE };
@@ -143,13 +145,13 @@ IDepthStencil::Ref DX11Cubemap::GetDS()
 
 MappedResource DX11Cubemap::Map(u32 subResource, ECpuAccessFlags flags)
 {
-	RASSERT(false);
+	ZE_ASSERT(false);
 	return MappedResource {};
 }
 
 void DX11Cubemap::Unmap(u32 subResource)
 {
-	RASSERT(false);
+	ZE_ASSERT(false);
 }
 
 void DX11ShadowCube::Init(DX11Ctx& ctx, u32 size)

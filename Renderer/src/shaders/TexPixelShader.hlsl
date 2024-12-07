@@ -18,13 +18,16 @@
 #define DEBUG_MODE_METALNESS 4
 #define DEBUG_MODE_DEPTH 5
 
+#ifndef BASE_LAYER
+#define BASE_LAYER 1
+#endif
 
 cbuffer PerFramePSData : register(b0) {
-#ifdef BASE_LAYER
+#if BASE_LAYER
 	float3 ambient;
 #endif
 #ifdef DIR_LIGHT
-#define USE_NORMAL
+#define USE_NORMAL 1
 #define SHADOWMAP_2D
 	float3 dirLightCol;
 	float3 dirLightDir;
@@ -32,7 +35,7 @@ cbuffer PerFramePSData : register(b0) {
 #endif
 
 #ifdef POINT_LIGHT
-#define USE_NORMAL
+#define USE_NORMAL 1
 	float3 pointLightPos;
 	float pointLightRad;
 	float3 pointLightCol;
@@ -41,7 +44,7 @@ cbuffer PerFramePSData : register(b0) {
 #endif
 
 #ifdef SPOTLIGHT
-#define USE_NORMAL
+#define USE_NORMAL 1
 #define SHADOWMAP_2D
 	float3 spotLightPos;
 	float spotLightTan;
@@ -54,6 +57,9 @@ cbuffer PerFramePSData : register(b0) {
 	float debugGrayscaleExp;
 	int brdf = 0;
 };
+#ifndef USE_NORMAL
+#define USE_NORMAL 0
+#endif
 
 cbuffer PerInstancePSData : register(b1) {
 	float4 matColour;
@@ -71,14 +77,16 @@ cbuffer PerInstancePSData : register(b1) {
 	uint stencilVal;
 #endif
 };
+#define EMISSIVE BASE_LAYER
 
 #if TEXTURED
 Texture2D diffuse;// : register(t0);
-#ifndef BASE_LAYER
+#if BASE_LAYER
+Texture2D emissiveMap;// : register(t2);
+#endif
+#if USE_NORMAL
 Texture2D normalMap;// : register(t1);
 Texture2D roughnessMap;
-#else
-Texture2D emissiveMap;// : register(t2);
 #endif
 #endif
 
@@ -87,6 +95,9 @@ Texture2D spotShadowMap;
 #endif
 
 #ifdef POINT_LIGHT
+#if !USE_NORMAL
+#error Ohno
+#endif
 TextureCube pointShadowMap;
 #endif
 
@@ -102,91 +113,19 @@ float squareLen(float3 v)
 	return dot(v,v);
 }
 
+#include "Material.hlsli"
+
 //template<class Vec>
 //float pdot(Vec a, Vec b)
 //{
 //	return saturate(dot(a,b));
 //}
 
-#define pdot(a,b) saturate(dot(a,b));
-
-static const float PI = 3.14159265f;
-static const float dielectricF0 = 0.04;
-
 float4 Greyscale(float value)
 {
 	value = pow(value, debugGrayscaleExp);
 	return float4(value, value, value, value);
 }
-
-#define BLINN
-float3 ComputeLighting_BlinnPhong(float3 normal, float3 diffuseCol, float3 lightCol, float3 lightDir, float roughness, float3 viewDir, float metalness)
-{
-	float alpha = roughness * roughness;
-	float alphasq = max(alpha * alpha,0.001);
-	float specularExp = 2/alphasq - 2;
-	float diffInt = saturate(dot(-lightDir, normal)) * ambdiffspec.y;
-	#ifdef BLINN
-	float f = max(dot(normalize(-viewDir - lightDir),normal), 0.00001f);
-	if (f > 1)
-	{
-		return float3(0,1,0);
-	}
-	#else
-	float3 outRay = normalize(lightDir - 2 * dot(lightDir, normal) * normal);
-	float f = max(dot(viewDir,-outRay), 0.00001f);
-	#endif
-	float specInt = (1-roughness)*(specularExp+8)/(8*PI) * pow(f, specularExp) * (specularExp > 0);// * ambdiffspec.z; 
-	//return diffuseCol * (lightCol * diffInt) + lightCol * specInt;
-	return diffuseCol * (lightCol * diffInt) + lightCol * specInt;
-}
-
-float3 ComputeLighting_GGX(float3 normal, float3 diffuseCol, float3 lightCol, float3 lightDir, float roughness, float3 viewDir, float metalness)
-{
-	viewDir = -viewDir;
-	lightDir = -lightDir;
-	roughness = max(roughness, 0.01);
-	float3 halfVec = normalize(lightDir + viewDir);
-	float alpha = roughness * roughness;
-	float alphasq = alpha * alpha;
-	float NH = pdot(normal, halfVec);
-	float NV = pdot(normal, viewDir);
-    NV	= max (NV, 0.00005);
-	float NL = pdot(normal, lightDir);
-
-	float3 specularCol = metalness * diffuseCol + (1-metalness) * float3(dielectricF0,dielectricF0,dielectricF0);
-	float3 Fresnel = specularCol + (1-specularCol) * pow(1-NL, 5);
-	//return float3(1-NL, 1-NL, 1-NL) + 0.01 * Fresnel;
-	//return Fresnel;
-	float NDF = (NH > 0) * alphasq / (PI * pow(NH * NH * (alphasq - 1) + 1, 2));
-	//return float3(NDF, NDF, NDF);
-	//return Fresnel * NDF * lightCol;
-	float k = alpha/2;
-
-	float G11 = NV / max((NV * (1-k) + k), 0.0001);
-	float G12 = NL / max((NL * (1-k) + k), 0.0001);
-	float GeomShadowing = G11 * G12;
-//	return float3(GeomShadowing, GeomShadowing, GeomShadowing);
-
-	float3 specularPart = lightCol * (Fresnel * GeomShadowing * NDF) / max((4 * NL * NV),0.0001) ;
-//	return specularPart;
-	
-	float diffInt =  ambdiffspec.y;
-	float3 diffusePart = (1-metalness) * diffuseCol * lightCol * diffInt;
-
-    return (diffusePart + specularPart) * NL;
-	
-}
-
-float3 ComputeLighting(float3 normal, float3 diffuseCol, float3 lightCol, float3 lightDir, float roughness, float3 viewDir, float metalness)
-{
-	if (brdf == 1)
-	{
-        return ComputeLighting_GGX(normal, diffuseCol, lightCol, lightDir, roughness, viewDir, metalness);
-    }
-	return ComputeLighting_BlinnPhong(normal, diffuseCol, lightCol, lightDir, roughness, viewDir, metalness);
-}
-
 struct PSOut
 {
 	float4 colour : SV_TARGET;
@@ -195,64 +134,131 @@ struct PSOut
 #endif
 };
 
-float4 CalcColour(
-	#if TEXTURED
-	float2 uv: TexCoord,
-	#endif
-	float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : WorldPos//, float4 lightPos: LightPos
-)
+struct GBufferOut
 {
+    float4 colourRough : SV_Target0;
+    float4 normalMetal : SV_Target1;
+    float4 emissive : SV_Target2;
+};
+
+GBufferOut PackGBuffer(PixelLightingInput li)
+{
+    GBufferOut result;
+    result.colourRough = float4(li.colour, li.roughness);
+    result.normalMetal = float4(li.normal, li.metalness);
+#if BASE_LAYER
+    result.emissive = float4(li.emissive, 1);
+#else
+    result.emissive = 0;
+#endif
+    return result;
+}
+
+struct BasePassPSIn
+{
+#if TEXTURED
+    float2 uv : TexCoord;
+#endif
+    float3 normal : Normal;
+    float3 tangent : Tangent;
+    float3 viewDir : ViewDir;
+    float3 worldPos : WorldPos;
+};
+
+PixelLightingInput GetLightingInput(BasePassPSIn interp)
+{
+    PixelLightingInput result;
+	float4 colour = matColour;
+#if TEXTURED
+	colour = diffuse.Sample(splr, interp.uv);
+#endif
+	{
+    #if (MASKED || TRANSLUCENT)
+        float alpha = texColour.w;
+        if (alphaMask < 1.f && alpha < alphaMask)
+        {
+            discard;
+        }
+    #endif
+    #if TRANSLUCENT
+        result.opacity = alpha;
+    #endif
+    }
+    result.colour = colour.xyz;
+#if EMISSIVE
+    result.emissive = emissiveColour;
+#if TEXTURED
+	if (useEmissiveMap)
+	{
+		result.emissive = emissiveMap.Sample(splr, interp.uv.xy).xyz;
+	}
+#endif
+#endif
+
+#if USE_NORMAL
+	result.normal = normalize(interp.normal);
+    result.roughness = roughness;
+    result.metalness = matMetalness;
+#if TEXTURED
+	if (useNormalMap)
+	{
+		float3 texNorm = 2 * normalMap.Sample(splr, interp.uv.xy).xyz - float3(1,1,1);
+        float3 tangent = normalize(interp.tangent);
+		float3 bitangent = cross(tangent, result.normal);
+		float3 newnormal = texNorm.x * tangent + texNorm.y * bitangent + texNorm.z * result.normal;
+		result.normal = normalize(newnormal);
+	}
+	if (useRoughnessMap)
+	{
+		float3 fullRough = roughnessMap.Sample(splr, interp.uv.xy);
+		result.roughness += fullRough.g;
+		result.metalness += fullRough.r;
+	}
+#endif
+#endif
+    return result;
+}
+
+struct ShadingOut
+{
+    float4 colour : SV_Target;
+};
+
+
+
+float4 CalcColour(BasePassPSIn interp)
+{
+    PixelLightingInput li = GetLightingInput(interp);
 	float4 texColour = matColour;
-	#if TEXTURED
-	texColour = diffuse.Sample(splr, float2(uv.x, uv.y));
-	#endif
+#if TEXTURED
+	texColour = diffuse.Sample(splr, interp.uv);
+#endif
 	float alpha = texColour.w;
+#if (MASKED || TRANSLUCENT)
 	if (alphaMask < 1.f && alpha < alphaMask)
 	{
 		discard;
 	}
+#endif
 	float3 colour = float3(0,0,0);
-	float3 emiss = emissiveColour;
-#ifdef BASE_LAYER
+#if BASE_LAYER
 	if (debugMode == DEBUG_MODE_ALBEDO)
 	{
-		return texColour;
-	}
-#if TEXTURED
-	if (useEmissiveMap)
-	{
-		emiss = emissiveMap.Sample(splr, float2(uv.x, uv.y)).xyz;
-	}
-	colour += emiss;
+        return float4(li.colour, 1);
+    }
+	colour += li.emissive;
+	colour += (ambient * ambdiffspec.x) * li.colour;
 #endif
-	colour += (ambient * ambdiffspec.x) * texColour;
-#else // BASE_LAYER
+#if USE_NORMAL
 	if (debugMode == DEBUG_MODE_ALBEDO)
 	{
 		return float4(0,0,0,0);
 	}
-	normal = normalize(normal);
-	float rough = roughness;
-	float metalness = matMetalness;
-#if TEXTURED
-	if (useNormalMap)
-	{
-		float3 texNorm = 2 * normalMap.Sample(splr, float2(uv.x, uv.y)) - float3(1,1,1);
-		float3 bitangent = cross(tangent, normal);
-		float3 newnormal = texNorm.x * tangent + texNorm.y * bitangent +
-		texNorm.z * normal;
-		normal = normalize(newnormal);
-	}
-	if (useRoughnessMap)
-	{
-		float3 fullRough = roughnessMap.Sample(splr, uv);
-		rough = rough + fullRough.g;
-		metalness += fullRough.r;
-	}
-	
-#endif // TEXTURED
-	viewDir = normalize(viewDir);
-#endif // !BASE_LAYER
+	float3 normal = li.normal;
+	float rough = li.roughness;
+	float metalness = li.metalness;
+	float3 viewDir = normalize(interp.viewDir);
+#endif // USE_NORMAL
 	if (debugMode == DEBUG_MODE_ROUGHNESS)
 	{
 		#ifdef DIR_LIGHT
@@ -278,10 +284,9 @@ float4 CalcColour(
 		#endif
 	}
 
-
-
 	float unshadowed = 0.;
 	const float bias = 0.0005;
+    float3 shadeSpacePos = interp.worldPos;
 #ifdef SHADOWMAP_2D
 	{
 		float4 lightPos = mul(world2Light, float4(shadeSpacePos, 1));
@@ -362,24 +367,20 @@ float4 CalcColour(
 #define IF_TEXTURED(x)
 #endif
 
-PSOut main(
-	#if TEXTURED
-	float2 uv: TexCoord,
-	#endif
-	float3 normal: Normal, float3 tangent : Tangent, float3 viewDir: ViewDir, float3 shadeSpacePos : WorldPos//, float4 lightPos: LightPos
-	)
+GBufferOut GBufferPSMain(BasePassPSIn interp)
+{
+    PixelLightingInput lightingInput = GetLightingInput(interp);
+    return PackGBuffer(lightingInput);
+}
+
+PSOut main(BasePassPSIn interp)
 {
 //	if (debugMode < 0)
 //	{
 //		return float4(1,0,1,1);
 //	}
 	PSOut result;
-	result.colour = CalcColour(
-        #if TEXTURED
-        uv,
-        #endif
-        normal, tangent, viewDir, shadeSpacePos
-    );
+	result.colour = CalcColour(interp);
 #if USE_STENCIL
 	result.stencil = stencilVal;
 #endif

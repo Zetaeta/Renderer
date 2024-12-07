@@ -72,13 +72,13 @@ public:
 
 	OwningPtr<ContainerAccessor> CreateAccessor(ReflectedValue container) const override
 	{
-		RASSERT(container.GetType() == *this);
+		ZE_ASSERT(container.GetType() == *this);
 		return std::make_unique<TAccessor>(container);
 	}
 
 	OwningPtr<ConstContainerAccessor> CreateAccessor(ConstReflectedValue container) const override
 	{
-		RASSERT(container.GetType() == *this);
+		ZE_ASSERT(container.GetType() == *this);
 		return std::make_unique<TConstAccessor>(container);
 	}
 
@@ -91,7 +91,7 @@ public:
 		}
 		else
 		{
-			RASSERT(false, "Not copyable");
+			ZE_ASSERT(false, "Not copyable");
 		}
 	}
 
@@ -110,7 +110,7 @@ public:
 		}
 		else
 		{
-			RASSERT(false, "Not movable");
+			ZE_ASSERT(false, "Not movable");
 		}
 	}
 };
@@ -150,7 +150,7 @@ struct VecNames<N, float, defaultp>
 \
 			TReflectedValue<IsConst> GetAt(size_t pos) override\
 			{\
-				RASSERT(pos < SIZE);\
+				ZE_ASSERT (pos < SIZE);\
 				return TReflectedValue<IsConst>::From(m_Start[pos]);\
 			}\
 \
@@ -161,7 +161,7 @@ struct VecNames<N, float, defaultp>
 \
 			void Resize(size_t size)\
 			{\
-				RASSERT(false);\
+				ZE_ASSERT (false);\
 			}\
 			\
 			CEntry* m_Start;\
@@ -196,7 +196,7 @@ struct TypeInfoHelper<vec<N,T,Q>>
 
 		TReflectedValue<IsConst> GetAt(size_t pos) override
 		{
-			RASSERT(pos < N);
+			ZE_ASSERT(pos < N);
 			return TReflectedValue<IsConst>::From(m_Vec[NumCast<glm::length_t>(pos)]);
 		}
 
@@ -208,7 +208,7 @@ struct TypeInfoHelper<vec<N,T,Q>>
 
 		void Resize(size_t size)
 		{
-			RASSERT(false);
+			ZE_ASSERT(false);
 		}
 		
 		cvec& m_Vec;
@@ -237,7 +237,7 @@ struct TypeInfoHelper<Vector<TEntry>>
 
 		ConstReflectedValue GetAt(size_t pos)
 		{
-			RASSERT(pos < m_Vec.size());
+			ZE_ASSERT(pos < m_Vec.size());
 			return ConstReflectedValue::From(m_Vec[pos]);
 		}
 
@@ -264,7 +264,7 @@ struct TypeInfoHelper<Vector<TEntry>>
 		
 		ReflectedValue GetAt(size_t pos)
 		{
-			RASSERT(pos < m_Vec.size());
+			ZE_ASSERT(pos < m_Vec.size());
 			return ReflectedValue::From(m_Vec[pos]);
 		}
 

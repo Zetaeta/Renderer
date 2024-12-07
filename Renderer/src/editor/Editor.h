@@ -38,6 +38,8 @@ public:
 
 	static Editor* Create(Input* input, class RenderManager* rmg);
 
+	static void Destroy();
+
 	void SelectComponent(class SceneComponent* Component);
 
 	void ClickComponent(class SceneComponent* Component);

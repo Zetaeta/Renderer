@@ -62,7 +62,7 @@ public:
 	void SetParent(SceneComponent* parent)
 	{
 		m_Parent = parent;
-		m_Object = parent->GetOwner();
+		mOuter = m_Object = parent->GetOwner();
 	}
 
 
@@ -136,6 +136,7 @@ protected:
 	void SetOwner(SceneObject* owner)
 	{
 		m_Object = owner;
+		mOuter = owner;
 	}
 
 	RefPtr<ScreenObject> mScreenObj;
@@ -157,6 +158,13 @@ protected:
 	bool m_Dirty = true;
 	bool m_AnyDirty = true;
 	bool m_Initialized = false;
+
+public:
+
+#if ZE_BUILD_EDITOR
+	bool Selected = false;
+#endif
+
 
 	void MarkDirty()
 	{

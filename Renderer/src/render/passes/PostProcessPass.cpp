@@ -6,8 +6,8 @@
 namespace rnd
 {
 
- PostProcessPass::PostProcessPass(RenderContext* rCtx, PixelShader const* shader, IRenderTarget::Ref dest, ShaderResources&& resources)
-	: RenderPass(rCtx), mShader(shader), mResources(std::move(resources)), mRenderTarget(dest)
+ PostProcessPass::PostProcessPass(RenderContext* rCtx, PixelShader const* shader, RGRenderTargetRef dest, RGShaderResources&& resources, String&& name)
+	: RenderPass(rCtx, std::move(name)), mShader(shader), mResources(std::move(resources)), mRenderTarget(dest)
 {
 	 mVertexShader = rCtx->GetShaderManager().GetCompiledShader<PostProcessVS>();
  }
@@ -15,18 +15,24 @@ namespace rnd
 void PostProcessPass::Execute(RenderContext& renderCtx)
 {
 	auto context = DeviceCtx();
-	context->SetRTAndDS(mRenderTarget, nullptr);
+	context->SetRTAndDS(mRenderTarget.ResolvedRT, nullptr);
 //	context->ClearRenderTarget(mRenderTarget, )
 	context->SetBlendMode(EBlendState::COL_OVERWRITE);
-	context->SetViewport(mRenderTarget->Desc.Width, mRenderTarget->Desc.Height);
+	context->SetViewport(mRenderTarget.ResolvedRT->Desc.Width, mRenderTarget.ResolvedRT->Desc.Height);
 	context->SetVertexShader(mVertexShader);
 	context->SetPixelShader(mShader);
-	context->SetShaderResources(EShaderType::Pixel, mResources.SRVs);
+	context->SetShaderResources(EShaderType::Pixel, mResources.ResolvedViews);
 	auto tri = Device()->BasicMeshes.GetFullScreenTri();
 	ZE_REQUIRE(tri);
 	context->SetVertexLayout(tri->GetVertexAttributes());
 	context->DrawMesh(tri);
-	context->SetShaderResources(EShaderType::Pixel, Vector<IDeviceTextureRef>(mResources.SRVs.size()));
+	context->SetShaderResources(EShaderType::Pixel, ShaderResources(mResources.Count()));
+}
+
+void PostProcessPass::Build(RGBuilder& builder)
+{
+	mResources.Resolve(builder);
+	mRenderTarget.Resolve(builder);
 }
 
 }

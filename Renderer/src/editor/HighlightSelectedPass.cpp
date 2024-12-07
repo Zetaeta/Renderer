@@ -46,12 +46,12 @@ void HighlightSelectedPass::DrawPrimitive(const PrimitiveComponent* primComp)
 		return;
 	}
 
-	static col4 const HighlightColour(.5f, .5f, 0.f, 0.f);
+	static col4 const HighlightColour(.1f, .1f, 0.f, 0.f);
 	ScopedCBOverride colourOverride(*mRCtx, CB::colour, HighlightColour);
 	auto material = mRCtx->GetMaterialManager()->GetDefaultMaterial(MAT_PLAIN);
 	material->Bind(*mRCtx, EShadingLayer::BASE);
 	DeviceCtx()->SetBlendMode(EBlendState::COL_ADD | EBlendState::ALPHA_MAX);
-	DeviceCtx()->SetDepthMode(EDepthMode::LESS_EQUAL);
+	DeviceCtx()->SetDepthStencilMode(EDepthMode::LessEqual | EDepthMode::NoWrite);
 	mRCtx->DrawPrimComp(primComp, material);
 }
 

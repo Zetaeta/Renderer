@@ -1,6 +1,5 @@
 #include "RenderApp.h"
 
-using namespace std;
 using namespace glm;
 namespace fs = std::filesystem;
 

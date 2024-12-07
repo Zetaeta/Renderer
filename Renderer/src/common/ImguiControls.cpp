@@ -226,7 +226,8 @@ bool ImGuiControls(ClassValuePtr obj, bool isConst, const PropertyFilter& filter
 {
 	bool changed = false;
 	obj = obj.Downcast();
-	obj.GetRuntimeType().ForEachProperty([&obj, &changed, isConst, &filter] (PropertyInfo const& prop)
+	auto const& type = obj.GetRuntimeType();
+	type.ForEachProperty([&obj, &changed, isConst, &filter] (PropertyInfo const& prop)
 	{
 		if (rg::find(filter.ExcludedProperties, &prop) != filter.ExcludedProperties.end()
 			|| rg::find_if(filter.ExcludedTypes, [&prop](const TypeInfo* type)
@@ -252,5 +253,12 @@ bool ImGuiControls(ClassValuePtr obj, bool isConst, const PropertyFilter& filter
 		}
 		
 	});
+	if (changed)
+	{
+		if (type.IsA<BaseSerialized>())
+		{
+			obj.GetAs<BaseSerialized>().Modify(false);
+		}
+	}
 	return changed;
 }

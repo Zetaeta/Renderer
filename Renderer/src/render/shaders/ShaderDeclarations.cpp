@@ -3,6 +3,7 @@
 
 namespace rnd
 {
-DEFINE_SHADER(OutlinePPPS, "OutlinePP_PS");
-DEFINE_SHADER(PostProcessVS, "PostProcess_VS");
+DEFINE_SHADER(WavyPPPS, "WavyPP_PS", "main");
+DEFINE_SHADER(OutlinePPPS, "OutlinePP_PS", "main");
+DEFINE_SHADER(PostProcessVS, "PostProcess_VS", "main");
 }

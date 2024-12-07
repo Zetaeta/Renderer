@@ -136,6 +136,9 @@ void AssetManager::Perform(MatLoadingJob& job)
 	LoadMatTexture(job.m_Normal,	normal, job.m_MeshPath, job.m_Import);
 	LoadMatTexture(job.m_Emissive,	emissive, job.m_MeshPath, job.m_Import);
 	LoadMatTexture(job.m_Roughness, roughness, job.m_MeshPath, job.m_Import);
+
+	albedo->Format = ETextureFormat::RGBA8_Unorm_SRGB;
+	emissive->Format = ETextureFormat::RGBA8_Unorm_SRGB;
 	{
 		std::lock_guard lock{ mat.GetUpdateMutex() };
 		mat.albedo = albedo;
@@ -649,13 +652,13 @@ void AssetManager::DrawControls()
 
 void AssetManager::Start()
 {
-	RASSERT(m_WorkerThread == nullptr);
+	ZE_ASSERT(m_WorkerThread == nullptr);
 	m_WorkerThread = std::make_unique<std::thread>([this] { Work(); });
 }
 
 void AssetManager::Finish()
 {
-	RASSERT(m_WorkerThread != nullptr && m_WorkerThread->joinable());
+	ZE_ASSERT(m_WorkerThread != nullptr && m_WorkerThread->joinable());
 	m_LoadingJobs.push(FinishJob{});
 	m_WorkerThread->join();
 	m_WorkerThread = nullptr;

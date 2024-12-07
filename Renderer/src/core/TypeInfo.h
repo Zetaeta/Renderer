@@ -20,8 +20,39 @@ enum class ETypeCategory : u8
 class TypeInfo;
 class ClassTypeInfo;
 
+
 template<typename T>
-TypeInfo const& GetTypeInfo();
+struct TypeInfoHelper
+{
+};
+//template<typename T>
+//inline TypeInfo const& GetTypeInfo();
+
+template<typename T>
+concept HasInternalTypeInfo = requires(T a)
+{
+	T::TypeInfoHelper::s_TypeInfo;
+};
+
+template<typename T>
+concept HasExternalTypeInfo = requires(T a)
+{
+	TypeInfoHelper<T>::s_TypeInfo;
+};
+
+template<typename T>
+inline TypeInfo const& GetTypeInfo()
+	requires(HasExternalTypeInfo<T>)
+{
+	return TypeInfoHelper<std::remove_cvref_t<T>>::s_TypeInfo;// g_TypeDB[TypeInfoHelper<T>::ID].Get();
+}
+
+template<typename T>
+	requires(HasInternalTypeInfo<T>)
+inline TypeInfo const& GetTypeInfo()
+{
+	return std::remove_cvref_t<T>::TypeInfoHelper::s_TypeInfo;// g_TypeDB[TypeInfoHelper<T>::ID].Get();
+}
 
 template<typename T>
 TypeInfo const& GetTypeInfo(T const&)
@@ -176,7 +207,7 @@ public:
 
 	virtual TypeInfo const& GetRuntimeType(ConstReflectedValue val) const
 	{
-		RASSERT(val.GetType() == *this);
+		ZE_ASSERT(val.GetType() == *this);
 		return *this;
 	}
 
@@ -202,43 +233,11 @@ private:
 };
 
 
-template<typename T>
-struct TypeInfoHelper
-{
-	
-};
-
 //template<typename T>
 //struct TypeInfoHelper
 //{
 //	
 //};
-
-template<typename T>
-concept HasInternalTypeInfo = requires(T a)
-{
-	T::TypeInfoHelper::s_TypeInfo;
-};
-
-template<typename T>
-concept HasExternalTypeInfo = requires(T a)
-{
-	TypeInfoHelper<T>::s_TypeInfo;
-};
-
-template<typename T>
-inline TypeInfo const& GetTypeInfo()
-	requires(HasExternalTypeInfo<T>)
-{
-	return TypeInfoHelper<std::remove_cvref_t<T>>::s_TypeInfo;// g_TypeDB[TypeInfoHelper<T>::ID].Get();
-}
-
-template<typename T>
-	requires(HasInternalTypeInfo<T>)
-inline TypeInfo const& GetTypeInfo()
-{
-	return std::remove_cvref_t<T>::TypeInfoHelper::s_TypeInfo;// g_TypeDB[TypeInfoHelper<T>::ID].Get();
-}
 
 template<typename T>
 concept HasTypeInfo = HasInternalTypeInfo<T> || HasExternalTypeInfo<T>;
@@ -298,7 +297,7 @@ public:
 
 	void Move(ReflectedValue const& from, ReflectedValue const& to) const override
 	{
-		RASSERT(from.GetType() == *this && to.GetType() == *this);
+		ZE_ASSERT(from.GetType() == *this && to.GetType() == *this);
 		to.GetAs<T>() = std::move(from.GetAs<T>());
 	}
 };
@@ -379,7 +378,7 @@ String GetTypeName()
 #define DEFINE_BASIC_TYPEINFO(typ)\
 	 BasicTypeInfo<typ> const TypeInfoHelper<typ>::s_TypeInfo(#typ);
 	//ATSTART(typ##TypeInfoDecl, {\
-	//	RASSERT(g_TypeDB.find(TypeInfoHelper<typ>::ID) == g_TypeDB.end(), "Type %s was already defined", #typ);\
+	//	ZE_ASSERT (g_TypeDB.find(TypeInfoHelper<typ>::ID) == g_TypeDB.end(), "Type %s was already defined", #typ);\
 	//	g_TypeDB[TypeInfoHelper<typ>::ID] = std::make_unique<BasicTypeInfo<typ>>(#typ);\
 	//});
 

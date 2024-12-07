@@ -26,7 +26,7 @@ public:
 	void OnRenderStart() override
 	{
 		if ((m_Img == nullptr || m_Img->GetWidth() != m_ViewWidth || m_Img->GetHeight() != m_ViewHeight)) {
-			m_Img = make_shared<Walnut::Image>(m_ViewWidth,m_ViewHeight, Walnut::ImageFormat::RGBA);
+			m_Img = std::make_shared<Walnut::Image>(m_ViewWidth,m_ViewHeight, Walnut::ImageFormat::RGBA);
 		}
 	}
 
@@ -41,6 +41,6 @@ public:
 	}
 
 private:
-	shared_ptr<Walnut::Image> m_Img;
+	std::shared_ptr<Walnut::Image> m_Img;
 };
 

@@ -71,7 +71,6 @@ public:
 protected:
 	Vector<DrawData> mBuffer;
 
-	Name mPassName;
 	Scene const* mScene;
 	ERenderPassMode mMode;
 	EMatType mAcceptedMatTypes;

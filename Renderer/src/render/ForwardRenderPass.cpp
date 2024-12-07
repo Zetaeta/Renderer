@@ -42,7 +42,7 @@ void ForwardRenderPass::BeginRender()
 {
 	mLayer = EShadingLayer::BASE;
 	SetupLayer(EShadingLayer::BASE, -1);
-	DeviceCtx()->SetDepthMode(EDepthMode::LESS);
+	DeviceCtx()->SetDepthStencilMode(EDepthMode::Less, {EStencilMode::Disabled, 0});
 	Super::BeginRender();
 }
 
@@ -71,7 +71,7 @@ void ForwardRenderPass::SetupLayer(EShadingLayer layer, u32 index)
 	
 
 	DeviceCtx()->SetBlendMode(BS_OPAQUE_LAYER);
-	DeviceCtx()->SetDepthMode(EDepthMode::EQUAL);
+	DeviceCtx()->SetDepthMode(EDepthMode::Equal | EDepthMode::NoWrite);
 	LightRenderData const& lrd = mRCtx->GetLightData(GetLightFromLayer(layer), index);
 	switch (layer)
 	{

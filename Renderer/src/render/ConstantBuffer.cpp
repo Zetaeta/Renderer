@@ -28,7 +28,7 @@ void ConstantBufferData::FillFromSource(const CBDataSource& source)
 {
 	if (!Layout)
 	{
-		RASSERT(false, "no layout");
+		ZE_ASSERT(false, "no layout");
 		return;
 	}
 
@@ -37,7 +37,7 @@ void ConstantBufferData::FillFromSource(const CBDataSource& source)
 		if (ConstReflectedValue sourceEntry = source.Get(entry.mName))
 		{
 			ReflectedValue val = CBAccessor {this, &entry}.Access();
-			RASSERT(val.GetType() == sourceEntry.GetType());
+			ZE_ASSERT(val.GetType() == sourceEntry.GetType());
 			val.GetType().Copy(sourceEntry, val);
 		}
 	}

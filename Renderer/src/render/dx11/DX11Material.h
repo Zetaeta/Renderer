@@ -13,6 +13,13 @@ namespace dx11
 
 struct DX11MaterialType : public MaterialArchetype
 {
+	DX11MaterialType() = default;
+	~DX11MaterialType() {}
+
+	DX11MaterialType(DX11MaterialType&&) noexcept = default;
+	DX11MaterialType(DX11MaterialType const&) = delete;
+	DX11MaterialType& operator=(DX11MaterialType&&) noexcept = default;
+
 	ComPtr<ID3D11PixelShader>  m_PixelShader[Denum(EShadingLayer::COUNT)];
 	ComPtr<ID3D11VertexShader> m_VertexShader;
 	ComPtr<ID3D11InputLayout> m_InputLayout;

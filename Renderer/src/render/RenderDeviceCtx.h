@@ -1,4 +1,5 @@
 #pragma once
+#include "core/BaseDefines.h"
 #include "render/Renderer.h"
 #include <core/Utils.h>
 #include "DeviceTexture.h"
@@ -39,13 +40,36 @@ constexpr EBlendState BS_TRANSLUCENT = EBlendState::COL_BLEND_ALPHA
 constexpr EBlendState BS_TRANSLUCENT_LAYER = EBlendState::COL_BLEND_ALPHA
 										   | EBlendState::ALPHA_ADD;
 
-enum class EDepthMode : u32
+enum class EDepthMode : u8
 {
-	DISABLED,
-	LESS,
-	LESS_EQUAL,
-	EQUAL,
-	COUNT
+	Disabled = 0,
+	Less = 1,
+	LessEqual = 2,
+	Equal = 3,
+	GreaterEqual = 4,
+	Greater = 5,
+	NoWrite = 0x08,
+	Count = 14
+};
+
+FLAG_ENUM(EDepthMode);
+
+
+enum class EStencilMode : u8
+{
+	Disabled = 0,
+	Overwrite = 1,
+	IgnoreDepth = 0x02,
+	UseBackFace = 0x04,
+	Count = 8
+};
+
+FLAG_ENUM(EStencilMode);
+;
+struct StencilState
+{
+	EStencilMode Mode = EStencilMode::Disabled;
+	u8 WriteValue = 0;
 };
 
 enum class EDSClearMode : u8
@@ -96,13 +120,16 @@ using Primitive = MeshPart;
 class IRenderDeviceCtx
 {
 public:
-	virtual void SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int RTArrayIdx = -1, int DSArrayIdx = -1) = 0;
+	virtual void SetRTAndDS(IRenderTarget::Ref rts, IDepthStencil::Ref ds, int RTArrayIdx = -1, int DSArrayIdx = -1) = 0;
+	virtual void SetRTAndDS(Span<IRenderTarget::Ref> rts, IDepthStencil::Ref ds) = 0;
 	virtual void SetViewport(float width, float height, float TopLeftX = 0, float TopLeftY = 0) = 0;
 	inline void SetViewport(u32 width, u32 height, u32 TopLeftX = 0, u32 TopLeftY = 0)
 	{
 		SetViewport(float(width), float(height), float(TopLeftX), float(TopLeftY));
 	}
 	virtual void SetDepthMode(EDepthMode mode) = 0;
+	virtual void SetDepthStencilMode(EDepthMode mode, StencilState stencil = {}) = 0;
+	virtual void SetStencilState(StencilState stencil) = 0;
 	virtual void SetBlendMode(EBlendState mode) = 0;
 	virtual void ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMode, float depth, u8 stencil = 0) = 0;
 	virtual void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) = 0;
@@ -112,10 +139,20 @@ public:
 	virtual void DrawMesh(IDeviceMesh* mesh) = 0;
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) = 0; 
 	virtual void			 SetConstantBuffers(EShaderType shaderType, IConstantBuffer** buffers, u32 numBuffers) = 0;
+	virtual void			 SetConstantBuffers(EShaderType shaderType, std::span<CBHandle>) = 0;
+
+	virtual void	 UpdateConstantBuffer(CBHandle handle, std::span<const byte> data) = 0;
+	template<typename T>
+	void UpdateConstantBuffer(CBHandle handle, T const& data)
+	{
+		Span<const byte> bytes(reinterpret_cast<const byte*>(&data), sizeof(data));
+		UpdateConstantBuffer(handle, bytes);
+	}
+
 	virtual void			 ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src) = 0;
 	virtual void					 Copy(DeviceResourceRef dst, DeviceResourceRef src) = 0;
 
-	virtual void SetShaderResources(EShaderType shader, const Vector<IDeviceTexture::Ref>& srvs, u32 startIdx = 0) = 0;
+	virtual void SetShaderResources(EShaderType shader, ShaderResources const& srvs, u32 startIdx = 0) = 0;
 	virtual void SetPixelShader(PixelShader const* shader) = 0;
 	virtual void SetVertexShader(VertexShader const* shader) = 0;
 
@@ -123,6 +160,9 @@ public:
 
 	virtual void PrepareMaterial(MaterialID mid) = 0;
 
+	virtual ~IRenderDeviceCtx() {}
+
+	ICBPool* CBPool = nullptr;
 	IRenderDevice* Device;
 	IRenderTextureManager* TextureManager;
 	class MaterialManager* MatManager;

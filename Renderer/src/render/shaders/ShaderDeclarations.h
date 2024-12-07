@@ -16,4 +16,10 @@ class OutlinePPPS : public PixelShader
 	DECLARE_SHADER(OutlinePPPS);
 };
 
+class WavyPPPS : public PixelShader
+{
+	DECLARE_SHADER(WavyPPPS);
+};
+
+
 }

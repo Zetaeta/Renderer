@@ -22,12 +22,21 @@ public:
 		return --mRefCount;
 	}
 
+	u32 GetRefCount() const
+	{
+		return mRefCount.load(std::memory_order_acquire);
+	}
+
 private:
 	mutable std::atomic<u32> mRefCount;
 };
 
 template<typename T>
 concept RefCountedType = std::derived_from<T, RefCountedObject>;
+
+#ifndef FORCEINLINE
+#define FORCEINLINE __forceinline
+#endif
 
 template<typename T>
 class RefPtr
@@ -45,15 +54,40 @@ public:
 		}
 	}
 
-	template<typename U>
-	RefPtr(const RefPtr<U>& other)
-		requires(std::derived_from<T,U>)
-		: Ptr(other.Ptr)
+	FORCEINLINE void InternalAddRef()
 	{
 		if (Ptr != nullptr)
 		{
 			Ptr->AddRef();
 		}
+	}
+
+	FORCEINLINE void InternalDecRef()
+	{
+		if (Ptr != nullptr)
+		{
+			Ptr->Release();
+		}
+	}
+
+	RefPtr(const RefPtr& other)
+	:Ptr(other.Ptr)
+	{
+		InternalAddRef();
+	}
+
+	RefPtr(RefPtr&& other)
+	:Ptr(other.Ptr)
+	{
+		other.Ptr = nullptr;
+	}
+
+	template<typename U>
+	RefPtr(const RefPtr<U>& other)
+		requires(std::derived_from<T,U>)
+		: Ptr(other.Ptr)
+	{
+		InternalAddRef();
 	}
 	template<typename U>
 	RefPtr(RefPtr<U>&& other)
@@ -71,24 +105,31 @@ public:
 	}
 
 	template<typename Derived>
-	RefPtr& operator =(Derived* derivedPtr)
+	RefPtr& operator=(Derived* derivedPtr)
 		requires(std::derived_from<T, Derived>)
 	{
-		if (Ptr)
-		{
-			Ptr->Release();
-		}
+		InternalDecRef();
 		Ptr = derivedPtr;
-		if (Ptr)
-		{
-			Ptr->AddRef();
-		}
+		InternalAddRef();
 		return *this;
 	}
 
 	template<typename U>
 	RefPtr& operator=(RefPtr<U> other)
 		requires(std::derived_from<T,U>)
+	{
+		std::swap(Ptr, other.Ptr);
+		return *this;
+	}
+
+	RefPtr& operator=(const RefPtr& other)
+	{
+		InternalDecRef();
+		Ptr = other.Ptr;
+		InternalAddRef();
+		return *this;
+	}
+	RefPtr& operator=(RefPtr&& other)
 	{
 		std::swap(Ptr, other.Ptr);
 		return *this;

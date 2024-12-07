@@ -22,19 +22,19 @@ public:
 
 	u8* operator[](size_t index)
 	{
-		RASSERT(index < mSize);
+		ZE_ASSERT(index < mSize);
 		return &mData[index];
 	}
 
 	u8 const* operator[](size_t index) const
 	{
-		RASSERT(index < mSize);
+		ZE_ASSERT(index < mSize);
 		return &mData[index];
 	}
 
 	void Resize(size_t newCapacity)
 	{
-		RASSERT(newCapacity > mSize);
+		ZE_ASSERT(newCapacity > mSize);
 		OwningPtr<u8[]> newData = MakeOwning<u8[]>(newCapacity);
 		memcpy(newData.get(), mData.get(), mSize);
 		std::swap(newData, mData);

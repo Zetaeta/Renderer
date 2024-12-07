@@ -12,7 +12,7 @@ struct Rotator
 	float		  roll = 0;
 	inline float& operator[](u32 i)
 	{
-		RASSERT(i < 3);
+		ZE_ASSERT(i < 3);
 		return (&pitch)[i];
 	}
 

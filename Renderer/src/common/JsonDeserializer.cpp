@@ -25,7 +25,7 @@ void JsonDeserializer::DeserializeContainer(ReflectedValue value, json const& da
 	}
 	else
 	{
-		RASSERT(acc->GetSize() == data.size());
+		ZE_ASSERT(acc->GetSize() == data.size());
 	}
 	for (int i = 0; i < acc->GetSize(); ++i)
 	{

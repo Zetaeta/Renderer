@@ -4,14 +4,19 @@
 #include <core/Maths.h>
 #include <core/Utils.h>
 #include <render/DeviceTexture.h>
+#include "common/CommonEnums.h"
 
 #define IND(x, y) (x + y * width)
 
 class TextureRef;
 
+using TextureId = u64;
+
 class Texture : public BracketAccessed<Texture>
 {
 public:
+	
+	ETextureFormat Format = ETextureFormat::RGBA8_Unorm;
 
 	friend class std::shared_ptr<Texture>;
 	//using size_type = u32;
@@ -48,14 +53,8 @@ public:
 		return std::make_shared <Texture>(std::forward<Args>(args)...);
 	}
 
-	Texture(size_type width, size_type height, std::string const& name = "(unnamed)", u8 const* data = nullptr)
-	: width(width), height(height), m_Data(width * height)
-	{
-		if (data != nullptr)
-		{
-			memcpy(&m_Data[0], data, width * height * sizeof(u32));
-		}
-	}
+	Texture(size_type width, size_type height, std::string const& name = "(unnamed)", u8 const* data = nullptr, ETextureFormat format = ETextureFormat::RGBA8_Unorm);
+	~Texture();
 
 	static TextureRef LoadFrom(char const* fileName);
 
@@ -66,9 +65,13 @@ public:
 
 	size_type const width;
 	size_type const height;
+	const TextureId Id;
 
+	#if !MULTI_RENDER_BACKEND
 	rnd::DeviceTextureRef const& GetDeviceTexture() const { return m_DeviceTex; }
-	void SetDeviceTexture(rnd::DeviceTextureRef const& dt) const { m_DeviceTex = dt; }
+	#else
+	rnd::DeviceTextureRef GetDeviceTexture() const;
+	#endif
 
 	char const* GetName() const { return m_Name.c_str(); }
 
@@ -81,16 +84,19 @@ private:
 
 	std::vector<u32> m_Data;
 	std::string m_Name;
+
+	#if !MULTI_RENDER_BACKEND
 	mutable rnd::DeviceTextureRef m_DeviceTex = INVALID_DEV_TEX;
+	#endif
 };
 
 class TextureRef
 {
 private:
-	std::shared_ptr<const Texture> m_Tex;
+	std::shared_ptr<Texture> m_Tex;
 public:
 
-	std::shared_ptr<const Texture> Get() const
+	std::shared_ptr<Texture> Get() const
 	{
 		return m_Tex;
 	}
@@ -100,14 +106,14 @@ public:
 
 	TextureRef(std::shared_ptr<Texture> tex)
 		: m_Tex(tex) {}
-	TextureRef(std::shared_ptr<const Texture> tex)
-		: m_Tex(tex) {}
+	//TextureRef(std::shared_ptr<Texture> tex)
+	//	: m_Tex(tex) {}
 
-	Texture const& operator*() const {
+	Texture& operator*() const {
 		return *m_Tex;
 	}
 
-	Texture const* operator->() const {
+	Texture* operator->() const {
 		return &*m_Tex;
 	}
 

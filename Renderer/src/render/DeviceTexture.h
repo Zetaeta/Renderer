@@ -1,7 +1,11 @@
 #pragma once
-#include <memory>
+
 #include <core/Maths.h>
 #include <core/Utils.h>
+#include "DeviceResource.h"
+
+#include <memory>
+#include "common/CommonEnums.h"
 
 namespace rnd
 {
@@ -18,14 +22,6 @@ enum class EDeviceResourceType : u8
 	Texture2D,
 	Texture3D,
 	Buffer
-};
-
-enum class ETextureFormat : u8
-{
-	RGBA8_Unorm,
-	D24_Unorm_S8_Uint,
-	D32_Float,
-	R32_Uint
 };
 
 struct DeviceChildDesc
@@ -98,7 +94,6 @@ enum ETextureFlags
 //	TF_Stencil = 0x80,
 };
 
-
 FLAG_ENUM(ETextureFlags);
 
 //constexpr ETextureFlags TF_DEPTH_STENCIL = TF_DEPTH | TF_Stencil;
@@ -138,30 +133,8 @@ struct CubemapData
 
 using TextureData = void const*;
 
-struct MappedResource
-{
-	void* Data;
-	u32 RowPitch;
-	u32 DepthPitch;
-};
-
-enum class ECpuAccessFlags
-{
-	None,
-	Read = 0x1,
-	Write = 0x2
-};
-
-FLAG_ENUM(ECpuAccessFlags);
-
-class IDeviceResource
-{
-public:
-	virtual MappedResource Map(u32 subResource, ECpuAccessFlags flags) = 0;
-	virtual void Unmap(u32 subResource) = 0;
-};
-
-using DeviceResourceRef = std::shared_ptr<IDeviceResource>;
+constexpr ShaderResourceId SRV_StencilBuffer = 1;
+constexpr ShaderResourceId SRV_Texture = 0;
 
 class IDeviceTexture : public IDeviceResource
 {
