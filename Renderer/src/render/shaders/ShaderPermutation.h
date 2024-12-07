@@ -1,6 +1,9 @@
 #pragma once
 #include <tuple>
 
+namespace rnd
+{
+
 struct PermutationElement
 {
 	String Key;
@@ -19,10 +22,25 @@ struct TPermutationElement
 
 struct PermutationBool
 {
-	String Value;
+	bool mVal = false;
 	void Set(bool value)
 	{
-		Value = value ? "1" : "0";
+		mVal = value;
+	}
+
+	const char* GetValue() const
+	{
+		return mVal ? "1" : "0";
+	}
+
+	constexpr static u32 NumBits()
+	{
+		return 1;
+	}
+
+	u64 EncodeBits() const
+	{
+		return mVal;
 	}
 };
 
@@ -37,35 +55,35 @@ struct TSimpleEnumElement
 	}
 };
 
-template<typename Enum, size_t NumElements = Enum::Count>
-struct TEnumPermutationElement
-{
-	std::array<Enum, NumElements> EnumVals;
-	std::array<char const *> intvals;
-	TEnumPermutationElement(std::initializer_list<Enum> enumVals, std::initializer_list<char const*> stringVals)
-	:EnumVals(enumVals), StringVals(stringVals)
-	{
-	}
-	String Value;
-	void Set(Enum value)
-	{
-		for (u32 i = 0; i < NumElements; ++i)
-		{
-			if (EnumVals[i] == value)
-			{
-				Value = StringVals[i];
-				return;
-			}
-		}
-		ZE_ASSERT(false, "Invalid enum permutation");
-	}
-};
+//template<typename Enum, size_t NumElements = Enum::Count>
+//struct TEnumPermutationElement
+//{
+//	std::array<Enum, NumElements> EnumVals;
+//	std::array<char const *, NumElements> intvals;
+//	TEnumPermutationElement(std::initializer_list<Enum> enumVals, std::initializer_list<char const*> stringVals)
+//	:EnumVals(enumVals), StringVals(stringVals)
+//	{
+//	}
+//	String Value;
+//	void Set(Enum value)
+//	{
+//		for (u32 i = 0; i < NumElements; ++i)
+//		{
+//			if (EnumVals[i] == value)
+//			{
+//				Value = StringVals[i];
+//				return;
+//			}
+//		}
+//		ZE_ASSERT(false, "Invalid enum permutation");
+//	}
+//};
 
 #define PERM_WITH_KEY(key, type) public type {\
 	static constexpr char const* Key = key;\
-	void ModifyEnv(ShaderCompileEnv& env)\
+	void ModifyEnv(ShaderCompileEnv& env) const\
 	{\
-		env.SetEnv(Key, Value);\
+		env.SetEnv(Key, GetValue());\
 	}\
 }
 
@@ -78,7 +96,7 @@ struct TEnumPermutationElement
 }
 
 template<typename... Elements>
-class PermutationDomain :  public IShaderPermutation, public std::tuple<Elements...>
+struct PermutationDomain :  public IShaderPermutation, public std::tuple<Elements...>
 {
 	template<typename ElementType, typename ValueType>
 	void Set(ValueType&& value)
@@ -86,12 +104,32 @@ class PermutationDomain :  public IShaderPermutation, public std::tuple<Elements
 		std::get<ElementType>(*this).Set(std::forward<ValueType>(value));
 	}
 
-	void ModifyCompileEnv(ShaderCompileEnv& env) override
+	void ModifyCompileEnv(ShaderCompileEnv& env) const override
 	{
-		std::apply([](auto&&... elements)
+		std::apply([&](auto&&... elements)
 		{
 			(elements.ModifyEnv(env), ...);
 //			env.SetEnv(elements.Key, elements.Value);
-		}, *this);
+		}, static_cast<const std::tuple<Elements...>&>(*this));
+	}
+
+	u64 GetUniqueId() const override
+	{
+		u64 result = 0;
+		std::apply([&](auto&&... elements)
+		{
+			u32 currentBit = 0;
+			auto loop = [&](auto&& element)
+			{
+				ZE_ASSERT(currentBit + element.NumBits() < 64);
+				result |= (element.EncodeBits() << currentBit);
+				currentBit += element.NumBits();
+			};
+			(loop(elements), ...);
+		}, static_cast<const std::tuple<Elements...>&>(*this));
+
+		return result;
 	}
 };
+
+}

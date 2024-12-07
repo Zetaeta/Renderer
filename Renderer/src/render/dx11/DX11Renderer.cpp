@@ -230,7 +230,7 @@ void DX11Renderer::DrawControls()
 		"pointlight",
 		"spotlight",
 	};
-	for (int i=0; i<Denum(EShadingLayer::NONE); ++i)
+	for (int i=0; i<Denum(EShadingLayer::ForwardRenderCount); ++i)
 	{
 		ImGui::Checkbox(layers[i], &m_Ctx.mRCtx->mLayersEnabled[i]);
 	}
@@ -684,39 +684,6 @@ void DX11Renderer::Render(const Scene& scene, EShadingLayer layer, int index, bo
 
 		DrawMesh(mesh, layer);
 	});
-}
-
-void DX11Renderer::LoadShaders(bool reload)
-{
-	{
-		const D3D11_INPUT_ELEMENT_DESC ied[] =
-		{
-			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "Normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "Tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(Vertex, uvs), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		};
-
-		CreateMatType("Plain", MAT_PLAIN, "PlainVertexShader", "PlainPixelShader", ied, Size(ied), reload);
-		CreateMatType("Textured", MAT_TEX, "TexVertexShader", "TexPixelShader", ied, Size(ied), reload);
-		CreateMatTypeUnshaded("PointShadow", MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied, Size(ied), reload);
-		CreateMatTypeUnshaded("ScreenId", MAT_SCREEN_ID, "PlainVertexShader", "ScreenId_PS", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "SHADED", "0" } });
-		static DataLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
-		m_MatTypes[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;
-	}
-
-	{
-		const D3D11_INPUT_ELEMENT_DESC ied[] =
-		{
-			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FlatVert, uv), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		};
-		CreateMatTypeUnshaded("2D", MAT_2D, "2D_VS", "2D_PS", ied, Size(ied), reload);
-		CreateMatTypeUnshaded("2D_Uint", MAT_2D_UINT, "2D_VS", "2D_PS_Uint", ied, Size(ied), reload);
-		CreateMatTypeUnshaded("Cubemap", MAT_BG, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload);
-		CreateMatTypeUnshaded("Cubedepth", MAT_CUBE_DEPTH, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "DEPTH_SAMPLE", "1" } });
-	
-	}
 }
 
 void DX11Renderer::DrawBG()
@@ -1603,6 +1570,67 @@ void GetCBInfo(ID3DBlob* shaderCode, DX11MaterialType& matType, ECBFrequency per
 			matType.GetCBData(freq).IsUsed = true;
 		}
 	}
+}
+
+
+DEFINE_MATERIAL_SHADER(TexturedMat, "TexVertexShader", "main", "TexPixelShader", "main");
+DEFINE_MATERIAL_SHADER(PlainMat, "PlainVertexShader", "main", "PlainPixelShader", "main");
+
+void DX11Renderer::LoadShaders(bool reload)
+{
+	{
+		const D3D11_INPUT_ELEMENT_DESC ied[] =
+		{
+			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "Normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "Tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(Vertex, uvs), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		};
+
+		CreateMatType2("Plain", MAT_PLAIN, "PlainVertexShader", PlainMat, ied, Size(ied), reload);
+		CreateMatType2("Textured", MAT_TEX, "TexVertexShader", TexturedMat, ied, Size(ied), reload);
+		CreateMatTypeUnshaded("PointShadow", MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied, Size(ied), reload);
+		CreateMatTypeUnshaded("ScreenId", MAT_SCREEN_ID, "PlainVertexShader", "ScreenId_PS", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "SHADED", "0" } });
+		static DataLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
+		m_MatTypes[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;
+	}
+
+	{
+		const D3D11_INPUT_ELEMENT_DESC ied[] =
+		{
+			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FlatVert, uv), D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		};
+		CreateMatTypeUnshaded("2D", MAT_2D, "2D_VS", "2D_PS", ied, Size(ied), reload);
+		CreateMatTypeUnshaded("2D_Uint", MAT_2D_UINT, "2D_VS", "2D_PS_Uint", ied, Size(ied), reload);
+		CreateMatTypeUnshaded("Cubemap", MAT_BG, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload);
+		CreateMatTypeUnshaded("Cubedepth", MAT_CUBE_DEPTH, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "DEPTH_SAMPLE", "1" } });
+	
+	}
+}
+
+void DX11Renderer::CreateMatType2(String const& name, u32 index, char const* vsName, const MaterialArchetypeDesc& typeDesc, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload)
+{
+
+	DX11MaterialType& matType = m_MatTypes[index];
+	matType.CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = GetLayout<PerInstancePSData>();
+	matType.DebugName = name;
+	ShaderVariant variant = {"vertex", {}};
+	if (GetCompiledShaderVariants(name + "_VS", vsName, &variant, 1, "vs_5_0", reload) > 0)
+	{
+		auto const& vertBlob = variant.m_Blob;
+		GetCBInfo(vertBlob.Get(), matType, ECBFrequency::VS_PerFrame, ECBFrequency::VS_PerInstance);
+		HR_ERR_CHECK(pDevice->CreateVertexShader(vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), nullptr, &matType.m_VertexShader));
+		HR_ERR_CHECK(pDevice->CreateInputLayout(ied, iedsize, vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), &m_MatTypes[index].m_InputLayout));
+		SetResourceName(m_MatTypes[index].m_VertexShader, vsName);
+	}
+	else
+	{
+		assert(false);
+	}
+	matType.Desc = typeDesc;
+	//ComPtr<ID3DBlob> pixBlob;
+	//HR_ERR_CHECK(D3DReadFileToBlob(psName, &pixBlob));
 }
 
 void DX11Renderer::CreateMatType(const String& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload)

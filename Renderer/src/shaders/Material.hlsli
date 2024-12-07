@@ -1,8 +1,11 @@
 
+#ifndef MATERIAL_HLSLI
+#define MATERIAL_HLSLI
+
 struct PixelLightingInput
 {
     float3 colour;
-#if TRANSLUCENCY
+#if TRANSLUCENT || MASKED
     float opacity;
 #endif
     float3 normal;
@@ -74,10 +77,16 @@ float3 ComputeLighting_GGX(float3 normal, float3 diffuseCol, float3 lightCol, fl
 
 float3 ComputeLighting(float3 normal, float3 diffuseCol, float3 lightCol, float3 lightDir, float roughness, float3 viewDir, float metalness)
 {
+    float3 result;
 	if (brdf == 1)
 	{
-        return ComputeLighting_GGX(normal, diffuseCol, lightCol, lightDir, roughness, viewDir, metalness);
+        result = ComputeLighting_GGX(normal, diffuseCol, lightCol, lightDir, roughness, viewDir, metalness);
     }
-	return ComputeLighting_BlinnPhong(normal, diffuseCol, lightCol, lightDir, roughness, viewDir, metalness);
+    else
+    {
+        result = ComputeLighting_BlinnPhong(normal, diffuseCol, lightCol, lightDir, roughness, viewDir, metalness);
+    }
+    return result;
 }
 
+#endif

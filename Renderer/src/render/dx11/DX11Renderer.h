@@ -231,6 +231,7 @@ void Copy(DeviceResourceRef dst, DeviceResourceRef src) override;
 
 protected:
 
+	void CreateMatType2(String const& name, u32 index, char const* vsName, const MaterialArchetypeDesc& typeDesc, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload);
 	void CreateMatType(String const& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload);
 	void CreateMatTypeUnshaded(String const& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload, Vector<D3D_SHADER_MACRO>&& defines = {});
 

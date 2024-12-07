@@ -9,6 +9,7 @@ namespace rnd
 
 class MaterialPixelShader : public PixelShader
 {
+public:
 	struct Opaque : SHADER_PERM_BOOL("OPAQUE");
 	struct Masked : SHADER_PERM_BOOL("MASKED");
 	struct Translucent : SHADER_PERM_BOOL("TRANSLUCENT");

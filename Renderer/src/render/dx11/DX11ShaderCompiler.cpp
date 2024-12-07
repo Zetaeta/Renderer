@@ -8,16 +8,25 @@ namespace rnd
 namespace dx11
 {
 
+DEFINE_LOG_CATEGORY_STATIC(LogDX11Shader);
+
+constexpr bool ShaderCompileDebugging = true;
+
 OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc,
 	const ShaderCompileEnv& env, EShaderType shaderType, VertexAttributeMask inputMask, bool forceRecompile)
 {
 	const String& file = desc.File;
 	Vector<D3D_SHADER_MACRO> macros;
-	macros.reserve(env.Defines.size());
+	macros.reserve(env.Defines.size() + 1);
 	for (auto const& pair : env.Defines)
 	{
 		macros.push_back({ pair.first.c_str(), pair.second.c_str() });
+		if (ShaderCompileDebugging)
+		{
+			RLOG(LogDX11Shader, Info, "%s: %s", pair.first.c_str(), pair.second.c_str());
+		}
 	}
+	macros.push_back({nullptr, nullptr});
 
 	fs::create_directories(mOutDir);
 	auto			 srcName = std::format("{}.hlsl", file);
@@ -39,7 +48,8 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 	if (forceRecompile || !fs::exists(cso) || fs::last_write_time(cso) < lastWrite)
 	{
 		RLOG(LogGlobal, Info, "Compiling shader in file %s\n", src.string().c_str());
-		HRESULT hr = D3DCompileFromFile(src.wstring().c_str(), Addr(macros), D3D_COMPILE_STANDARD_FILE_INCLUDE, desc.EntryPoint.c_str(), GetShaderTypeString(shaderType), flags, 0, &outBlob, &errBlob);
+		HRESULT hr = D3DCompileFromFile(src.wstring().c_str(), Addr(macros), D3D_COMPILE_STANDARD_FILE_INCLUDE,
+				desc.EntryPoint.c_str(), GetShaderTypeString(shaderType), flags, 0, &outBlob, &errBlob);
 		if (SUCCEEDED(hr))
 		{
 			RLOG(LogGlobal, Info, "Saving to file %s\n", cso.string().c_str());

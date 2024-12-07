@@ -20,19 +20,15 @@ struct DX11MaterialType : public MaterialArchetype
 	DX11MaterialType(DX11MaterialType const&) = delete;
 	DX11MaterialType& operator=(DX11MaterialType&&) noexcept = default;
 
-	ComPtr<ID3D11PixelShader>  m_PixelShader[Denum(EShadingLayer::COUNT)];
+	ComPtr<ID3D11PixelShader>  m_PixelShader[Denum(EShadingLayer::Count)];
 	ComPtr<ID3D11VertexShader> m_VertexShader;
 	ComPtr<ID3D11InputLayout> m_InputLayout;
 	std::unique_ptr<class DX11Material> m_Default;
 	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) override;
 	
 	using Ref = RefPtr<DX11MaterialType>;
-	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer)
-	{
-		ctx.pContext->PSSetShader(m_PixelShader[layer >= EShadingLayer::NONE ? 0 : Denum(layer)].Get(), nullptr, 0);
-		ctx.pContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
-		ctx.pContext->IASetInputLayout(m_InputLayout.Get());
-	}
+	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer);
+
 };
 
 class DX11Material : public IDeviceMaterial

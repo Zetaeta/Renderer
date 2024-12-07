@@ -7,11 +7,14 @@
 #include <mutex>
 #include <core/RefCounted.h>
 #include <render/ConstantBuffer.h>
+#include "container/EnumArray.h"
+#include "render/shaders/MaterialShader.h"
 
 namespace rnd
 {
 class RenderContext;
 class IRenderDeviceCtx;
+class ShaderManager;
 }
 
 enum EMatType
@@ -44,10 +47,12 @@ enum class EShadingLayer : u8
 	LIGHTS_START = DIRLIGHT,
 	POINTLIGHT,
 	SPOTLIGHT,
+	GBuffer,
+	ForwardRenderCount = GBuffer,
 	SHADING_COUNT,
 	NONE = SHADING_COUNT,
-	DEPTH = NONE,
-	COUNT
+	Depth = NONE,
+	Count
 };
 
 struct ShaderCBData
@@ -56,11 +61,28 @@ struct ShaderCBData
 	bool IsUsed = false;
 };
 
+struct MaterialArchetypeDesc
+{
+//	rnd::ShaderDesc mShaderDesc;
+	rnd::ShaderTypeId mVSRegistryId = 0;
+	rnd::ShaderTypeId mPSRegistryId = 0;
+	rnd::MaterialPixelShader const* GetShader(rnd::ShaderManager& shaderMgr, EShadingLayer layer, EMatType opacity) const;
+};
+
+MaterialArchetypeDesc CreateAndRegisterMatDesc(const char* name, const char* psFilename, const char* psEntryPoint,
+	const char* vsFilename, const char* vsEntryPoint);
+
+#define DECLARE_MATERIAL_SHADER(name) extern MaterialArchetypeDesc name;
+#define DEFINE_MATERIAL_SHADER(Name, VSShaderFile, VSEntryPoint, PSShaderFile, PSEntryPoint)\
+	MaterialArchetypeDesc Name = CreateAndRegisterMatDesc(#Name, PSShaderFile, PSEntryPoint, VSShaderFile, VSEntryPoint);
+
 class MaterialArchetype : public RefCountedObject
 {
 public:
+
+	MaterialArchetypeDesc Desc;
 //	virtual ~MaterialArchetype() {}
-	std::array<ShaderCBData, Denum(rnd::ECBFrequency::Count)> CBData;
+	EnumArray<ShaderCBData, rnd::ECBFrequency> CBData;
 	ShaderCBData const& GetCBData(rnd::ECBFrequency freq) const
 	{
 		return CBData[Denum(freq)];
@@ -70,6 +92,8 @@ public:
 	{
 		return CBData[Denum(freq)];
 	}
+
+	EnumArray<RefPtr<rnd::MaterialPixelShader const>, EShadingLayer> PixelShaders;
 	
 	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) = 0;
 	String DebugName;

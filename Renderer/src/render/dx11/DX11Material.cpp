@@ -9,7 +9,7 @@ namespace dx11
 void DX11TexturedMaterial::Bind(DX11Ctx& ctx, EShadingLayer layer)
 {
 	Archetype->Bind(*ctx.mRCtx, layer);
-	if (layer == EShadingLayer::NONE || layer == EShadingLayer::DEPTH)
+	if (layer == EShadingLayer::NONE || layer == EShadingLayer::Depth)
 	{
 		ctx.psTextures.ClearFlags();
 		ctx.psTextures.Bind(ctx);
@@ -65,6 +65,29 @@ void DX11Material::Bind(rnd::RenderContext& rctx, EShadingLayer layer)
 void DX11MaterialType::Bind(rnd::RenderContext& rctx, EShadingLayer layer)
 {
 	Bind(static_cast<DX11Renderer*>(rctx.DeviceCtx())->m_Ctx, layer);
+}
+
+void DX11MaterialType::Bind(DX11Ctx& ctx, EShadingLayer layer)
+{
+	ctx.pContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
+	ctx.pContext->IASetInputLayout(m_InputLayout.Get());
+
+	auto& pixelShader = PixelShaders[layer >= EShadingLayer::NONE ? EShadingLayer::BASE : layer];
+	if (pixelShader == nullptr && Desc.mVSRegistryId != 0)
+	{
+		pixelShader = Desc.GetShader(ctx.mRCtx->GetShaderManager(), layer, EMatType::E_MT_TRANSL); // TODO: Proper opacity separation
+		CBData[ECBFrequency::PS_PerFrame].IsUsed = true; // TEMP fix
+		CBData[ECBFrequency::PS_PerInstance].IsUsed = true;
+	}
+	if (pixelShader && pixelShader->GetDeviceShader())
+	{
+		ctx.pContext->PSSetShader(static_cast<DX11PixelShader*>(pixelShader->GetDeviceShader())->GetShader(), nullptr, 0);
+	}
+	else
+	{
+		ctx.pContext->PSSetShader(m_PixelShader[layer >= EShadingLayer::NONE ? 0 : Denum(layer)].Get(), nullptr, 0);
+	}
+
 }
 
 }

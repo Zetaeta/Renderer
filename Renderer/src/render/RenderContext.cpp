@@ -82,29 +82,37 @@ void RenderContext::SetupRenderTarget()
 
  void RenderContext::SetupPasses()
  {
+	tempRemember.clear();
 	mPasses.clear();
 	mPPPasses.clear();
 	mPasses.emplace_back(std::make_unique<ShadowmapsPass>(this));
 	mPasses.emplace_back(std::make_unique<ForwardRenderPass>(this, "ForwardRender", mCamera, mMainRT, mMainDS));
 	mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::BACK, "Background", static_cast<dx11::DX11Renderer*>(mDeviceCtx)->m_BG.get()));
 
-	DeviceTextureDesc gbAlbedoDesc = mTarget->Desc;
-	gbAlbedoDesc.DebugName = "GBuffer";
-	gbAlbedoDesc.Flags = TF_RenderTarget | TF_SRV;
-	gbAlbedoDesc.Format = ETextureFormat::RGBA8_Unorm_SRGB;
-	auto gbAlbedo = mDeviceCtx->Device->CreateTexture2D(gbAlbedoDesc);
-
-	DeviceTextureDesc gbNormalDesc = mTarget->Desc;
-	gbNormalDesc.DebugName = "GBuffer Normal";
-	gbNormalDesc.Flags = TF_RenderTarget | TF_SRV;
-	gbNormalDesc.Format = ETextureFormat::RGBA8_Unorm;
-	auto gbNormal = mDeviceCtx->Device->CreateTexture2D(gbAlbedoDesc);
-//	mPasses.emplace_back(std::make_unique<GBufferPass>(this, "GBuffer", mCamera, gbAlbedo->GetRT(), gbNormal->GetRT(), mMainDS));
+		DeviceTextureDesc gbAlbedoDesc = mTarget->Desc;
+		gbAlbedoDesc.DebugName = "GBuffer";
+		gbAlbedoDesc.Flags = TF_RenderTarget | TF_SRV;
+		gbAlbedoDesc.Format = ETextureFormat::RGBA8_Unorm_SRGB;
+		auto gbAlbedo = mDeviceCtx->Device->CreateTexture2D(gbAlbedoDesc);
+	tempRemember.push_back(gbAlbedo);
+		DeviceTextureDesc gbNormalDesc = mTarget->Desc;
+		gbNormalDesc.DebugName = "GBuffer Normal";
+		gbNormalDesc.Flags = TF_RenderTarget | TF_SRV;
+		gbNormalDesc.Format = ETextureFormat::RGBA8_Unorm;
+		auto gbNormal = mDeviceCtx->Device->CreateTexture2D(gbNormalDesc);
+	tempRemember.push_back(gbNormal);
+		DeviceTextureDesc gbDSDesc = mTarget->Desc;
+		gbDSDesc.DebugName = "GBuffer Depth";
+		gbDSDesc.Flags = TF_DEPTH | TF_SRV;
+		gbDSDesc.Format = ETextureFormat::D24_Unorm_S8_Uint;
+		auto gbDS = mDeviceCtx->Device->CreateTexture2D(gbDSDesc);
+	tempRemember.push_back(gbDS);
+	mPasses.emplace_back(std::make_unique<GBufferPass>(this, "GBuffer", mCamera, gbAlbedo->GetRT(), gbNormal->GetRT(), gbDS->GetDS()));
 #if ZE_BUILD_EDITOR
 //	mPasses.emplace_back(MakeOwning<HighlightSelectedPass>(this));
 #endif
 	mDebugCubePass = static_cast<RenderCubemap*>(mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::FRONT, "DebugCube")).get());
-	memset(mLayersEnabled, 1, Denum(EShadingLayer::COUNT));
+	memset(mLayersEnabled, 1, Denum(EShadingLayer::Count));
 
 	SetupPostProcess();
 

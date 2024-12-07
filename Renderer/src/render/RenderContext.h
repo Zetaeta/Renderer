@@ -99,7 +99,7 @@ public:
 	template<typename T>
 	T const* GetShader(T::Permutation const& permutation = {})
 	{
-		return DeviceCtx()->Device->ShaderMgr->GetCompiledShader<T>(permutation);
+		return DeviceCtx()->Device->ShaderMgr->GetCompiledShader<T>(T::sRegistryId, permutation);
 	}
 
 	LightRenderData CreateLightRenderData(ELightType lightType, u32 lightIdx);
@@ -135,7 +135,7 @@ public:
 	const Scene& GetScene() { return *mScene; }
 
 
-	bool mLayersEnabled[Denum(EShadingLayer::COUNT)];
+	bool mLayersEnabled[Denum(EShadingLayer::ForwardRenderCount)];
 
 	EShadingDebugMode ShadingDebugMode = EShadingDebugMode::NONE;
 	float mDebugGrayscaleExp = 1.f;
@@ -186,6 +186,8 @@ public:
 	}
 
 private:
+
+	Vector<IDeviceTexture::Ref> tempRemember;
 
 	bool mUseMSAA = true;
 	u32 msaaSampleCount = 4;

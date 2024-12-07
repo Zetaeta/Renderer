@@ -419,7 +419,8 @@ bool CreateDeviceD3D(HWND hWnd)
 			filter.DenyList.NumIDs = NumCast<u32>(std::size(hide));
 			filter.DenyList.pIDList = hide;
 			d3dInfoQueue->AddStorageFilterEntries(&filter);
-//			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+//			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, true);
 		}
 	}
 

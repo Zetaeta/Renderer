@@ -18,9 +18,9 @@ public:
 	~ShaderManager();
 
 	template <typename ShaderType>
-	ShaderType const* GetCompiledShader(ShaderType::Permutation const& permutation = {})
+	ShaderType const* GetCompiledShader(ShaderTypeId id = ShaderType::sRegistryId, ShaderType::Permutation const& permutation = {})
 	{
-		ShaderInstanceId instanceId{ ShaderType::sRegistryId, permutation.GetUniqueId() };
+		ShaderInstanceId instanceId{ id, permutation.GetUniqueId() };
 		if (auto it = mCompiledShaders.find(instanceId); it != mCompiledShaders.end())
 		{
 			return static_cast<ShaderType*>(it->second.Get());
@@ -28,7 +28,7 @@ public:
 
 		ShaderCompileEnv env;
 		permutation.ModifyCompileEnv(env);
-		auto& shaderInfo = ShaderRegistry::Get().GetRegisteredShader(ShaderType::sRegistryId);
+		auto& shaderInfo = ShaderRegistry::Get().GetRegisteredShader(id);
 		OwningPtr<IDeviceShader> deviceShader;
 		ShaderType* shader = new ShaderType;
 		if constexpr (ShaderType::Type == EShaderType::Vertex)

@@ -148,14 +148,16 @@ public:
 //	Vector<ResourceView> SRVs;
 //};
 
+using ShaderTypeId = u32;
+
 #define DECLARE_SHADER(Type)\
 public:\
-	static const u32 sRegistryId;
+	static const ShaderTypeId sRegistryId;
 //	Type(OwningPtr<IDeviceShader>&&)
 
 
 #define DEFINE_SHADER(Type, ShaderFile, EntryPoint)\
-	u32 const Type::sRegistryId = ShaderRegistry::Get().RegisterShaderType<Type>(#Type, "" ShaderFile, "" EntryPoint);
+	ShaderTypeId const Type::sRegistryId = ShaderRegistry::Get().RegisterShaderType<Type>(#Type, "" ShaderFile, "" EntryPoint);
 }
 
 #define VS_INPUTS(args)\

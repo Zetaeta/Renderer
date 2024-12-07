@@ -63,7 +63,7 @@ public:
 	void Draw(DrawData const& data);
 	void DrawSingle(DrawData const& data, mat4 const& projection, mat4 const& projWorld);
 
-	bool IsDepthOnly() { return mLayer == EShadingLayer::DEPTH; }
+	bool IsDepthOnly() { return mLayer == EShadingLayer::Depth; }
 	bool IsDeferred() { return mMode == ERenderPassMode::DEFERRED; }
 
 	IDeviceMaterial* mMatOverride = nullptr;

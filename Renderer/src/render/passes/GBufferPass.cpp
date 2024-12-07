@@ -25,10 +25,13 @@ void GBufferPass::BeginRender()
 	perFrameData.brdf = mRCtx->mBrdf;
 	PSPF->Data().SetData(perFrameData);
 	PSPF->Update();
-	mLayer = EShadingLayer::BASE;
+	mLayer = EShadingLayer::GBuffer;
 //	DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerFrame, sizeof(PerFramePSData));
 	DeviceCtx()->SetBlendMode(BS_OPAQUE);
 	DeviceCtx()->SetDepthStencilMode(EDepthMode::LessEqual, {EStencilMode::Disabled, 0});
+	DeviceCtx()->ClearDepthStencil(mDepthStencil, EDSClearMode::DEPTH, 1.f);
+	DeviceCtx()->ClearRenderTarget(mNormalRT, col4(0));
+	DeviceCtx()->ClearRenderTarget(mRenderTarget, col4(0));
 	Super::BeginRender();
 	IRenderTarget::Ref rts[] = {mRenderTarget, mNormalRT};
 	DeviceCtx()->SetRTAndDS(rts, mDepthStencil);

@@ -12,6 +12,22 @@
 #define USE_STENCIL 0
 #endif
 
+#ifndef POINT_LIGHT
+#define POINT_LIGHT 0
+#endif
+
+#ifndef DIR_LIGHT
+#define DIR_LIGHT 0
+#endif
+
+#ifndef SPOTLIGHT
+#define SPOTLIGHT 0
+#endif
+
+#ifndef GBUFFER
+#define GBUFFER 0
+#endif
+
 #define DEBUG_MODE_ALBEDO 1
 #define DEBUG_MODE_NORMAL 2
 #define DEBUG_MODE_ROUGHNESS 3
@@ -23,18 +39,18 @@
 #endif
 
 cbuffer PerFramePSData : register(b0) {
-#if BASE_LAYER
+#if BASE_LAYER || GBUFFER
 	float3 ambient;
 #endif
-#ifdef DIR_LIGHT
+#if DIR_LIGHT
 #define USE_NORMAL 1
-#define SHADOWMAP_2D
+#define SHADOWMAP_2D 1
 	float3 dirLightCol;
 	float3 dirLightDir;
 	Matrix world2Light;
 #endif
 
-#ifdef POINT_LIGHT
+#if POINT_LIGHT
 #define USE_NORMAL 1
 	float3 pointLightPos;
 	float pointLightRad;
@@ -43,9 +59,9 @@ cbuffer PerFramePSData : register(b0) {
 	Matrix world2Light;
 #endif
 
-#ifdef SPOTLIGHT
+#if SPOTLIGHT
 #define USE_NORMAL 1
-#define SHADOWMAP_2D
+#define SHADOWMAP_2D 1
 	float3 spotLightPos;
 	float spotLightTan;
 	float3 spotLightDir;
@@ -58,7 +74,7 @@ cbuffer PerFramePSData : register(b0) {
 	int brdf = 0;
 };
 #ifndef USE_NORMAL
-#define USE_NORMAL 0
+#define USE_NORMAL GBUFFER
 #endif
 
 cbuffer PerInstancePSData : register(b1) {
@@ -94,7 +110,7 @@ Texture2D roughnessMap;
 Texture2D spotShadowMap;
 #endif
 
-#ifdef POINT_LIGHT
+#if POINT_LIGHT
 #if !USE_NORMAL
 #error Ohno
 #endif
@@ -103,6 +119,9 @@ TextureCube pointShadowMap;
 
 SamplerState splr : register(s0);
 SamplerComparisonState shadowSampler : register(s1);
+
+#include "Material.hlsli"
+
 
 float square(float f)
 {
@@ -123,7 +142,7 @@ float squareLen(float3 v)
 
 float4 Greyscale(float value)
 {
-	value = pow(value, debugGrayscaleExp);
+    value = pow(abs(value), debugGrayscaleExp);
 	return float4(value, value, value, value);
 }
 struct PSOut
@@ -141,11 +160,16 @@ struct GBufferOut
     float4 emissive : SV_Target2;
 };
 
+float3 PackNormalToUnorm(float3 normalVector)
+{
+    return (normalVector * 0.5) + float3(1, 1, 1);
+}
+
 GBufferOut PackGBuffer(PixelLightingInput li)
 {
     GBufferOut result;
     result.colourRough = float4(li.colour, li.roughness);
-    result.normalMetal = float4(li.normal, li.metalness);
+    result.normalMetal = float4(PackNormalToUnorm(li.normal), li.metalness);
 #if BASE_LAYER
     result.emissive = float4(li.emissive, 1);
 #else
@@ -173,12 +197,12 @@ PixelLightingInput GetLightingInput(BasePassPSIn interp)
 	colour = diffuse.Sample(splr, interp.uv);
 #endif
 	{
-    #if (MASKED || TRANSLUCENT)
-        float alpha = texColour.w;
-        if (alphaMask < 1.f && alpha < alphaMask)
-        {
-            discard;
-        }
+#if (MASKED || TRANSLUCENT)
+    float alpha = colour.w;
+    //if (alphaMask < 1.f && alpha < alphaMask)
+    //{
+    //    discard;
+    //}
     #endif
     #if TRANSLUCENT
         result.opacity = alpha;
@@ -210,12 +234,14 @@ PixelLightingInput GetLightingInput(BasePassPSIn interp)
 	}
 	if (useRoughnessMap)
 	{
-		float3 fullRough = roughnessMap.Sample(splr, interp.uv.xy);
+		float3 fullRough = roughnessMap.Sample(splr, interp.uv.xy).xyz;
 		result.roughness += fullRough.g;
 		result.metalness += fullRough.r;
 	}
 #endif
 #endif
+    result.viewDir = normalize(interp.viewDir);
+    result.worldPos = interp.worldPos;
     return result;
 }
 
@@ -226,21 +252,20 @@ struct ShadingOut
 
 
 
-float4 CalcColour(BasePassPSIn interp)
+float4 DoShading(PixelLightingInput li)
 {
-    PixelLightingInput li = GetLightingInput(interp);
-	float4 texColour = matColour;
-#if TEXTURED
-	texColour = diffuse.Sample(splr, interp.uv);
-#endif
-	float alpha = texColour.w;
-#if (MASKED || TRANSLUCENT)
-	if (alphaMask < 1.f && alpha < alphaMask)
-	{
-		discard;
-	}
-#endif
+	float3 texColour = li.colour;
 	float3 colour = float3(0,0,0);
+    float alpha = 1;
+
+#if TRANSLUCENT || MASKED
+	alpha = li.opacity;
+    if (alphaMask < 1.f && alpha < alphaMask)
+    {
+        discard;
+    }
+#endif
+
 #if BASE_LAYER
 	if (debugMode == DEBUG_MODE_ALBEDO)
 	{
@@ -249,6 +274,7 @@ float4 CalcColour(BasePassPSIn interp)
 	colour += li.emissive;
 	colour += (ambient * ambdiffspec.x) * li.colour;
 #endif
+
 #if USE_NORMAL
 	if (debugMode == DEBUG_MODE_ALBEDO)
 	{
@@ -257,11 +283,11 @@ float4 CalcColour(BasePassPSIn interp)
 	float3 normal = li.normal;
 	float rough = li.roughness;
 	float metalness = li.metalness;
-	float3 viewDir = normalize(interp.viewDir);
+	float3 viewDir = li.viewDir;
 #endif // USE_NORMAL
 	if (debugMode == DEBUG_MODE_ROUGHNESS)
 	{
-		#ifdef DIR_LIGHT
+		#if DIR_LIGHT
 		return Greyscale(rough);
 		#else
 		return float4(0,0,0,1);
@@ -269,7 +295,7 @@ float4 CalcColour(BasePassPSIn interp)
 	}
 	if (debugMode == DEBUG_MODE_METALNESS)
 	{
-		#ifdef DIR_LIGHT
+		#if DIR_LIGHT
 		return Greyscale(metalness);
 		#else
 		return float4(0,0,0,1);
@@ -277,7 +303,7 @@ float4 CalcColour(BasePassPSIn interp)
 	}
 	if (debugMode == DEBUG_MODE_NORMAL)
 	{
-		#ifdef DIR_LIGHT
+		#if DIR_LIGHT
 		return float4((normal + 1)/2, 1);
 		#else
 		return float4(0,0,0,0);
@@ -286,12 +312,12 @@ float4 CalcColour(BasePassPSIn interp)
 
 	float unshadowed = 0.;
 	const float bias = 0.0005;
-    float3 shadeSpacePos = interp.worldPos;
+    float3 worldPos = li.worldPos;
 #ifdef SHADOWMAP_2D
 	{
-		float4 lightPos = mul(world2Light, float4(shadeSpacePos, 1));
+		float4 lightPos = mul(world2Light, float4(worldPos, 1));
 		float2 lightCoord = float2((lightPos.x / lightPos.w + 1)/2, (1 - lightPos.y / lightPos.w)/2);
-		float shadowSpl = spotShadowMap.Sample(splr, lightCoord);
+		float shadowSpl = spotShadowMap.Sample(splr, lightCoord).x;
 		//return shadowSpl + 0.1 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, dirLightCol, dirLightDir, specularExp, viewDir),1);;
 		if (lightCoord.x <= 1 && lightCoord.x >= 0 && lightCoord.y <= 1 && lightCoord.y >= 0) {
 			float depth = lightPos.z / lightPos.w;
@@ -308,7 +334,7 @@ float4 CalcColour(BasePassPSIn interp)
 		}
 		else if (debugMode == 3)
 		{
-			return float4(shadeSpacePos, 1);
+			return float4(worldPos, 1);
 		}
 
 //		return mul(world2Light, float4(1,1,1,1))* 100;
@@ -317,36 +343,36 @@ float4 CalcColour(BasePassPSIn interp)
 	}
 #endif
 
-#ifdef POINT_LIGHT
+#if POINT_LIGHT
 	{
 
-		float3 lightDist = -pointLightPos + shadeSpacePos;
-		//float3 lightPos = shadeSpacePos - pointLightPos
+		float3 lightDist = -pointLightPos + worldPos;
+		//float3 lightPos = worldPos - pointLightPos
 		float3 lightDir = normalize(lightDist);
 		float d2 = dot(lightDist, lightDist) / square(pointLightFalloff) ;
 		float r = pointLightRad;
 		float3 lightCol = pointLightCol / (d2 + r*r);
 
-		float4 dummy = 0.001 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, rough, viewDir, metalness),1);
+//		float4 dummy = 0.001 * float4(ComputeLighting(normal, (texColour * ambdiffspec.y), lightCol, lightDir, rough, viewDir, metalness),1);
 
-		float4 lightPos = mul(world2Light, float4(shadeSpacePos, 1));
+		float4 lightPos = mul(world2Light, float4(worldPos, 1));
 		float depth = length(lightDist.xyz) / 100;
 		unshadowed = pointShadowMap.SampleCmp(shadowSampler, lightDist, depth - bias );
 
 
-		colour += unshadowed * ComputeLighting(normal, texColour * ambdiffspec.y, lightCol, lightDir, rough, viewDir, metalness);
+		colour += unshadowed * ComputeLighting(normal, (texColour * ambdiffspec.y), lightCol, lightDir, rough, viewDir, metalness);
 	}
 #endif
 
-#ifdef DIR_LIGHT
+#if DIR_LIGHTGBufferPSMain
 	{
 	//	unshadowed = 1 - 0.01*unshadowed;
-		colour += (unshadowed) * ComputeLighting(normal, texColour * ambdiffspec.y, dirLightCol, dirLightDir, rough, viewDir, metalness);
+		colour += (unshadowed) * ComputeLighting(normal, (texColour * ambdiffspec.y).xyz, dirLightCol, dirLightDir, rough, viewDir, metalness);
 	}
 #endif
-#ifdef SPOTLIGHT
+#if SPOTLIGHT
 	{
-		float3 lightDist = shadeSpacePos - spotLightPos;
+		float3 lightDist = worldPos - spotLightPos;
 		float3 lightDir = normalize(lightDist);
 		float d2 = dot(lightDist, lightDist) / square(spotLightFalloff) ;
 		float3 lightCol = spotLightCol / (d2);
@@ -354,7 +380,8 @@ float4 CalcColour(BasePassPSIn interp)
 		float3 straightDist = dot(lightDist, spotLightDir) * spotLightDir;
 		float tangleSq = squareLen(lightDist - straightDist) / squareLen(straightDist);
 
-		colour += (unshadowed) * ((tangleSq < square(spotLightTan) && (dot(spotLightDir, lightDir) > 0))) * ComputeLighting(normal, texColour , lightCol, lightDir, rough, viewDir, metalness);
+		colour += (unshadowed) * ((tangleSq < square(spotLightTan) && (dot(spotLightDir, lightDir) > 0))) *
+				ComputeLighting(normal, (texColour * ambdiffspec.y).xyz , lightCol, lightDir, rough, viewDir, metalness);
 	}
 #endif
 
@@ -367,11 +394,13 @@ float4 CalcColour(BasePassPSIn interp)
 #define IF_TEXTURED(x)
 #endif
 
-GBufferOut GBufferPSMain(BasePassPSIn interp)
+#if GBUFFER
+GBufferOut main(BasePassPSIn interp)
 {
     PixelLightingInput lightingInput = GetLightingInput(interp);
     return PackGBuffer(lightingInput);
 }
+#else
 
 PSOut main(BasePassPSIn interp)
 {
@@ -380,9 +409,10 @@ PSOut main(BasePassPSIn interp)
 //		return float4(1,0,1,1);
 //	}
 	PSOut result;
-	result.colour = CalcColour(interp);
+    result.colour = DoShading(GetLightingInput(interp));
 #if USE_STENCIL
 	result.stencil = stencilVal;
 #endif
 	return result;
 }
+#endif
