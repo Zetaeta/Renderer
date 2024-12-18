@@ -11,7 +11,7 @@ namespace dx11
 	: DX11TextureBase(ctx, desc)
 {
 	CreateResources(textureData);
-	printf("%p\n", m_Texture.Get());
+//	printf("%p\n", m_Texture.Get());
 }
 
 DX11Texture::DX11Texture(DX11Ctx& ctx, DeviceTextureDesc const& desc, ID3D11Texture2D* texture)
@@ -86,6 +86,10 @@ void DX11Texture::CreateResources(TextureData textureData /*= {}*/)
 	{
 		textureDesc.BindFlags |= D3D11_BIND_RENDER_TARGET;
 	}
+	if (desc.Flags & TF_UAV)
+	{
+		textureDesc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
+	}
 
 	textureDesc.Format = GetDxgiFormat(desc.Format, EDxgiFormatContext::Resource);
 	//switch (desc.Format)
@@ -155,6 +159,11 @@ void DX11Texture::CreateResources(TextureData textureData /*= {}*/)
 
 		HR_ERR_CHECK(pDevice->CreateShaderResourceView(m_Texture.Get(), &srvDesc, &m_StencilSRV));
 		SetResourceName(m_StencilSRV, desc.DebugName + " Stencil SRV");
+	}
+
+	if (desc.Flags & TF_UAV)
+	{
+		CreateUAV();
 	}
 
 
@@ -269,6 +278,15 @@ void DX11Texture::CreateSRV()
 	CreateSRV(dx11Desc);
 }
 
+void DX11Texture::CreateUAV(u32 mip /*= 0*/)
+{
+	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
+	desc.Format = GetDxgiFormat(Desc.Format, EDxgiFormatContext::UAV);
+	desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+	desc.Texture2D.MipSlice = mip;
+	HR_ERR_CHECK(m_Ctx->pDevice->CreateUnorderedAccessView(m_Texture.Get(), &desc, &mUAV));
+}
+
 void DX11Texture::DestroyResources()
 {
 	mRenderTarget = nullptr;
@@ -288,6 +306,11 @@ void* DX11Texture::GetShaderResource(ShaderResourceId id)
 		ZE_ENSURE(false);
 		return nullptr;
 	}
+}
+
+void* DX11TextureBase::GetUAV(UavId id)
+{
+	return GetUAV();
 }
 
 void DX11Texture::Resize(u32 width, u32 height)

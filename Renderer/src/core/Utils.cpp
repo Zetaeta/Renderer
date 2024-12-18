@@ -2,6 +2,7 @@
 #include <sstream>
 #include <algorithm>
 
+unsigned char const ZerosArray[1024] = {0};
 
 std::vector<std::string> Split(const std::string& s, char delim)
 {

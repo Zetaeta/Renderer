@@ -62,6 +62,7 @@ public:
 		return m_Texture.Get();
 	}
 
+
 	void Init(u32 width, u32 height, u32 const* data, ETextureFlags flags);
 
 	~DX11Texture();
@@ -76,6 +77,7 @@ public:
 
 public:
 	void CreateSRV() override;
+	void CreateUAV(u32 mip = 0);
 
 	void DestroyResources();
 

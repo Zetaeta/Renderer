@@ -169,11 +169,62 @@ rnd::dx11::DX11TextureRef DX11Device::GetRenderTexture(const Texture* texture)
 	{
 		return it->second;
 	}
-	ZE_ASSERT(false);
+//	ZE_ASSERT(false);
 	return nullptr;
 	//ZE_ASSERT(texture != Texture::EMPTY.get());
 	//return GetRenderTexture(Texture::EMPTY.get());
 }
+
+SamplerHandle DX11Device::GetSampler(SamplerDesc const& desc)
+{
+	auto& value = mSamplers[desc];
+	if (value == nullptr)
+	{
+		D3D11_SAMPLER_DESC desc11;
+		desc11.ComparisonFunc = EnumCast<D3D11_COMPARISON_FUNC>(desc.Comparison);
+		desc11.MipLODBias = desc.MipBias;
+		desc11.MinLOD = desc.MinMip;
+		desc11.MaxLOD = desc.MaxMip;
+		desc11.AddressU = EnumCast<D3D11_TEXTURE_ADDRESS_MODE>(desc.AddressModes[0]);
+		desc11.AddressV = EnumCast<D3D11_TEXTURE_ADDRESS_MODE>(desc.AddressModes[1]);
+		desc11.AddressW = EnumCast<D3D11_TEXTURE_ADDRESS_MODE>(desc.AddressModes[2]);
+		for (int i = 0; i < 4; ++i)
+		{
+			desc11.BorderColor[i] = desc.BorderColour[i];
+		}
+		switch (desc.Filter & 0x0f)
+		{
+		case ETextureFilter::Point:
+			desc11.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+			break;
+		case ETextureFilter::Bilinear:
+			desc11.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+			break;
+		case ETextureFilter::Trilinear:
+			desc11.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+			break;
+		default:
+			ZE_ASSERT(false);
+			break;
+		}
+		// D3D11_FILTER has similar bitwise breakup
+		if (!!(desc.Filter & ETextureFilter::Comparison))
+		{
+			desc11.Filter = EnumCast<D3D11_FILTER>(desc11.Filter | D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT);
+		}
+		else if (!!(desc.Filter & ETextureFilter::Minimum))
+		{
+			desc11.Filter = EnumCast<D3D11_FILTER>(desc11.Filter | D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT);
+		}
+		else if (!!(desc.Filter & ETextureFilter::Maximum))
+		{
+			desc11.Filter = EnumCast<D3D11_FILTER>(desc11.Filter | D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_POINT);
+		}
+		mDevice->CreateSamplerState(&desc11, &value);
+	}
+	return SamplerHandle(value.Get());
+}
+
 #endif
 
 }

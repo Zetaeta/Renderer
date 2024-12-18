@@ -37,6 +37,7 @@ void Camera::Recompute() const
 			{ 0, 0, 1, 0 },
 		});
 	}
+	InverseProjection = inverse(Projection);
 
 	if (CameraType == ECameraType::CUBE)
 	{
@@ -60,5 +61,7 @@ void Camera::Recompute() const
 	mat4 m(Rotation);
 	m[3] = vec4(Position, 1.f);
 	W2C = glm::inverse(m);
+	ProjWorld = Projection * W2C;
+	InverseProjWorld = glm::inverse(ProjWorld);
 	Dirty = false;
 }

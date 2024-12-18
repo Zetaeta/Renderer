@@ -38,41 +38,11 @@
 #define BASE_LAYER 1
 #endif
 
-cbuffer PerFramePSData : register(b0) {
-#if BASE_LAYER || GBUFFER
-	float3 ambient;
-#endif
-#if DIR_LIGHT
-#define USE_NORMAL 1
-#define SHADOWMAP_2D 1
-	float3 dirLightCol;
-	float3 dirLightDir;
-	Matrix world2Light;
+#ifndef FW_DEBUGGING
+#define FW_DEBUGGING !GBUFFER
 #endif
 
-#if POINT_LIGHT
-#define USE_NORMAL 1
-	float3 pointLightPos;
-	float pointLightRad;
-	float3 pointLightCol;
-	float pointLightFalloff;
-	Matrix world2Light;
-#endif
-
-#if SPOTLIGHT
-#define USE_NORMAL 1
-#define SHADOWMAP_2D 1
-	float3 spotLightPos;
-	float spotLightTan;
-	float3 spotLightDir;
-	float spotLightFalloff;
-	float3 spotLightCol;
-	Matrix world2Light;
-#endif
-	int debugMode;
-	float debugGrayscaleExp;
-	int brdf = 0;
-};
+#include "PerLightShading.hlsli"
 #ifndef USE_NORMAL
 #define USE_NORMAL GBUFFER
 #endif
@@ -120,18 +90,11 @@ TextureCube pointShadowMap;
 SamplerState splr : register(s0);
 SamplerComparisonState shadowSampler : register(s1);
 
-#include "Material.hlsli"
-
-
-float square(float f)
+float4 Greyscale(float value)
 {
-	return f*f;
+    value = pow(abs(value), debugGrayscaleExp);
+	return float4(value, value, value, value);
 }
-float squareLen(float3 v)
-{
-	return dot(v,v);
-}
-
 #include "Material.hlsli"
 
 //template<class Vec>
@@ -140,11 +103,6 @@ float squareLen(float3 v)
 //	return saturate(dot(a,b));
 //}
 
-float4 Greyscale(float value)
-{
-    value = pow(abs(value), debugGrayscaleExp);
-	return float4(value, value, value, value);
-}
 struct PSOut
 {
 	float4 colour : SV_TARGET;
@@ -159,11 +117,6 @@ struct GBufferOut
     float4 normalMetal : SV_Target1;
     float4 emissive : SV_Target2;
 };
-
-float3 PackNormalToUnorm(float3 normalVector)
-{
-    return (normalVector * 0.5) + float3(1, 1, 1);
-}
 
 GBufferOut PackGBuffer(PixelLightingInput li)
 {
@@ -192,6 +145,9 @@ struct BasePassPSIn
 PixelLightingInput GetLightingInput(BasePassPSIn interp)
 {
     PixelLightingInput result;
+    result.ambientStrength = ambdiffspec.x;
+    result.diffuseStrength = ambdiffspec.y;
+    result.specularStrength = ambdiffspec.z;
 	float4 colour = matColour;
 #if TEXTURED
 	colour = diffuse.Sample(splr, interp.uv);
@@ -252,141 +208,6 @@ struct ShadingOut
 
 
 
-float4 DoShading(PixelLightingInput li)
-{
-	float3 texColour = li.colour;
-	float3 colour = float3(0,0,0);
-    float alpha = 1;
-
-#if TRANSLUCENT || MASKED
-	alpha = li.opacity;
-    if (alphaMask < 1.f && alpha < alphaMask)
-    {
-        discard;
-    }
-#endif
-
-#if BASE_LAYER
-	if (debugMode == DEBUG_MODE_ALBEDO)
-	{
-        return float4(li.colour, 1);
-    }
-	colour += li.emissive;
-	colour += (ambient * ambdiffspec.x) * li.colour;
-#endif
-
-#if USE_NORMAL
-	if (debugMode == DEBUG_MODE_ALBEDO)
-	{
-		return float4(0,0,0,0);
-	}
-	float3 normal = li.normal;
-	float rough = li.roughness;
-	float metalness = li.metalness;
-	float3 viewDir = li.viewDir;
-#endif // USE_NORMAL
-	if (debugMode == DEBUG_MODE_ROUGHNESS)
-	{
-		#if DIR_LIGHT
-		return Greyscale(rough);
-		#else
-		return float4(0,0,0,1);
-		#endif
-	}
-	if (debugMode == DEBUG_MODE_METALNESS)
-	{
-		#if DIR_LIGHT
-		return Greyscale(metalness);
-		#else
-		return float4(0,0,0,1);
-		#endif
-	}
-	if (debugMode == DEBUG_MODE_NORMAL)
-	{
-		#if DIR_LIGHT
-		return float4((normal + 1)/2, 1);
-		#else
-		return float4(0,0,0,0);
-		#endif
-	}
-
-	float unshadowed = 0.;
-	const float bias = 0.0005;
-    float3 worldPos = li.worldPos;
-#ifdef SHADOWMAP_2D
-	{
-		float4 lightPos = mul(world2Light, float4(worldPos, 1));
-		float2 lightCoord = float2((lightPos.x / lightPos.w + 1)/2, (1 - lightPos.y / lightPos.w)/2);
-		float shadowSpl = spotShadowMap.Sample(splr, lightCoord).x;
-		//return shadowSpl + 0.1 * float4(ComputeLighting(normal, texColour * ambdiffspec.y, dirLightCol, dirLightDir, specularExp, viewDir),1);;
-		if (lightCoord.x <= 1 && lightCoord.x >= 0 && lightCoord.y <= 1 && lightCoord.y >= 0) {
-			float depth = lightPos.z / lightPos.w;
-//			shadowed = !( shadowSpl + bias >= depth);
-			unshadowed = spotShadowMap.SampleCmp(shadowSampler, lightCoord, depth - bias );
-		}
-		if (debugMode == 1)
-		{
-        	return float4(shadowSpl, shadowSpl, shadowSpl, 1);
-        }
-		else if (debugMode == 2)
-		{
-			return float4(lightCoord, lightPos.w, 1);
-		}
-		else if (debugMode == 3)
-		{
-			return float4(worldPos, 1);
-		}
-
-//		return mul(world2Light, float4(1,1,1,1))* 100;
-//		return lightPos;
-//		return float4(shadowSpl, shadowSpl, lightPos.z / lightPos.w, 1);
-	}
-#endif
-
-#if POINT_LIGHT
-	{
-
-		float3 lightDist = -pointLightPos + worldPos;
-		//float3 lightPos = worldPos - pointLightPos
-		float3 lightDir = normalize(lightDist);
-		float d2 = dot(lightDist, lightDist) / square(pointLightFalloff) ;
-		float r = pointLightRad;
-		float3 lightCol = pointLightCol / (d2 + r*r);
-
-//		float4 dummy = 0.001 * float4(ComputeLighting(normal, (texColour * ambdiffspec.y), lightCol, lightDir, rough, viewDir, metalness),1);
-
-		float4 lightPos = mul(world2Light, float4(worldPos, 1));
-		float depth = length(lightDist.xyz) / 100;
-		unshadowed = pointShadowMap.SampleCmp(shadowSampler, lightDist, depth - bias );
-
-
-		colour += unshadowed * ComputeLighting(normal, (texColour * ambdiffspec.y), lightCol, lightDir, rough, viewDir, metalness);
-	}
-#endif
-
-#if DIR_LIGHTGBufferPSMain
-	{
-	//	unshadowed = 1 - 0.01*unshadowed;
-		colour += (unshadowed) * ComputeLighting(normal, (texColour * ambdiffspec.y).xyz, dirLightCol, dirLightDir, rough, viewDir, metalness);
-	}
-#endif
-#if SPOTLIGHT
-	{
-		float3 lightDist = worldPos - spotLightPos;
-		float3 lightDir = normalize(lightDist);
-		float d2 = dot(lightDist, lightDist) / square(spotLightFalloff) ;
-		float3 lightCol = spotLightCol / (d2);
-
-		float3 straightDist = dot(lightDist, spotLightDir) * spotLightDir;
-		float tangleSq = squareLen(lightDist - straightDist) / squareLen(straightDist);
-
-		colour += (unshadowed) * ((tangleSq < square(spotLightTan) && (dot(spotLightDir, lightDir) > 0))) *
-				ComputeLighting(normal, (texColour * ambdiffspec.y).xyz , lightCol, lightDir, rough, viewDir, metalness);
-	}
-#endif
-
-	return float4(colour, alpha);
-}
 
 #if TEXTURED
 #define IF_TEXTURED(x) x
@@ -398,6 +219,12 @@ float4 DoShading(PixelLightingInput li)
 GBufferOut main(BasePassPSIn interp)
 {
     PixelLightingInput lightingInput = GetLightingInput(interp);
+#if MASKED || TRANSLUCENT
+    if (alphaMask < 1.f && lightingInput.opacity < alphaMask)
+    {
+        discard;
+    }
+#endif
     return PackGBuffer(lightingInput);
 }
 #else

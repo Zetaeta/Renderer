@@ -70,6 +70,13 @@ void Editor::OnEndLeftClick()
 	RLOG(LogGlobal, Info, "End left click");
 }
 
+void Editor::OnRightClick()
+{
+	vec2 mousePos = mInput->GetWindowMousePos();
+	Viewport* viewport = GetViewportAt(mousePos);
+	viewport->DebugPixel({NumCast<int>(mousePos.x), NumCast<int>(mousePos.y)});
+}
+
 void Editor::OnWindowResize(u32 width, u32 height)
 {
 }
@@ -189,6 +196,26 @@ void Editor::Tick(float dt)
 		
 		}
 		mWasMouseDown = isMouseDown;
+	}
+
+	bool isRightMouseDown = mInput->IsMouseDown(Input::MouseButton::RIGHT);
+	//&& !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)
+	;
+	if (isRightMouseDown != mWasRightMouseDown)
+	{
+		if (!ImGui::GetIO().WantCaptureMouse)
+		{
+			if (isMouseDown)
+			{
+				OnRightClick();
+			}
+			else
+			{
+				OnEndRightClick();
+			}
+		
+		}
+		mWasRightMouseDown = isRightMouseDown;
 	}
 
 	// Autosave

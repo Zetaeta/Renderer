@@ -18,7 +18,12 @@ ScreenObject* Viewport::GetObjectAt(ivec2 pos)
 
 void Viewport::Resize(u32 width, u32 height, rnd::IDeviceTexture::Ref backbuffer)
 {
-	mRCtx = MakeOwning<rnd::RenderContext>(mDeviceCtx, mCamera, backbuffer);
+	rnd::RenderSettings settings;
+	if (mRCtx)
+	{
+		settings = mRCtx->Settings;
+	}
+	mRCtx = MakeOwning<rnd::RenderContext>(mDeviceCtx, mCamera, backbuffer, settings);
 	mWidth = width;
 	mHeight = height;
 }
@@ -32,4 +37,9 @@ void Viewport::Reset()
 void Viewport::Draw()
 {
 	mRCtx->RenderFrame(*mScene);
+}
+
+void Viewport::DebugPixel(uint2 pixCoord)
+{
+	mRCtx->DebugPixel(pixCoord);
 }

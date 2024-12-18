@@ -4,6 +4,7 @@
 #include <render/RenderDeviceCtx.h>
 #include <render/RenderContext.h>
 #include <render/dx11/DX11Renderer.h>
+#include "render/ShadingCommon.h"
 
 namespace rnd
 {
@@ -15,11 +16,11 @@ void HighlightSelectedPass::Execute(RenderContext& renderCtx)
 	auto& PSPF = static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerFramePSCB();
 
 	{
-		dx11::PerFramePSData perFrameData;
+		PerFramePSData perFrameData;
 		Zero(perFrameData);
 		perFrameData.ambient = vec3(1);
-		perFrameData.debugMode = Denum(mRCtx->ShadingDebugMode);
-		perFrameData.debugGrayscaleExp = mRCtx->mDebugGrayscaleExp;
+		perFrameData.debugMode = Denum(mRCtx->Settings.ShadingDebugMode);
+		perFrameData.debugGrayscaleExp = mRCtx->Settings.DebugGrayscaleExp;
 		perFrameData.brdf = mRCtx->mBrdf;
 		PSPF.WriteData(perFrameData);
 	}

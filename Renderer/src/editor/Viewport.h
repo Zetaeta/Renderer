@@ -40,6 +40,8 @@ public:
 	{
 		return mHeight;
 	}
+
+	void DebugPixel(uint2 pixCoord);
 	
 public:
 	u32 mWidth = 0;
@@ -49,4 +51,4 @@ public:
 	Scene* mScene = nullptr;
 	rnd::IRenderDeviceCtx* mDeviceCtx = nullptr;
 };
-
+ 

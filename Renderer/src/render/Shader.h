@@ -143,6 +143,10 @@ public:
 	VertexAttributeMask InputSigInst;
 };
 
+class ComputeShader : public TShader<EShaderType::Compute>
+{
+};
+
 //struct ShaderResources
 //{
 //	Vector<ResourceView> SRVs;
@@ -162,7 +166,13 @@ public:\
 
 #define VS_INPUTS(args)\
 public:\
-	constexpr static VertexAttributeMask InputSignature = VertexAttributeMask(args);
+	constexpr static VertexAttributeMask GetInputSignature(const Permutation&) { return VertexAttributeMask(args); }
+
+#define VS_INPUTS_START public:\
+	static VertexAttributeMask GetInputSignature(const Permutation& perm) { u32 mask = 0;
+#define VS_INPUT_STATIC(arg) mask |= arg;
+#define VS_INPUT_SWITCH(boolSwitch, arg) if (perm.Get<boolSwitch>().Value) mask |= arg; 
+#define VS_INPUTS_END return VertexAttributeMask(mask); }
 
 
 START_HASH(rnd::ShaderInstanceId, id)

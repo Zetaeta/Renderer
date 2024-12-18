@@ -309,11 +309,50 @@ constexpr size_t HashMix(size_t x)
 	return x;
 }
 
+class fnv1a
+{
+	size_t h = 14695981039346656037ULL;
+public:
+	void operator()(void const* key, size_t len) noexcept
+	{
+		u8 const* p = static_cast<u8 const*>(key);
+		for (size_t i = 0; i < len; ++i)
+		{
+			h ^= p[i];
+			h *= 1099511628211ULL;
+		}
+	}
+
+	size_t Result() const noexcept
+	{
+		return h;
+	}
+};
+
 template<typename T, typename Hash = std::hash<T>>
 constexpr size_t CombineHash(size_t seedHash, T const& obj)
 {
 	return HashMix(seedHash + 0x9e3779b9 + (Hash{})(obj));
 }
+
+template<typename Hasher, typename T>
+	requires std::is_trivially_copyable_v<T> // for any POD type
+void HashAppend(Hasher& hasher, T const& value)
+{
+	hasher(&value, sizeof(value));
+}
+
+template<typename HashAlgorithm = fnv1a>
+struct GenericHash
+{
+	template<typename T>
+	size_t operator()(T const& value) const
+	{
+		HashAlgorithm hasher;
+		HashAppend(hasher, value);
+		return hasher.Result();
+	}
+};
 
 #define START_HASH(T, name)\
 template<>\

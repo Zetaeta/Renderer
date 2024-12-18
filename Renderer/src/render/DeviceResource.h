@@ -2,9 +2,24 @@
 
 #include "core/Maths.h"
 #include <memory>
+#include <span>
+
+template<typename T>
+using Span = std::span<T>;
+
+template<typename T>
+Span<T> Single(T& value)
+{
+	return Span<T>(&value, 1u);
+}
 
 namespace rnd
 {
+
+#define DEFINE_DEVICE_RESOURCE_GETTER(FunctionName)\
+	virtual void* FunctionName() const = 0;\
+	template<typename T>\
+	T* FunctionName() { return static_cast<T*>(FunctionName()); }
 
 struct MappedResource
 {
@@ -14,6 +29,7 @@ struct MappedResource
 };
 
 using ShaderResourceId = u64;
+using UavId = u64;
 
 enum class ECpuAccessFlags
 {
@@ -38,6 +54,13 @@ public:
 	{
 		return reinterpret_cast<T>(GetShaderResource(id));
 	}
+
+	virtual void* GetUAV(UavId id = {}) = 0;
+	template <typename T>
+	T GetUAV(UavId id = {})
+	{
+		return reinterpret_cast<T>(GetUAV(id));
+	}
 };
 
 using DeviceResourceRef = std::shared_ptr<IDeviceResource>;
@@ -47,11 +70,7 @@ struct ResourceView
 	DeviceResourceRef Resource;
 	u64 ViewId = 0;
 
-	ResourceView() {}
-	ResourceView(DeviceResourceRef resource)
-		: Resource(resource) {}
-
-	ResourceView(DeviceResourceRef resource, u64 view)
+	ResourceView(DeviceResourceRef resource = nullptr, u64 view = 0)
 		: Resource(resource), ViewId(view) {}
 
 	template<typename T>
@@ -59,9 +78,27 @@ struct ResourceView
 	{
 		return Resource ? Resource->GetShaderResource<T>(ViewId) : T{};
 	}
+
 };
 
-using ShaderResources = Vector<ResourceView>;
+struct UnorderedAccessView
+{
+	DeviceResourceRef Resource;
+	UavId ViewId = 0;
+
+	UnorderedAccessView(DeviceResourceRef resource = nullptr, UavId view = {})
+		: Resource(resource), ViewId(view) {}
+
+	template<typename T>
+	T Get() const
+	{
+		return Resource ? Resource->GetUAV<T>(ViewId) : T{};
+	}
+};
+
+
+using ShaderResources = Span<ResourceView const>;
+using UnorderedAccessViews = Span<UnorderedAccessView const>;
 
 
 } // namespace rnd

@@ -2,21 +2,27 @@
 #include "DeviceResource.h"
 #include "DeviceTexture.h"
 
-namespace rnd { class RenderPass; }
-
 namespace rnd
 {
-
+class IRenderDevice;
+class RenderPass;
 enum class ERGResourceBevhiour : u8
 {
+	Invalid,
 	FlipFlop,
+	Texture,
 	FixedSRV
 };
 
 struct RGResourceHandle
 {
-	u32 Hdl;
-	ERGResourceBevhiour Type;
+	RGResourceHandle() = default;
+	RGResourceHandle(std::nullptr_t null) {};
+	RGResourceHandle(u32 hdl, ERGResourceBevhiour type, u32 subresource = 0)
+	:Hdl(hdl), Type(type), Subresource(subresource) { }
+	u32 Hdl = (u32) -1;
+	u32 Subresource : 24 = 0;
+	ERGResourceBevhiour Type = ERGResourceBevhiour::Invalid;
 };
 
 class IRGResource
@@ -27,8 +33,19 @@ public:
 		ZE_ASSERT(false);
 		return {};
 	}
+	virtual IDepthStencil::Ref GetDSV(RGResourceHandle instanceHandle)
+	{
+		ZE_ASSERT(false);
+		return {};
+	}
 
 	virtual ResourceView GetResourceView(RGResourceHandle instanceHandle)
+	{
+		ZE_ASSERT(false);
+		return {};
+	}
+
+	virtual UnorderedAccessView GetUAV(RGResourceHandle instanceHandle)
 	{
 		ZE_ASSERT(false);
 		return {};
@@ -73,15 +90,29 @@ public:
 	ResourceView View;
 };
 
+class RGTexture : public IRGResource
+{
+public:
+	RGTexture(DeviceTextureRef&& texture)
+	:mTexture(texture) { }
+
+	IRenderTarget::Ref GetRenderTarget(RGResourceHandle instanceHandle);
+	IDepthStencil::Ref GetDSV(RGResourceHandle instanceHandle);
+	ResourceView GetResourceView(RGResourceHandle instanceHandle);
+	UnorderedAccessView GetUAV(RGResourceHandle instanceHandle);
+private:
+	DeviceTextureRef mTexture;
+};
+
 class RGBuilder
 {
 public:
-	RGResourceHandle AddFixedSRV(ResourceView view)
-	{
-		mFixedSRVs.push_back(RGFixedSRV{view});
-		return RGResourceHandle{NumCast<u32>(mFixedSRVs.size() - 1), ERGResourceBevhiour::FixedSRV};
-	}
+	RGBuilder(IRenderDevice* device)
+	:mDevice(device) { }
+	RGResourceHandle AddFixedSRV(ResourceView view);
 	RGResourceHandle MakeFlipFlop(DeviceTextureRef tex1, DeviceTextureRef tex2);
+
+	RGResourceHandle MakeTexture2D(DeviceTextureDesc const& desc);
 
 	IRGResource* operator[](RGResourceHandle handle)
 	{
@@ -91,16 +122,32 @@ public:
 			return &mFlipFlops[handle.Hdl];
 		case ERGResourceBevhiour::FixedSRV:
 			return &mFixedSRVs[handle.Hdl];
+		case ERGResourceBevhiour::Texture:
+			return &mTextures[handle.Hdl];
+		case ERGResourceBevhiour::Invalid:
+			return nullptr;
 		default:
 			ZE_ASSERT(false);
 			return nullptr;
 		}
 	}
 
+	ResourceView GetSRV(RGResourceHandle handle)
+	{
+		return this->operator[](handle)->GetResourceView(handle);
+	}
+
+	UnorderedAccessView GetUAV(RGResourceHandle handle)
+	{
+		return this->operator[](handle)->GetUAV(handle);
+	}
+
 	void Reset();
 private:
 	Vector<RGFlipFlop> mFlipFlops;
 	Vector<RGFixedSRV> mFixedSRVs;
+	Vector<RGTexture> mTextures;
+	IRenderDevice* mDevice = nullptr;
 };
 
 struct RGResourceRef
@@ -131,11 +178,36 @@ struct RGShaderResources
 	{
 		for (int i = 0; i < Handles.size(); ++i)
 		{
-			ResolvedViews[i] = builder[Handles[i]]->GetResourceView(Handles[i]);
+			if (auto resource = builder[Handles[i]])
+			{
+				ResolvedViews[i] = resource->GetResourceView(Handles[i]);
+			}
+			else
+			{
+				ResolvedViews[i] = {};
+			}
 		}
 	}
 
 	size_t Count() { return Handles.size(); }
+};
+
+struct RGUnorderedAccessViews
+{
+	RGUnorderedAccessViews(Vector<RGResourceHandle>&& handles)
+	:Handles(std::move(handles)), ResolvedViews(Handles.size()) {}
+
+	Vector<RGResourceHandle> Handles;
+	Vector<UnorderedAccessView> ResolvedViews;
+	void Resolve(RGBuilder& builder)
+	{
+		for (int i = 0; i < Handles.size(); ++i)
+		{
+			ResolvedViews[i] = builder[Handles[i]]->GetUAV(Handles[i]);
+		}
+	}
+
+	u32 Count() { return NumCast<u32>(Handles.size()); }
 };
 
 struct RGRenderTargetRef
@@ -147,6 +219,18 @@ struct RGRenderTargetRef
 	void Resolve(RGBuilder& builder)
 	{
 		ResolvedRT = builder[Handle]->GetRenderTarget(Handle);
+	}
+};
+
+struct RGDepthStencilRef
+{
+	RGDepthStencilRef(RGResourceHandle hdl)
+	:Handle(hdl) {}
+	RGResourceHandle Handle;
+	IDepthStencil::Ref ResolvedDS = nullptr;
+	void Resolve(RGBuilder& builder)
+	{
+		ResolvedDS = builder[Handle]->GetDSV(Handle);
 	}
 };
 

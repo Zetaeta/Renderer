@@ -1,11 +1,13 @@
 #include "GBufferPass.h"
 #include "render/dx11/DX11Renderer.h"
+#include "render/ForwardRenderPass.h"
+#include "render/ShadingCommon.h"
 
 namespace rnd
 {
 
-GBufferPass::GBufferPass(RenderContext* rctx, Name const& name, Camera::Ref camera, IRenderTarget::Ref rt1, IRenderTarget::Ref rt2, IDepthStencil::Ref ds)
-	:SceneRenderPass(rctx, name, camera, rt1, ds, E_MT_OPAQUE | E_MT_MASKED), mNormalRT(rt2)
+GBufferPass::GBufferPass(RenderContext* rctx, Name const& name, Camera::Ref camera, RGRenderTargetRef rt1, RGRenderTargetRef rt2, RGDepthStencilRef ds)
+	:SceneRenderPass(rctx, name, camera, nullptr, nullptr, E_MT_OPAQUE | E_MT_MASKED), mAlbedoRT(rt1), mNormalRT(rt2), mDSV(ds)
 {
 }
 
@@ -17,11 +19,11 @@ void GBufferPass::Accept(SceneComponent const* sceneComp, MeshPart const* mesh)
 void GBufferPass::BeginRender()
 {
 	auto* PSPF = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerFrame);
-	dx11::PerFramePSData perFrameData;
+	PerFramePSData perFrameData;
 	Zero(perFrameData);
 	perFrameData.ambient = vec3(1);
-	perFrameData.debugMode = Denum(mRCtx->ShadingDebugMode);
-	perFrameData.debugGrayscaleExp = mRCtx->mDebugGrayscaleExp;
+	perFrameData.debugMode = Denum(mRCtx->Settings.ShadingDebugMode);
+	perFrameData.debugGrayscaleExp = mRCtx->Settings.DebugGrayscaleExp;
 	perFrameData.brdf = mRCtx->mBrdf;
 	PSPF->Data().SetData(perFrameData);
 	PSPF->Update();
@@ -29,13 +31,20 @@ void GBufferPass::BeginRender()
 //	DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerFrame, sizeof(PerFramePSData));
 	DeviceCtx()->SetBlendMode(BS_OPAQUE);
 	DeviceCtx()->SetDepthStencilMode(EDepthMode::LessEqual, {EStencilMode::Disabled, 0});
-	DeviceCtx()->ClearDepthStencil(mDepthStencil, EDSClearMode::DEPTH, 1.f);
-	DeviceCtx()->ClearRenderTarget(mNormalRT, col4(0));
-	DeviceCtx()->ClearRenderTarget(mRenderTarget, col4(0));
+	DeviceCtx()->ClearDepthStencil(mDSV.ResolvedDS, EDSClearMode::DEPTH, 1.f);
+	DeviceCtx()->ClearRenderTarget(mNormalRT.ResolvedRT, col4(0));
+	DeviceCtx()->ClearRenderTarget(mAlbedoRT.ResolvedRT, col4(0));
 	Super::BeginRender();
-	IRenderTarget::Ref rts[] = {mRenderTarget, mNormalRT};
-	DeviceCtx()->SetRTAndDS(rts, mDepthStencil);
+	IRenderTarget::Ref rts[] = {mAlbedoRT.ResolvedRT, mNormalRT.ResolvedRT};
+	DeviceCtx()->SetRTAndDS(rts, mDSV.ResolvedDS);
 
+}
+
+void GBufferPass::Build(RGBuilder& builder)
+{
+	mAlbedoRT.Resolve(builder);
+	mNormalRT.Resolve(builder);
+	mDSV.Resolve(builder);
 }
 
 }

@@ -36,6 +36,15 @@ void DX11ConstantBuffer::Update()
 	mCtx->pContext->Unmap(mDeviceBuffer.Get(), 0);
 }
 
+void DX11ConstantBuffer::Resize(size_t size)
+{
+	if (size > mData.GetSize())
+	{
+		mData.Resize(GetActualSize(size));
+		CreateDeviceResource();
+	}
+}
+
 //void DX11ConstantBuffer::Bind(u32 idx)
 //{
 //}

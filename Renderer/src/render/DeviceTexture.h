@@ -43,11 +43,6 @@ struct RenderTargetDesc : DeviceChildDesc
 	u32 Height = 0;
 };
 
-#define DEFINE_DEVICE_RESOURCE_GETTER(FunctionName)\
-	virtual void* FunctionName() const = 0;\
-	template<typename T>\
-	T* FunctionName() { return static_cast<T*>(FunctionName()); }
-
 
 class IDepthStencil
 {
@@ -91,6 +86,7 @@ enum ETextureFlags
 	TF_CpuReadback = 0x8,
 	TF_SRV = 0x10,
 	TF_StencilSRV = 0x20,
+	TF_UAV = 0x40,
 //	TF_Stencil = 0x80,
 };
 

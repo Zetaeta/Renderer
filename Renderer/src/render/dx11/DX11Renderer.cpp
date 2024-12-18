@@ -19,6 +19,8 @@
 #include "render/Shader.h"
 #include "render/VertexTypes.h"
 #include "../VertexAttributes.h"
+#include "render/ForwardRenderPass.h"
+#include "render/ShadingCommon.h"
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -201,6 +203,15 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 	Setup();
 	MatManager = new MaterialManager(this);
 	mViewport = MakeOwning<Viewport>(this, scene, camera);
+
+	D3D11_QUERY_DESC disjointDesc {};
+	disjointDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+	for (int i = 0; i < DX11Timer::BufferSize; ++i)
+	{
+		pDevice->CreateQuery(&disjointDesc, &DisjointQueries[i]);
+	}
+	mFrameTimer = CreateTimer(L"Frame");
+	pContext->QueryInterface<ID3DUserDefinedAnnotation>(&mUserAnnotation);
 }
 
 DX11Renderer::~DX11Renderer()
@@ -224,6 +235,7 @@ void DX11Renderer::DrawControls()
 		return;
 	}
 	ImGui::Begin("Renderer");
+	ImGui::Text("GPU time %f", mFrameTimer->GPUTimeMs);
 	ImGui::Checkbox("Refactor", &mUsePasses);
 	static const char* layers[] = { "base",
 		"dirlight",
@@ -232,7 +244,7 @@ void DX11Renderer::DrawControls()
 	};
 	for (int i=0; i<Denum(EShadingLayer::ForwardRenderCount); ++i)
 	{
-		ImGui::Checkbox(layers[i], &m_Ctx.mRCtx->mLayersEnabled[i]);
+		ImGui::Checkbox(layers[i], &m_Ctx.mRCtx->Settings.LayersEnabled[i]);
 	}
 	if (ImGui::Button("Reload shaders"))
 	{
@@ -241,12 +253,14 @@ void DX11Renderer::DrawControls()
 	if (ImGui::Button("Full recompile shaders"))
 	{
 		LoadShaders(true);
+		mShaderMgr.RecompileAll(true);
 	}
 
 	ImGui::DragFloat("Dir shadowmap scale", &m_DirShadowSize);
 	ImGui::DragFloat("Point shadow factor", &m_PointShadowFactor, 0.1f);
-	ImGui::DragInt("Debug mode", reinterpret_cast<int*>(&mRCtx->ShadingDebugMode), 0.5, 0, Denum(EShadingDebugMode::COUNT));
-	ImGui::DragFloat("Debug greyscale exponent", &mRCtx->mDebugGrayscaleExp, 0.1f, 0, 10);
+	ImGui::DragInt("Debug mode", reinterpret_cast<int*>(&mRCtx->Settings.ShadingDebugMode), 0.5, 0, Denum(EShadingDebugMode::COUNT));
+	ImGui::DragFloat("Debug greyscale exponent", &mRCtx->Settings.DebugGrayscaleExp, 0.1f, 0, 10);
+	ImGui::DragInt2("Viewer size", &mViewerSize.x, 1.f, 0, 2500);
 	mRCtx->DrawControls();
 
 	{
@@ -460,6 +474,9 @@ void DX11Renderer::PrepareBG()
 
 void DX11Renderer::Render(const Scene& scene)
 {
+	++mFrameNum;
+	ProcessTimers();
+	StartFrameTimer();
 	ProcessTextureCreations();
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 
@@ -533,7 +550,7 @@ void DX11Renderer::Render(const Scene& scene)
 			//DrawMesh(mi.mesh);
 		}
 		pContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
-		if (mRCtx->mLayersEnabled[Denum(EShadingLayer::BASE)])
+		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::BASE)])
 		{
 			Render(scene, EShadingLayer::BASE, -1, false);
 		}
@@ -541,21 +558,21 @@ void DX11Renderer::Render(const Scene& scene)
 		//pContext->OMSetDepthStencilState(m_LightsDSState.Get(), 1);
 		SetDepthStencilMode(EDepthMode::Equal | EDepthMode::NoWrite);
 
-		if (mRCtx->mLayersEnabled[Denum(EShadingLayer::DIRLIGHT)])
+		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::DIRLIGHT)])
 		{
 			for (int i = 0; i < scene.m_DirLights.size(); ++i)
 			{
 				Render(scene, EShadingLayer::DIRLIGHT, i, false);
 			}
 		}
-		if (mRCtx->mLayersEnabled[Denum(EShadingLayer::SPOTLIGHT)])
+		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::SPOTLIGHT)])
 		{
 			for (int i = 0; i < scene.m_SpotLights.size(); ++i)
 			{
 				Render(scene, EShadingLayer::SPOTLIGHT, i,false);
 			}
 		}
-		if (mRCtx->mLayersEnabled[Denum(EShadingLayer::POINTLIGHT)])
+		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::POINTLIGHT)])
 		{
 			for (int i = 0; i < scene.m_PointLights.size(); ++i)
 			{
@@ -566,27 +583,27 @@ void DX11Renderer::Render(const Scene& scene)
 		pContext->OMSetBlendState(m_AlphaBlendState.Get(), nullptr, 0xffffffff);
 	//	pContext->OMSetDepthStencilState(m_AlphaDSState.Get(), 1);
 		SetDepthStencilMode(EDepthMode::LessEqual | EDepthMode::NoWrite);
-		if (mRCtx->mLayersEnabled[Denum(EShadingLayer::BASE)])
+		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::BASE)])
 		{
 			Render(scene, EShadingLayer::BASE, -1, true);
 		}
 
 		pContext->OMSetBlendState(m_AlphaLitBlendState.Get(), nullptr, 0xffffffff);
-		if (mRCtx->mLayersEnabled[Denum(EShadingLayer::DIRLIGHT)])
+		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::DIRLIGHT)])
 		{
 			for (int i = 0; i < scene.m_DirLights.size(); ++i)
 			{
 				Render(scene, EShadingLayer::DIRLIGHT, i, true);
 			}
 		}
-		if (mRCtx->mLayersEnabled[Denum(EShadingLayer::SPOTLIGHT)])
+		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::SPOTLIGHT)])
 		{
 			for (int i = 0; i < scene.m_SpotLights.size(); ++i)
 			{
 				Render(scene, EShadingLayer::SPOTLIGHT, i, true);
 			}
 		}
-		if (mRCtx->mLayersEnabled[Denum(EShadingLayer::POINTLIGHT)])
+		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::POINTLIGHT)])
 		{
 			for (int i = 0; i < scene.m_PointLights.size(); ++i)
 			{
@@ -612,6 +629,7 @@ void DX11Renderer::Render(const Scene& scene)
 	pContext->VSSetShader(nullptr, nullptr, 0);
 
 	m_Ctx.psTextures.UnBind(m_Ctx);
+	EndFrameTimer();
 }
 
 
@@ -730,9 +748,9 @@ void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 	vec2 texturePos = vec2(pos) / vec2 {m_Width, m_Height};
 	cbuff.pos = texturePos;// vec2(texturePos.x * 2 - 1, 1 - 2 * texturePos.y);
 	if (size.x <= 0)
-		size.x = 500;
+		size.x = mViewerSize.x;
 	if (size.y <= 0)
-		size.y = 500;
+		size.y = mViewerSize.y;
 	cbuff.size = vec2(size) / vec2 {m_Width, m_Height};
 
 	m_VS2DCBuff.WriteData(cbuff);
@@ -867,24 +885,35 @@ void DX11Renderer::Copy(DeviceResourceRef dst, DeviceResourceRef src)
 
 IConstantBuffer* DX11Renderer::GetConstantBuffer(ECBFrequency freq, size_t size /* = 0 */)
 {
+	DX11ConstantBuffer* result = nullptr;
 	switch (freq)
 	{
-		case rnd::ECBFrequency::PS_PerInstance:
-			return &m_PSPerInstanceBuff;
-		case rnd::ECBFrequency::PS_PerFrame:
-			return &m_PSPerFrameBuff;
-		case rnd::ECBFrequency::VS_PerInstance:
-			return &m_VSPerInstanceBuff;
-		case rnd::ECBFrequency::VS_PerFrame:
-			return &m_VSPerFrameBuff;
-		default:
-			return nullptr;
+	case rnd::ECBFrequency::PS_PerInstance:
+		result = &m_PSPerInstanceBuff;
+		break;
+	case rnd::ECBFrequency::PS_PerFrame:
+		result = &m_PSPerFrameBuff;
+		break;
+	case rnd::ECBFrequency::VS_PerInstance:
+		result = &m_VSPerInstanceBuff;
+		break;
+	case rnd::ECBFrequency::VS_PerFrame:
+		result = &m_VSPerFrameBuff;
+		break;
+	default:
+		return nullptr;
 	}
+	if (size > result->GetCBData().GetSize())
+	{
+		result->Resize(size);
+	}
+
+	return result;
 }
 
 void DX11Renderer::PrepareMesh(MeshPart const& mesh, DX11IndexedMesh& meshData)
 {
-	printf("Creating buffers for mesh %s\n", mesh.name.ToString().c_str());
+//	printf("Creating buffers for mesh %s\n", mesh.name.ToString().c_str());
 	const UINT stride = Sizeof(mesh.vertices[0]);
 	{
 		D3D11_BUFFER_DESC bd = {};
@@ -1048,6 +1077,57 @@ DX11Texture::Ref DX11Renderer::PrepareTexture(Texture const& tex, bool sRGB /*= 
 //	return result;
 }
 
+void DX11Renderer::ProcessTimers()
+{
+	u32 frameIdx = mFrameNum % DX11Timer::BufferSize;
+	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
+	if ((pContext->GetData(DisjointQueries[frameIdx].Get(), &disjointData, sizeof(disjointData), 0) != S_OK)
+		|| disjointData.Disjoint)
+	{
+		for (u32 i = 0; i < mTimerPool.Size(); ++i)
+		{
+			mTimerPool[i].GPUTimeMs = -1.f;
+		}
+		return;
+	}
+	for (u32 i = 0; i < mTimerPool.Size(); ++i)
+	{
+		if (!mTimerPool.IsInUse(i))
+		{
+			continue;
+		}
+		u64 start, end;
+		DX11Timer& timer = mTimerPool[i];
+		if (timer.GetRefCount() == 0)
+		{
+			mTimerPool.Release(i);
+			continue;
+		}
+
+		if ((pContext->GetData(timer.Queries[frameIdx].Start.Get(), &start, sizeof(u64), 0) == S_OK)
+			&& (pContext->GetData(timer.Queries[frameIdx].End.Get(), &end, sizeof(u64), 0) == S_OK))
+		{
+			timer.GPUTimeMs = NumCast<float>((double(end - start) * 1000.) / disjointData.Frequency);
+		}
+		else
+		{
+			timer.GPUTimeMs = 0;
+		}
+	}
+}
+
+void DX11Renderer::StartFrameTimer()
+{
+	pContext->Begin(DisjointQueries[mFrameNum % DX11Timer::BufferSize].Get());
+	StartTimer(mFrameTimer);
+}
+
+void DX11Renderer::EndFrameTimer()
+{
+	StopTimer(mFrameTimer);
+	pContext->End(DisjointQueries[mFrameNum % DX11Timer::BufferSize].Get());
+}
+
 void DX11Renderer::UnregisterTexture(DX11Texture* tex)
 {
 	std::erase_if(m_TextureRegistry, [tex](DX11Texture* other) {return other == tex; });
@@ -1085,13 +1165,15 @@ IDeviceTexture::Ref DX11Renderer::CreateTexture2D(DeviceTextureDesc const& desc,
 	return std::make_shared<DX11Texture>(m_Ctx, desc, initialData);
 }
 
-void DX11Renderer::SetShaderResources(EShaderType shader, const Vector<ResourceView>& srvs, u32 startIdx)
+void DX11Renderer::SetShaderResources(EShaderType shader, Span<ResourceView const> srvs, u32 startIdx)
 {
 	Vector<ID3D11ShaderResourceView*> views(srvs.size());
 	for (int i=0;i<srvs.size(); ++i)
 	{
 		views[i] = srvs[i].Get<ID3D11ShaderResourceView*>();
 	}
+
+	mMaxShaderResources[shader] = max(mMaxShaderResources[shader], NumCast<u32>(srvs.size() + startIdx));
 	
 	switch (shader)
 	{
@@ -1112,6 +1194,109 @@ void DX11Renderer::SetShaderResources(EShaderType shader, const Vector<ResourceV
 	}
 }
 
+void DX11Renderer::SetUAVs(EShaderType shader, Span<UnorderedAccessView const> uavs, u32 startIdx /* = 0 */)
+{
+	Vector<ID3D11UnorderedAccessView*> views(uavs.size());
+	for (int i=0;i<uavs.size(); ++i)
+	{
+		views[i] = uavs[i].Get<ID3D11UnorderedAccessView*>();
+	}
+	mMaxUAVs[shader] = max(mMaxUAVs[shader], NumCast<u32>(startIdx + uavs.size()));
+	ZE_ASSERT(shader == EShaderType::Compute);
+	pContext->CSSetUnorderedAccessViews(startIdx, NumCast<u32>(uavs.size()), &views[0], nullptr);
+}
+
+
+void DX11Renderer::UnbindUAVs(EShaderType shader, u32 clearNum, u32 startIdx /* = 0 */)
+{
+
+	pContext->CSSetUnorderedAccessViews(startIdx, clearNum, reinterpret_cast<ID3D11UnorderedAccessView* const*>(ZerosArray), nullptr);
+}
+
+void DX11Renderer::SetSamplers(EShaderType shader, Span<SamplerHandle const> samplers, u32 startSlot)
+{
+	static_assert(sizeof(SamplerHandle) == sizeof(ID3D11SamplerState*));
+	ID3D11SamplerState* const* const d3d11Samplers = reinterpret_cast<ID3D11SamplerState* const*>(samplers.data());
+	u32 numSamplers = NumCast<u32>(samplers.size());
+	switch (shader)
+	{
+	case rnd::EShaderType::Vertex:
+		pContext->VSSetSamplers(startSlot, numSamplers, d3d11Samplers);
+		break;
+	case rnd::EShaderType::Pixel:
+		pContext->PSSetSamplers(startSlot, numSamplers, d3d11Samplers);
+		break;
+	case rnd::EShaderType::Geometry:
+		pContext->GSSetSamplers(startSlot, numSamplers, d3d11Samplers);
+		break;
+	case rnd::EShaderType::Compute:
+		pContext->CSSetSamplers(startSlot, numSamplers, d3d11Samplers);
+		break;
+	default:
+		ZE_ASSERT(false);
+		break;
+	}
+}
+
+void DX11Renderer::DispatchCompute(ComputeDispatch args)
+{
+	pContext->Dispatch(args.ThreadGroupsX, args.ThreadGroupsY, args.ThreadGroupsZ);
+}
+
+void DX11Renderer::ClearResourceBindings()
+{
+	m_Ctx.psTextures.UnBind(m_Ctx);
+	ID3D11ShaderResourceView* const* dummyViews = reinterpret_cast<ID3D11ShaderResourceView* const*>(ZerosArray);
+	pContext->PSSetShaderResources(0, mMaxShaderResources[EShaderType::Pixel], dummyViews);
+	pContext->VSSetShaderResources(0, mMaxShaderResources[EShaderType::Vertex], dummyViews);
+	pContext->CSSetShaderResources(0, mMaxShaderResources[EShaderType::Compute], dummyViews);
+	pContext->CSSetUnorderedAccessViews(0, mMaxUAVs[EShaderType::Compute], reinterpret_cast<ID3D11UnorderedAccessView* const*>(ZerosArray), nullptr);
+	pContext->OMSetRenderTargets(0, nullptr, nullptr);
+}
+
+#if PROFILING
+GPUTimer* DX11Renderer::CreateTimer(const wchar_t* name)
+{
+	DX11Timer* timer;
+	u32 dontCare;
+	bool isNew = mTimerPool.Claim(dontCare, timer);
+	timer->Name = name;
+
+	if (isNew)
+	{
+		D3D11_QUERY_DESC desc {};
+		desc.Query = D3D11_QUERY_TIMESTAMP;
+		for (int i = 0; i < DX11Timer::BufferSize; ++i)
+		{
+			pDevice->CreateQuery(&desc, &timer->Queries[i].Start);
+			pDevice->CreateQuery(&desc, &timer->Queries[i].End);
+		}
+	}
+	return timer;
+}
+
+void DX11Renderer::StartTimer(GPUTimer* timer)
+{
+	u32 currFrameIdx = NumCast<u32>(mFrameNum % DX11Timer::BufferSize);
+	pContext->End(static_cast<DX11Timer*>(timer)->Queries[currFrameIdx].Start.Get());
+	if (mUserAnnotation)
+	{
+		mUserAnnotation->BeginEvent(timer->Name.c_str());
+	}
+}
+
+void DX11Renderer::StopTimer(GPUTimer* timer)
+{
+
+	u32 currFrameIdx = NumCast<u32>(mFrameNum % DX11Timer::BufferSize);
+	pContext->End(static_cast<DX11Timer*>(timer)->Queries[currFrameIdx].End.Get());
+	if (mUserAnnotation)
+	{
+		mUserAnnotation->EndEvent();
+	}
+}
+#endif
+
 void DX11Renderer::SetPixelShader(PixelShader const* shader)
 {
 	DX11PixelShader* dx11Shader = shader ? static_cast<DX11PixelShader*>(shader->GetDeviceShader()) : nullptr;
@@ -1127,6 +1312,12 @@ void DX11Renderer::SetVertexShader(VertexShader const* shader)
 	{
 		UpdateInputLayout();
 	}
+}
+
+void DX11Renderer::SetComputeShader(ComputeShader const* shader)
+{
+	DX11ComputeShader* dx11Shader = shader ? static_cast<DX11ComputeShader*>(shader->GetDeviceShader()) : nullptr;
+	pContext->CSSetShader(dx11Shader ? dx11Shader->GetShader() : nullptr, nullptr, 0);
 }
 
 void DX11Renderer::DrawMesh(Primitive const& primitive)
@@ -1360,10 +1551,28 @@ void DX11Renderer::ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour)
 	pContext->ClearRenderTargetView(rt->GetData<ID3D11RenderTargetView>(), clearCol);
 }
 
+void DX11Renderer::ClearUAV(UnorderedAccessView uav, vec4 clearValues)
+{
+	if (auto dxUav = uav.Get<ID3D11UnorderedAccessView*>())
+	{
+		pContext->ClearUnorderedAccessViewFloat(dxUav, &clearValues[0]);
+	}
+}
+
+void DX11Renderer::ClearUAV(UnorderedAccessView uav, uint4 clearValues)
+{
+
+	if (auto dxUav = uav.Get<ID3D11UnorderedAccessView*>())
+	{
+		pContext->ClearUnorderedAccessViewUint(dxUav, &clearValues[0]);
+	}
+}
+
 void DX11Renderer::SetConstantBuffers(EShaderType shader, IConstantBuffer** buffers, u32 numBuffers)
 {
-	constexpr u32 MAX_CONSTANT_BUFFERS = 16;
+	constexpr u32 MAX_CONSTANT_BUFFERS = 14;
 	ID3D11Buffer* dx11Buffers[MAX_CONSTANT_BUFFERS];
+	ZE_ASSERT(numBuffers <= MAX_CONSTANT_BUFFERS);
 	for (u32 i = 0; i < std::min(MAX_CONSTANT_BUFFERS, numBuffers); ++i)
 	{
 		if (!buffers[i])
@@ -1383,12 +1592,15 @@ void DX11Renderer::SetConstantBuffers(EShaderType shader, IConstantBuffer** buff
 	case EShaderType::Pixel:
 		pContext->PSSetConstantBuffers(0, numBuffers, dx11Buffers);
 		break;
+	case EShaderType::Compute:
+		pContext->CSSetConstantBuffers(0, numBuffers, dx11Buffers);
+		break;
 	default:
 		break;
 	}
 }
 
-void DX11Renderer::SetConstantBuffers(EShaderType shaderType, std::span<CBHandle> handles)
+void DX11Renderer::SetConstantBuffers(EShaderType shaderType, std::span<CBHandle const> handles)
 {
 	constexpr u64 MAX_CONSTANT_BUFFERS = 16;
 	ID3D11Buffer* dx11Buffers[MAX_CONSTANT_BUFFERS];
@@ -1404,7 +1616,11 @@ void DX11Renderer::SetConstantBuffers(EShaderType shaderType, std::span<CBHandle
 	case EShaderType::Pixel:
 		pContext->PSSetConstantBuffers(0, NumCast<u32>(handles.size()), dx11Buffers);
 		break;
+	case EShaderType::Compute:
+		pContext->CSSetConstantBuffers(0, NumCast<u32>(handles.size()), dx11Buffers);
+		break;
 	default:
+		ZE_ASSERT(false);
 		break;
 	}
 }

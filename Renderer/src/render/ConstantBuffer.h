@@ -22,7 +22,7 @@ enum class ECBFrequency : u8
 
 class ConstantBufferData;
 
-using GPUBoolType = u32;
+using GPUBool = u32;
 
 struct CBAccessor
 {
@@ -40,7 +40,7 @@ struct CBAccessor
 	template<>
 	bool const& operator=(bool const& val)
 	{
-		*this = (GPUBoolType) val;
+		*this = (GPUBool) val;
 		return val;
 	}
 
@@ -169,6 +169,14 @@ public:
 	ConstantBufferData& Data() { return mData; }
 	virtual void		Update() = 0;
 	virtual void		SetLayout(DataLayout::Ref layout) = 0;
+
+	template<typename T>
+	void WriteData(const T& val)
+	{
+		mData.SetData(val);
+		Update();
+	}
+
 protected:
 	ConstantBufferData mData;
 };

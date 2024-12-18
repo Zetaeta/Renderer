@@ -7,6 +7,7 @@
 
 class SceneComponent;
 
+
 enum class ELightType
 {
 	START = 0,

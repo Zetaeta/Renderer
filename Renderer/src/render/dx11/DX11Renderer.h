@@ -4,7 +4,7 @@
 #include "scene/Scene.h"
 #include <array>
 #include "render/RastRenderer.h"
-#include <d3d11.h>
+#include <d3d11_1.h>
 #include "core/WinUtils.h"
 #include "render/dx11/DX11Texture.h"
 #include "render/dx11/DX11Material.h"
@@ -19,6 +19,8 @@
 #include "render/DeviceMesh.h"
 #include "container/EnumArray.h"
 #include "DX11CBPool.h"
+#include "core/memory/GrowingImmobileObjectPool.h"
+#include "DX11Timer.h"
 
 class Viewport;
 namespace rnd
@@ -27,8 +29,6 @@ namespace dx11
 {
 using namespace rnd;
 using namespace rnd::dx11;
-
-using col = vec3; 
 
 struct PerInstanceVSData
 {
@@ -39,56 +39,6 @@ public:
 	mat4 model2ShadeDual;
 };
 DECLARE_CLASS_TYPEINFO(PerInstanceVSData);
-
-__declspec(align(16))
-struct PerFramePSData
-{
-	col ambient;
-	int debugMode = 0;
-	float debugGrayscaleExp = 1;
-	int brdf = 0;
-};
-
-__declspec(align(16))
-struct PFPSDirLight// : PerFramePSData
-{
-	col directionalCol;
-	float _pad2;
-	vec3 directionalDir;
-	float _pad3;
-	mat4 world2Light;
-	int debugMode = 0;
-	float debugGrayscaleExp = 1;
-	int brdf = 0;
-};
-
-__declspec(align(16))
-struct PFPSPointLight// : PerFramePSData
-{
-	vec3 pointLightPos;
-	float pointLightRad;
-	vec3 pointLightCol;
-	float pointLightFalloff;
-	mat4 world2Light;
-	int debugMode = 0;
-	float debugGrayscaleExp = 1;
-	int brdf = 0;
-};
-
-__declspec(align(16))
-struct PFPSSpotLight// : PerFramePSData
-{
-	float3 spotLightPos;
-	float spotLightTan;
-	float3 spotLightDir;
-	float spotLightFalloff;
-	float3 spotLightCol;
-	float _pad;
-	mat4 world2Light;
-	int debugMode = 0;
-	float debugGrayscaleExp = 1;
-	int brdf = 0;
-};
 
 class DX11Renderer : public IRenderer, public rnd::IRenderDeviceCtx, public DX11Device
 {
@@ -143,10 +93,29 @@ public:
 	void SetBlendMode(EBlendState mode) override;
 	void ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMode, float depth, u8 stencil /* = 0 */) override;
 	void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) override;
+	void ClearUAV(UnorderedAccessView uav, vec4 clearValues) override;
+	void ClearUAV(UnorderedAccessView uav, uint4 clearValues) override;
 	void SetConstantBuffers(EShaderType shader, IConstantBuffer** buffers, u32 numBuffers) override;
-	void SetConstantBuffers(EShaderType shaderType, std::span<CBHandle> handles);
+	void SetConstantBuffers(EShaderType shaderType, std::span<CBHandle const> handles) override;
 	void ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src);
 	void	 UpdateConstantBuffer(CBHandle handle, std::span<const byte> data);
+	void SetUAVs(EShaderType shader, UnorderedAccessViews uavs, u32 startIdx /* = 0 */) override;
+	void UnbindUAVs(EShaderType shader, u32 clearNum, u32 startIdx /* = 0 */);
+	void SetSamplers(EShaderType shader, Span<SamplerHandle const> samplers, u32 startSlot = 0) override;
+	void DispatchCompute(ComputeDispatch args) override;
+	void ClearResourceBindings() override;
+
+	virtual void SetShaderResources(EShaderType shader, Span<ResourceView const> const srvs, u32 startIdx) override;
+	void SetPixelShader(PixelShader const* shader) override;
+	void SetVertexShader(VertexShader const* shader) override;
+	void SetComputeShader(ComputeShader const* shader) override;
+	void Copy(DeviceResourceRef dst, DeviceResourceRef src) override;
+
+	#if PROFILING
+	GPUTimer* CreateTimer(const wchar_t* Name);
+	void StartTimer(GPUTimer* timer);
+	void StopTimer(GPUTimer* timer);
+	#endif
 	// End IRenderDeviceCtx overrides
 
 
@@ -195,6 +164,9 @@ public:
 	std::vector<DX11MaterialType> m_MatTypes;
 	std::vector<std::unique_ptr<DX11Material>> m_Materials;
 	std::unique_ptr<DX11Cubemap> m_BG;
+
+	EnumArray<u32, EShaderType> mMaxShaderResources = {};
+	EnumArray<u32, EShaderType> mMaxUAVs = {};
 	DX11Ctx m_Ctx;
 
 	Viewport* GetViewport()
@@ -203,9 +175,7 @@ public:
 	}
 
 
-	virtual void SetShaderResources(EShaderType shader, Vector<ResourceView> const& srvs, u32 startIdx) override;
-	void SetPixelShader(PixelShader const* shader) override;
-	void SetVertexShader(VertexShader const* shader) override;
+
 
 
 	void DrawMesh(Primitive const& primitive) override;
@@ -217,10 +187,7 @@ public:
 	RefPtr<VertexShader const> mCurrVertexShader = nullptr;
 
 
- void DrawMesh(IDeviceMesh* mesh) override;
-
-
-void Copy(DeviceResourceRef dst, DeviceResourceRef src) override;
+	void DrawMesh(IDeviceMesh* mesh) override;
 
  private:
 	template<typename TFunc>
@@ -229,7 +196,13 @@ void Copy(DeviceResourceRef dst, DeviceResourceRef src) override;
 
 	RenderContext* mRCtx = nullptr;
 
+	void ProcessTimers();
+	void StartFrameTimer();
+	void EndFrameTimer();
+
 protected:
+
+	ivec2 mViewerSize = {500, 500};
 
 	void CreateMatType2(String const& name, u32 index, char const* vsName, const MaterialArchetypeDesc& typeDesc, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload);
 	void CreateMatType(String const& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload);
@@ -239,7 +212,12 @@ protected:
 
 	UserCamera* m_Camera;
 	//Scene* m_Scene;
-
+#if PROFILING
+	GrowingImmobileObjectPool<DX11Timer, 256, true> mTimerPool;
+	ComPtr<ID3DUserDefinedAnnotation> mUserAnnotation;
+	RefPtr<GPUTimer> mFrameTimer;
+	std::array<ComPtr<ID3D11Query>, DX11Timer::BufferSize> DisjointQueries;
+#endif
 	ID3D11Device*		   pDevice;
 	ID3D11DeviceContext*	   pContext;
 	IDXGISwapChain* pSwapChain = nullptr;
@@ -297,6 +275,9 @@ protected:
 	std::unordered_map<MeshPart const*, PerInstanceVSData> m_PIVS;
 
 	DX11Texture* m_ViewerTex = nullptr;
+
+	u64 mFrameNum = 0;
+
 
 
 	float m_Scale;

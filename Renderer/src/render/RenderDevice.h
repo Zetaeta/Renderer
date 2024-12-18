@@ -7,6 +7,7 @@
 #include "core/memory/CopyableMemory.h"
 #include <span>
 #include "RenderResourceManager.h"
+#include "SamplerState.h"
 
 namespace rnd { class ShaderManager; }
 
@@ -22,13 +23,11 @@ struct PooledCBHandle : CBHandle
 	u64 Id = 0;
 };
 
-template<typename T>
-using Span = std::span<T>;
 
 class ICBPool
 {
 public:
-	virtual PooledCBHandle AcquireConstantBuffer(u32 size, std::span<const byte> initialData) = 0;
+	[[nodiscard]] virtual PooledCBHandle AcquireConstantBuffer(u32 size, std::span<const byte> initialData) = 0;
 	virtual void	 ReleaseConstantBuffer(PooledCBHandle handle) = 0;
 
 	virtual ~ICBPool() {}
@@ -42,6 +41,8 @@ public:
 	virtual IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData = CubemapData{}) = 0;
 	virtual IDeviceTexture::Ref CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData = nullptr) = 0;
 	virtual DeviceMeshRef		CreateDirectMesh(VertexAttributeDesc::Handle vertAtts, u32 numVerts, u32 vertSize, void const* data) = 0;
+
+	virtual SamplerHandle GetSampler(SamplerDesc const& desc) = 0;
 
 	virtual ~IRenderDevice() {}
 

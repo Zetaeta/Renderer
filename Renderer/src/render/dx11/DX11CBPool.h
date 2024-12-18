@@ -3,77 +3,7 @@
 #include "core/Maths.h"
 #include "DX11ConstantBuffer.h"
 #include <utility>
-
-struct Noop
-{
-	template<typename... Args>
-	void operator()(Args&&...)
-	{
-	}
-};
-
-//template <typename T, typename U>
-//using Pair = std::pair;
-
-template<typename T, typename Initializer = Noop, typename SizeType = u32, size_t PageSize = 256>
-class GrowingImmobileObjectPool
-{
-public:
-	GrowingImmobileObjectPool(Initializer&& init = {})
-		: mInit(init)
-	{
-		mPages.emplace_back().reserve(PageSize);
-	}
-
-	// Returns true if new
-	bool Claim(SizeType& id, T*& object)
-	{
-		if (!mFreeObjects.empty())
-		{
-			SizeType freeIdx = mFreeObjects.back();
-			mFreeObjects.pop_back();
-			id = freeIdx;
-			object = &(*this)[freeIdx];
-			return false;
-		}
-
-		if (mPages.empty() || mPages.back().size() == PageSize)
-		{
-			mPages.emplace_back().reserve(PageSize);
-		}
-
-		Vector<T>& lastPage = mPages.back();
-		T& newObj = lastPage.emplace_back();
-		mInit(newObj);
-		SizeType idx = NumCast<SizeType>((mPages.size() - 1) * PageSize + (lastPage.size() - 1));
-		id = idx;
-		object = &newObj;
-		return true;
-	}
-
-	T& operator[](SizeType index)
-	{
-		SizeType pageIdx = index / PageSize;
-		SizeType objIdx = index % PageSize;
-		ZE_ENSURE(pageIdx < mPages.size() && objIdx < mPages[pageIdx].size());
-		return mPages[pageIdx][objIdx];
-	}
-
-	T const& operator[](SizeType index) const
-	{
-		return const_cast<GrowingImmobileObjectPool*>(this)->operator[](index);
-	}
-
-	T& Release(SizeType index)
-	{
-		mFreeObjects.push_back(index);
-		return operator[](index);
-	}
-
-	Vector<Vector<T>> mPages;
-	Vector<SizeType> mFreeObjects;
-	Initializer mInit;
-};
+#include "core/memory/GrowingImmobileObjectPool.h"
 
 using byte = unsigned char;
 

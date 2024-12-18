@@ -14,8 +14,15 @@ public:
 	{
 	}
 
+	ID3D11UnorderedAccessView* GetUAV()
+	{
+		return mUAV.Get();
+	}
+
 protected:
+	void* GetUAV(UavId id) override;
 	DX11Ctx* m_Ctx;
+	ComPtr<ID3D11UnorderedAccessView> mUAV;
 };
 }
 }

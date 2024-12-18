@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#define Zero(x) ZeroMemory(&x, sizeof(x))
+#define Zero(x) memset(&x, 0, sizeof(x))
 
 #define RCOPY_PROTECT(ClassName) ClassName(ClassName const& other) = delete;\
 								ClassName& operator=(ClassName const& other) = delete;
@@ -41,6 +41,10 @@ constexpr auto Denum(TEnum e)
 	constexpr EType operator op (EType a, EType b) \
 	{                                 \
 		return EnumCast<EType>(Denum(a) op Denum(b));      \
+	}\
+	constexpr EType operator op (EType a, std::underlying_type_t<EType> b) \
+	{                                 \
+		return EnumCast<EType>(Denum(a) op b);      \
 	}
 
 #define DECLARE_ENUM_ASSOP(EType, op, assop)\
@@ -78,6 +82,18 @@ constexpr auto Denum(TEnum e)
 #define ITER_ENUM(EType)\
 	DECLARE_ENUM_UNOP(EType, ++, +1)\
 	DECLARE_ENUM_UNOP(EType, --, -1)
+
+#define POD_EQUALITY(Type)\
+	bool operator==(Type const& other) const\
+	{\
+		static_assert(sizeof(*this) == sizeof(Type));\
+		return memcmp(this, &other, sizeof(Type)) == 0;\
+	}\
+	bool operator!=(Type const& other) const\
+	{\
+		return !(*this == other);\
+	}
+
 
 template<typename TInt>
 class range
@@ -439,6 +455,8 @@ bool FindIgnoreCase(const std::string_view& haystack, const std::string_view& ne
 #define STR_LEN(str) (ARRAY_SIZE(str) - 1)
 
 #define AT_START(block) static uint8_t sStaticInitializer##__LINE__ = [] { block }();
+
+extern unsigned char const ZerosArray[1024];
 
 //template<typename... Args>
 //using Variant = std::Variant<Args...>;

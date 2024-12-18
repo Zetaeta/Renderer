@@ -33,8 +33,9 @@ public:
 		ShaderType* shader = new ShaderType;
 		if constexpr (ShaderType::Type == EShaderType::Vertex)
 		{
-			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, ShaderType::InputSignature);
-			shader->InputSigInst = ShaderType::InputSignature;
+			auto inputSig = ShaderType::GetInputSignature(permutation);
+			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, inputSig);
+			shader->InputSigInst = inputSig;
 		}
 		else
 		{
@@ -45,9 +46,15 @@ public:
 		auto& compileInfo = (mCompileInfo[instanceId] = {std::move(env), ShaderType::Type, {}});
 		if constexpr (ShaderType::Type == EShaderType::Vertex)
 		{
-			compileInfo.InputSignature = ShaderType::InputSignature;
+			compileInfo.InputSignature = ShaderType::GetInputSignature(permutation);
 		}
 		return shader;
+	}
+
+	template<typename ShaderType>
+	ShaderType const* GetCompiledShader(ShaderType::Permutation const& permutation)
+	{
+		return GetCompiledShader<ShaderType>(ShaderType::sRegistryId, permutation);
 	}
 
 #if ALLOW_RECOMPILATION

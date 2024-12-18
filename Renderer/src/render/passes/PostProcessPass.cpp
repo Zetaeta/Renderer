@@ -26,7 +26,7 @@ void PostProcessPass::Execute(RenderContext& renderCtx)
 	ZE_REQUIRE(tri);
 	context->SetVertexLayout(tri->GetVertexAttributes());
 	context->DrawMesh(tri);
-	context->SetShaderResources(EShaderType::Pixel, ShaderResources(mResources.Count()));
+	context->ClearResourceBindings();
 }
 
 void PostProcessPass::Build(RGBuilder& builder)

@@ -70,7 +70,6 @@ rnd::MaterialPixelShader const* MaterialArchetypeDesc::GetShader(rnd::ShaderMana
 		break;
 	case EShadingLayer::GBuffer:
 		perm.Set<MaterialPixelShader::GBuffer>(true);
-		perm.Set<MaterialPixelShader::FwdBaseLayer>(true);
 		break;
 	default:
 		return nullptr;

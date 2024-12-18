@@ -63,10 +63,14 @@ public:
 	}
 #endif
 
+	SamplerHandle GetSampler(SamplerDesc const& desc) override;
+
 	std::unordered_map<TextureId, DX11TextureRef> mTextures;
 
 
+
 protected:
+	std::unordered_map<SamplerDesc, ComPtr<ID3D11SamplerState>, GenericHash<>> mSamplers;
 
 	struct TexDestroyCommand
 	{

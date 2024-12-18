@@ -17,6 +17,9 @@ public:
 	void OnLeftClick();
 	void OnEndLeftClick();
 
+	void OnRightClick();
+	void OnEndRightClick() {}
+
 	void OnWindowResize(u32 width, u32 height);
 
 	void DrawControls();
@@ -59,6 +62,7 @@ public:
 	void SelectObject(const SceneObject* Obj);
 
 private:
+	bool mWasRightMouseDown = false;
 	bool mWasMouseDown = false;
 	Input* mInput;
 

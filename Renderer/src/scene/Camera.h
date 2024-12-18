@@ -42,7 +42,7 @@ public:
 		{
 			Recompute();
 		}
-		return Projection * W2C;
+		return ProjWorld;
 	}
 
 	mat4 GetInverseProjWorld() const
@@ -51,7 +51,7 @@ public:
 		{
 			Recompute();
 		}
-		return glm::inverse(GetProjWorld());
+		return InverseProjWorld;
 	}
 
 	void SetPosition(vec3 pos)
@@ -125,6 +125,16 @@ public:
 		return Projection;
 	}
 
+	mat4 const& GetInverseProjection() const
+	{
+		if (Dirty)
+		{
+			Recompute();
+		}
+
+		return InverseProjection;
+	}
+
 	Vector<mat4> const& GetCubeProjections() const
 	{
 		ZE_ASSERT(CameraType == ECameraType::CUBE);
@@ -158,5 +168,8 @@ protected:
 	mutable mat4 W2C;
 
 	mutable mat4		 Projection;
+	mutable mat4		 InverseProjection;
+	mutable mat4		 ProjWorld;
+	mutable mat4		 InverseProjWorld;
 	mutable Vector<mat4> CubeProjs;
 };

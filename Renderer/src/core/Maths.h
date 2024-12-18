@@ -5,6 +5,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/gtx/matrix_operation.hpp>
+#include <glm/gtx/compatibility.hpp>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <bit>
@@ -20,6 +21,10 @@ using s16 = i16;
 using s8 = i8;
 
 using byte = u8;
+
+using uint2 = uvec2;
+using uint3 = uvec3;
+using uint4 = uvec4;
 
 template<typename T, int N, qualifier Q>
 constexpr auto operator,(const vec<N,T,Q>& v1, const vec<N,T,Q>& v2)
@@ -174,4 +179,23 @@ template<typename Unsigned>
 constexpr Unsigned Pow2(Unsigned value)
 {
 	return 1 << value;
+}
+
+template<typename T>
+	requires(std::is_integral_v<T>)
+inline T DivideRoundUp(T x, T y)
+{
+	return x / y + (x % y != 0);
+}
+
+template<typename T, qualifier Q>
+vec<2, T, Q> DivideRoundUp(vec<2, T, Q> const& x, vec<2, T, Q> const& y)
+{
+	return {DivideRoundUp(x.x, y.x), DivideRoundUp(x.y, y.y)};
+}
+
+template<typename T, qualifier Q>
+vec<3,T, Q> DivideRoundUp(vec<3, T, Q> const& x, vec<3, T, Q> const& y)
+{
+	return {DivideRoundUp(x.x, y.x), DivideRoundUp(x.y, y.y), DivideRoundUp(x.z, y.z)};
 }

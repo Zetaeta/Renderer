@@ -5,6 +5,8 @@
 #include "DeviceTexture.h"
 #include <common/Material.h>
 #include "Shader.h"
+#include "GPUTimer.h"
+
 
 struct MeshPart;
 namespace rnd { class IConstantBuffer; }
@@ -117,6 +119,13 @@ enum class EShaderType : u8;
 
 using Primitive = MeshPart;
 
+struct ComputeDispatch
+{
+	u32 ThreadGroupsX = 1;
+	u32 ThreadGroupsY = 1;
+	u32 ThreadGroupsZ = 1;
+};
+
 class IRenderDeviceCtx
 {
 public:
@@ -133,13 +142,16 @@ public:
 	virtual void SetBlendMode(EBlendState mode) = 0;
 	virtual void ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMode, float depth, u8 stencil = 0) = 0;
 	virtual void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) = 0;
+	virtual void ClearUAV(UnorderedAccessView uav, uint4 clearValues) = 0;
+	virtual void ClearUAV(UnorderedAccessView uav, vec4 clearValues) = 0;
 	virtual void DrawCubemap(IDeviceTextureCube* cubemap) = 0;
 	virtual void DrawMesh(MeshPart const& meshPart, EShadingLayer layer, bool useMaterial = true) = 0;
 	virtual void DrawMesh(Primitive const& primitive) = 0;
 	virtual void DrawMesh(IDeviceMesh* mesh) = 0;
+	virtual void DispatchCompute(ComputeDispatch args) = 0;
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) = 0; 
 	virtual void			 SetConstantBuffers(EShaderType shaderType, IConstantBuffer** buffers, u32 numBuffers) = 0;
-	virtual void			 SetConstantBuffers(EShaderType shaderType, std::span<CBHandle>) = 0;
+	virtual void			 SetConstantBuffers(EShaderType shaderType, std::span<CBHandle const>) = 0;
 
 	virtual void	 UpdateConstantBuffer(CBHandle handle, std::span<const byte> data) = 0;
 	template<typename T>
@@ -149,12 +161,26 @@ public:
 		UpdateConstantBuffer(handle, bytes);
 	}
 
-	virtual void			 ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src) = 0;
-	virtual void					 Copy(DeviceResourceRef dst, DeviceResourceRef src) = 0;
+	virtual void ClearResourceBindings() = 0;
 
-	virtual void SetShaderResources(EShaderType shader, ShaderResources const& srvs, u32 startIdx = 0) = 0;
+	virtual void ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src) = 0;
+	virtual void Copy(DeviceResourceRef dst, DeviceResourceRef src) = 0;
+
+	virtual void SetShaderResources(EShaderType shader, ShaderResources srvs, u32 startIdx = 0) = 0;
+	virtual void SetUAVs(EShaderType shader, Span<UnorderedAccessView const> uavs, u32 startIdx = 0) = 0;
+	virtual void UnbindUAVs(EShaderType shader, u32 clearNum, u32 startIdx = 0) = 0;
+	virtual void SetSamplers(EShaderType shader, Span<SamplerHandle const> samplers, u32 startSlot = 0) = 0;
+
+#if PROFILING
+	virtual GPUTimer* CreateTimer(const wchar_t* Name) = 0;
+	virtual void StartTimer(GPUTimer* timer) = 0;
+	virtual void StopTimer(GPUTimer* timer) = 0;
+#endif
+
+
 	virtual void SetPixelShader(PixelShader const* shader) = 0;
 	virtual void SetVertexShader(VertexShader const* shader) = 0;
+	virtual void SetComputeShader(ComputeShader const* shader) = 0;
 
 	virtual void SetVertexLayout(VertAttDescHandle attDescHandle) = 0;
 

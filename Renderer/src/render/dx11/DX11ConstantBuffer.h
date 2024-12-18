@@ -41,13 +41,6 @@ public:
 		return DX11ConstantBuffer(ctx, T{});
 	}
 
-	template<typename T>
-	void WriteData(const T& val)
-	{
-		mData.SetData(val);
-		Update();
-	}
-
 	ID3D11Buffer** GetAddressOf()
 	{
 		return mDeviceBuffer.GetAddressOf();
@@ -72,6 +65,18 @@ public:
 		{
 			mData.SetLayout(layout);
 		}
+	}
+
+	void Resize(size_t size);
+
+	static size_t GetActualSize(size_t inSize)
+	{
+		size_t floorSize = (inSize / 16) * 16;
+		if (floorSize == inSize)
+		{
+			return inSize;
+		}
+		return floorSize + 16;
 	}
 
 	void Update();

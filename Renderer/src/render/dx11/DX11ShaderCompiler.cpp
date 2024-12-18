@@ -40,7 +40,7 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 	ComPtr<ID3DBlob> errBlob;
 	UINT			 flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DEBUG) || defined(_DEBUG)
-//	flags |= D3DCOMPILE_DEBUG;
+	flags |= D3DCOMPILE_DEBUG;
 #endif
 
 	auto	 csoName = std::format("{}_{:x}.cso", file, id.PermuatationId);
@@ -71,6 +71,7 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 			{
 				RLOG(LogGlobal, Info, "Output: %s\n", (const char*) errBlob->GetBufferPointer());
 			}
+			ZE_ASSERT(false);
 			return nullptr;
 		}
 	}

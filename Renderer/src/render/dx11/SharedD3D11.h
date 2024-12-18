@@ -33,6 +33,7 @@ enum class EDxgiFormatContext : u8
 {
 	Resource,
 	SRV,
+	UAV,
 	RenderTarget,
 	DepthStencil = RenderTarget,
 	StencilSRV

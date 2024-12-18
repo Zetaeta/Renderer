@@ -12,9 +12,9 @@ DeviceMeshRef BasicMeshFactory::GetFullScreenTri()
 	{
 		FlatVert const verts[3] =
 		{
-			{ {-1,-1.f, Z}, {0,2} },
-			{ {-1,3.f, Z}, {0,0} },
-			{ {3,-1.f, Z}, {2,2} },
+			{ {-1,-1.f, Z}, {0,1} },
+			{ {-1,3.f, Z}, {0,-1} },
+			{ {3,-1.f, Z}, {2,1} },
 		};
 		FullScreenTriangle = mDevice->CreateDirectMesh(verts);
 		FullScreenTriangle->Topology = EPrimitiveTopology::TRIANGLES;

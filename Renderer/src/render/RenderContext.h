@@ -82,17 +82,36 @@ enum class EShadingDebugMode : u32
 };
 
 
+struct RenderSettings
+{
+	RenderSettings();
+
+	bool LayersEnabled[Denum(EShadingLayer::ForwardRenderCount)];
+	EShadingDebugMode ShadingDebugMode = EShadingDebugMode::NONE;
+	bool AmbientOcclusion = true;
+	float DebugGrayscaleExp = 1.f;
+	float DirShadowmapScale = 20;
+	int2 DebugPixel {0};
+	bool EnablePixelDebug = false;
+};
+
 class RenderContext
 {
 public:
-	RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IDeviceTexture::Ref target);
+	RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IDeviceTexture::Ref target, RenderSettings const& settings = {});
 	~RenderContext();
 
 	void SetupRenderTarget();
 	void SetupPasses();
 	void RenderFrame(Scene const& scene);
 
+	RGBuilder& GraphBuilder()
+	{
+		return mRGBuilder;
+	}
+
 	void BuildGraph();
+	IDeviceTexture::Ref GetPrimaryRT();
 
 	void Postprocessing();
 
@@ -106,17 +125,17 @@ public:
 
 	void SetupLightData();
 
-	Vector<LightRenderData> const& GetLightData(ELightType lightType)
+	Vector<LightRenderData> const& GetLightData(ELightType lightType) const
 	{
 		return mLightData[Denum(lightType)];
 	}
 
-	LightRenderData const& GetLightData(ELightType lightType, u32 lightIdx)
+	LightRenderData const& GetLightData(ELightType lightType, u32 lightIdx) const
 	{
 		return GetLightData(lightType)[lightIdx];
 	}
 
-	IRenderDeviceCtx* DeviceCtx()
+	IRenderDeviceCtx* DeviceCtx() const
 	{
 		return mDeviceCtx;
 	}
@@ -126,20 +145,29 @@ public:
 		return mDeviceCtx->MatManager;
 	}
 
+	ICBPool* GetCBPool()
+	{
+		return DeviceCtx()->CBPool;
+	}
+
 	template<typename TPass, typename... Args>
-	void RunSinglePass(Args... args)
+	void RunSinglePass(Args&&... args)
 	{
 		MakeOwning<TPass>(this, std::forward<Args>(args)...)->Execute(*this);
 	}
 
-	const Scene& GetScene() { return *mScene; }
+	template<typename TPass, typename... Args>
+	void AddPass(Args&&... args)
+	{
+		mPasses.emplace_back(MakeOwning<TPass>(this, std::forward<Args>(args)...));
+	}
 
+	const Scene& GetScene() const { return *mScene; }
 
-	bool mLayersEnabled[Denum(EShadingLayer::ForwardRenderCount)];
+	uint2 GetPrimaryRenderSize() const;
 
-	EShadingDebugMode ShadingDebugMode = EShadingDebugMode::NONE;
-	float mDebugGrayscaleExp = 1.f;
-	float mDirShadowmapScale = 20;
+	RenderSettings Settings;
+
 	static int mBrdf;
 
 	void SetDebugCube(IDeviceTextureCube* cubemap);
@@ -185,6 +213,18 @@ public:
 		return *mDevice->ShaderMgr;
 	}
 
+	void DebugPixel(uint2 pixCoord)
+	{
+		Settings.DebugPixel = pixCoord;
+	}
+
+	UnorderedAccessView GetPixelDebugUav()
+	{
+		return mPixDebugUav;
+	}
+
+	void ShowPixelDebug();
+
 private:
 
 	Vector<IDeviceTexture::Ref> tempRemember;
@@ -215,6 +255,8 @@ private:
 
 	RGBuilder mRGBuilder;
 	RGResourceHandle mPingPongHandle; 
+	RGResourceHandle mPixelDebugTex;
+	UnorderedAccessView mPixDebugUav;
 };
 
 class ScopedCBOverride

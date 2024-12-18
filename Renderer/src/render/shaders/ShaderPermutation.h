@@ -22,15 +22,15 @@ struct TPermutationElement
 
 struct PermutationBool
 {
-	bool mVal = false;
+	bool Value = false;
 	void Set(bool value)
 	{
-		mVal = value;
+		Value = value;
 	}
 
 	const char* GetValue() const
 	{
-		return mVal ? "1" : "0";
+		return Value ? "1" : "0";
 	}
 
 	constexpr static u32 NumBits()
@@ -40,7 +40,7 @@ struct PermutationBool
 
 	u64 EncodeBits() const
 	{
-		return mVal;
+		return Value;
 	}
 };
 
@@ -96,12 +96,20 @@ struct TSimpleEnumElement
 }
 
 template<typename... Elements>
-struct PermutationDomain :  public IShaderPermutation, public std::tuple<Elements...>
+struct PermutationDomain : public IShaderPermutation, public std::tuple<Elements...>
 {
+	PermutationDomain() {}
+
 	template<typename ElementType, typename ValueType>
 	void Set(ValueType&& value)
 	{
 		std::get<ElementType>(*this).Set(std::forward<ValueType>(value));
+	}
+
+	template<typename ElementType>
+	ElementType const& Get() const
+	{
+		return std::get<ElementType>(*this);
 	}
 
 	void ModifyCompileEnv(ShaderCompileEnv& env) const override

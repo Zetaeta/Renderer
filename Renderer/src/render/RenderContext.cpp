@@ -12,12 +12,14 @@
 #include "shaders/ShaderDeclarations.h"
 #include "WavyEffectPPPass.h"
 #include "passes/GBufferPass.h"
+#include "passes/DeferredShadingPass.h"
+#include "passes/SSAOPass.h"
 
 namespace rnd
 {
 
-RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IDeviceTexture::Ref target)
-		: mCamera(camera)
+RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IDeviceTexture::Ref target, RenderSettings const& settings)
+	: mCamera(camera), mRGBuilder(DeviceCtx->Device), Settings(settings)
 {
 	mTarget = target;
 	mDeviceCtx = DeviceCtx;
@@ -89,30 +91,49 @@ void RenderContext::SetupRenderTarget()
 	mPasses.emplace_back(std::make_unique<ForwardRenderPass>(this, "ForwardRender", mCamera, mMainRT, mMainDS));
 	mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::BACK, "Background", static_cast<dx11::DX11Renderer*>(mDeviceCtx)->m_BG.get()));
 
-		DeviceTextureDesc gbAlbedoDesc = mTarget->Desc;
-		gbAlbedoDesc.DebugName = "GBuffer";
-		gbAlbedoDesc.Flags = TF_RenderTarget | TF_SRV;
-		gbAlbedoDesc.Format = ETextureFormat::RGBA8_Unorm_SRGB;
-		auto gbAlbedo = mDeviceCtx->Device->CreateTexture2D(gbAlbedoDesc);
-	tempRemember.push_back(gbAlbedo);
-		DeviceTextureDesc gbNormalDesc = mTarget->Desc;
-		gbNormalDesc.DebugName = "GBuffer Normal";
-		gbNormalDesc.Flags = TF_RenderTarget | TF_SRV;
-		gbNormalDesc.Format = ETextureFormat::RGBA8_Unorm;
-		auto gbNormal = mDeviceCtx->Device->CreateTexture2D(gbNormalDesc);
-	tempRemember.push_back(gbNormal);
-		DeviceTextureDesc gbDSDesc = mTarget->Desc;
-		gbDSDesc.DebugName = "GBuffer Depth";
-		gbDSDesc.Flags = TF_DEPTH | TF_SRV;
-		gbDSDesc.Format = ETextureFormat::D24_Unorm_S8_Uint;
-		auto gbDS = mDeviceCtx->Device->CreateTexture2D(gbDSDesc);
-	tempRemember.push_back(gbDS);
-	mPasses.emplace_back(std::make_unique<GBufferPass>(this, "GBuffer", mCamera, gbAlbedo->GetRT(), gbNormal->GetRT(), gbDS->GetDS()));
+	DeviceTextureDesc gbAlbedoDesc = mTarget->Desc;
+	gbAlbedoDesc.DebugName = "GBuffer";
+	gbAlbedoDesc.Flags = TF_RenderTarget | TF_SRV;
+	gbAlbedoDesc.Format = ETextureFormat::RGBA8_Unorm_SRGB;
+	auto gbAlbedo = mRGBuilder.MakeTexture2D(gbAlbedoDesc);
+
+	DeviceTextureDesc gbNormalDesc = mTarget->Desc;
+	gbNormalDesc.DebugName = "GBuffer Normal";
+	gbNormalDesc.Flags = TF_RenderTarget | TF_SRV;
+	gbNormalDesc.Format = ETextureFormat::RGBA8_Unorm;
+	auto gbNormal = mRGBuilder.MakeTexture2D(gbNormalDesc);
+
+	DeviceTextureDesc gbDSDesc = mTarget->Desc;
+	gbDSDesc.DebugName = "GBuffer Depth";
+	gbDSDesc.Flags = TF_DEPTH | TF_SRV;
+	gbDSDesc.Format = ETextureFormat::D24_Unorm_S8_Uint;
+	auto gbDS = mRGBuilder.MakeTexture2D(gbDSDesc);
+
+	DeviceTextureDesc aoDesc = mTarget->Desc;
+	aoDesc.Format = ETextureFormat::R16_Float;
+	aoDesc.Flags = TF_SRV | TF_UAV;
+	aoDesc.DebugName = "SSAO";
+	auto aoTex = mRGBuilder.MakeTexture2D(aoDesc);
+
+	DeviceTextureDesc pixDebugDesc = mTarget->Desc;
+	aoDesc.Format = ETextureFormat::RGBA8_Unorm;
+	aoDesc.Flags = TF_SRV | TF_UAV;
+	aoDesc.DebugName = "Pixel debug";
+	mPixelDebugTex = mRGBuilder.MakeTexture2D(aoDesc);
+
+	mPasses.emplace_back(std::make_unique<GBufferPass>(this, "GBuffer", mCamera, gbAlbedo, gbNormal, gbDS));
+
+	if (Settings.AmbientOcclusion)
+	{
+		AddPass<SSAOPass>(RGShaderResources({gbDS, gbNormal}), RGUnorderedAccessViews({aoTex}));
+	}
+
+	mPasses.emplace_back(std::make_unique<DeferredShadingPass>(this, mCamera, mMainRT, gbAlbedo, gbNormal, nullptr, gbDS, aoTex));
 #if ZE_BUILD_EDITOR
 //	mPasses.emplace_back(MakeOwning<HighlightSelectedPass>(this));
 #endif
 	mDebugCubePass = static_cast<RenderCubemap*>(mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::FRONT, "DebugCube")).get());
-	memset(mLayersEnabled, 1, Denum(EShadingLayer::Count));
+	memset(Settings.LayersEnabled, 1, Denum(EShadingLayer::Count));
 
 	SetupPostProcess();
 
@@ -134,12 +155,18 @@ void RenderContext::SetupPostProcess()
 	SetupLightData();
 	mDeviceCtx->ClearRenderTarget(mMainRT, { 0.45f, 0.55f, 0.60f, 1.00f });
 	mDeviceCtx->ClearDepthStencil(mMainDS, EDSClearMode::DEPTH_STENCIL, 1.f);
+	mDeviceCtx->ClearUAV(mPixDebugUav, vec4{0.f});
 	for (auto& pass : mPasses)
 	{
 		if (pass->IsEnabled())
 		{
-			pass->Execute(*this);
+			pass->ExecuteWithProfiling(*this);
 		}
+	}
+
+	if (Settings.EnablePixelDebug)
+	{
+		ShowPixelDebug();
 	}
 
 	if (mUseMSAA)
@@ -148,11 +175,14 @@ void RenderContext::SetupPostProcess()
 	}
 
 	Postprocessing();
+	mDeviceCtx->ClearResourceBindings();
 }
 
 void RenderContext::BuildGraph()
 {
 	mRGBuilder.Reset();
+
+	mPixDebugUav = mRGBuilder.GetUAV(mPixelDebugTex);
 
 	for (auto& pass : mPasses)
 	{
@@ -171,13 +201,18 @@ void RenderContext::BuildGraph()
 	}
 }
 
+rnd::IDeviceTexture::Ref RenderContext::GetPrimaryRT()
+{
+	return mTarget;
+}
+
 void RenderContext::Postprocessing()
 {
 	for (auto& pass : mPPPasses)
 	{
 		if (pass->IsEnabled())
 		{
-			pass->Execute(*this);
+			pass->ExecuteWithProfiling(*this);
 		}
 	}
 
@@ -237,7 +272,7 @@ LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 l
 		lrd.mCamera = std::make_unique<Camera>(cameraType, lightPos);
 		if (cameraType == ECameraType::ORTHOGRAPHIC)
 		{
-			lrd.mCamera->SetViewExtent(mDirShadowmapScale, mDirShadowmapScale);
+			lrd.mCamera->SetViewExtent(Settings.DirShadowmapScale, Settings.DirShadowmapScale);
 		}
 	}, light);
 
@@ -295,10 +330,15 @@ void RenderContext::SetupLightData()
 			lrd.GetCamera()->SetTransform(trans);
 			if (lrd.GetCamera()->GetCameraType() == ECameraType::ORTHOGRAPHIC)
 			{
-				lrd.mCamera->SetViewExtent(mDirShadowmapScale, mDirShadowmapScale);
+				lrd.mCamera->SetViewExtent(Settings.DirShadowmapScale, Settings.DirShadowmapScale);
 			}
 		}
 	}
+}
+
+uint2 RenderContext::GetPrimaryRenderSize() const
+{
+	return {mTarget->Desc.Width, mTarget->Desc.Height};
 }
 
 int RenderContext::mBrdf = 1;
@@ -324,6 +364,11 @@ void RenderContext::DrawControls()
 			needsRebuild = true;
 			pass.SetEnabled(enabled);
 		}
+		if (enabled)
+		{
+			ImGui::Text("GPU Time: %f", pass.GetTimer()->GPUTimeMs);
+			pass.AddControls();
+		}
 		ImGui::PopID();
 	};
 
@@ -342,6 +387,9 @@ void RenderContext::DrawControls()
 	{
 		needsFullRebuild = true;
 	}
+	ImGui::Checkbox("Ambient occlusion", &Settings.AmbientOcclusion);
+	ImGui::Checkbox("Pixel debugging", &Settings.EnablePixelDebug);
+	ImGui::DragInt2("Debug pixel", &Settings.DebugPixel.x);
 
 	if (needsFullRebuild)
 	{
@@ -467,6 +515,24 @@ IDepthStencil::Ref RenderContext::GetTempDepthStencilFor(IRenderTarget::Ref rt)
 	return tempDS;
 }
 
+void RenderContext::ShowPixelDebug()
+{
+	mDeviceCtx->SetBlendMode(EBlendState::COL_OBSCURE_ALPHA | EBlendState::COL_BLEND_ALPHA | EBlendState::ALPHA_ADD);
+	mDeviceCtx->SetDepthMode(EDepthMode::Disabled);
+
+	PostProcessVS::Permutation perm;
+	perm.Set<PostProcessVS::UseUVs>(true);
+	static auto vs = GetShader<PostProcessVS>(perm);
+	static auto ps = GetShader<FlatPS>();
+
+	mDeviceCtx->SetPixelShader(ps);
+	mDeviceCtx->SetVertexShader(vs);
+	mDeviceCtx->SetShaderResources(EShaderType::Pixel, Single<ResourceView const>(mRGBuilder.GetSRV(mPixelDebugTex)));
+	auto tri = mDevice->BasicMeshes.GetFullScreenTri();
+	mDeviceCtx->SetRTAndDS(mMainRT, IDepthStencil::Ref{});
+	mDeviceCtx->DrawMesh(tri);
+}
+
 Camera::ConstRef LightRenderData::GetCamera() const
 {
 	return mCamera.get();
@@ -475,6 +541,11 @@ Camera::ConstRef LightRenderData::GetCamera() const
 Camera::Ref LightRenderData::GetCamera()
 {
 	return mCamera.get();
+}
+
+RenderSettings::RenderSettings()
+{
+	memset(LayersEnabled, 1, Denum(EShadingLayer::Count));
 }
 
 }

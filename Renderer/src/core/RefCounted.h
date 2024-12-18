@@ -106,7 +106,7 @@ public:
 
 	template<typename Derived>
 	RefPtr& operator=(Derived* derivedPtr)
-		requires(std::derived_from<T, Derived>)
+//		requires(std::derived_from<T, Derived>)
 	{
 		InternalDecRef();
 		Ptr = derivedPtr;
@@ -116,7 +116,7 @@ public:
 
 	template<typename U>
 	RefPtr& operator=(RefPtr<U> other)
-		requires(std::derived_from<T,U>)
+//		requires(std::derived_from<T,U>)
 	{
 		std::swap(Ptr, other.Ptr);
 		return *this;

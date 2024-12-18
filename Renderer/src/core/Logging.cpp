@@ -26,19 +26,20 @@ public:
 			return;
 		}
 		// Reverse chain
-		//Node* prev = Head, current = prev->Next, next = nullptr;
-		//prev->Next = nullptr;
-		//while (current)
-		//{
-		//
-		//}
-		//for (Node* current = head, next = head->Next; next != nullptr; current = next, next = next->Next)
-		//{
-		//	
-		//}
-		for (Node* current = head; current; current = current->Next)
+		Node* prev = head;
+		Node* current = prev->Next;
+		Node* next = nullptr;
+		prev->Next = nullptr;
+		while (current)
 		{
-			func(current->Msg);
+			next = current->Next;
+			current->Next = prev;
+			prev = current;
+			current = next;
+		}
+		for (Node* n = prev; n; n = n->Next)
+		{
+			func(n->Msg);
 		}
 	}
 
