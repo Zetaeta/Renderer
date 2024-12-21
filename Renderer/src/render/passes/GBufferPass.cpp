@@ -2,6 +2,7 @@
 #include "render/dx11/DX11Renderer.h"
 #include "render/ForwardRenderPass.h"
 #include "render/ShadingCommon.h"
+#include "imgui.h"
 
 namespace rnd
 {
@@ -25,6 +26,8 @@ void GBufferPass::BeginRender()
 	perFrameData.debugMode = Denum(mRCtx->Settings.ShadingDebugMode);
 	perFrameData.debugGrayscaleExp = mRCtx->Settings.DebugGrayscaleExp;
 	perFrameData.brdf = mRCtx->mBrdf;
+	perFrameData.roughnessMod = roughnessMod;
+	perFrameData.metalnessMod = metalnessMod;
 	PSPF->Data().SetData(perFrameData);
 	PSPF->Update();
 	mLayer = EShadingLayer::GBuffer;
@@ -45,6 +48,12 @@ void GBufferPass::Build(RGBuilder& builder)
 	mAlbedoRT.Resolve(builder);
 	mNormalRT.Resolve(builder);
 	mDSV.Resolve(builder);
+}
+
+void GBufferPass::AddControls()
+{
+	ImGui::DragFloat("Roughness modifier", &roughnessMod, 0.1f, -1.f, 1.f);
+	ImGui::DragFloat("Metalness modifier", &metalnessMod, 0.1f, -1.f, 1.f);
 }
 
 }

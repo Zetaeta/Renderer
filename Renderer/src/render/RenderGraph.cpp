@@ -27,6 +27,13 @@ RGResourceHandle RGBuilder::MakeFlipFlop(DeviceTextureRef tex1, DeviceTextureRef
 	return RGResourceHandle{NumCast<u32>(mFlipFlops.size() - 1), ERGResourceBevhiour::FlipFlop};
 }
 
+void RGBuilder::GetFlipFlopState(RGResourceHandle handle, DeviceTextureRef& lastInput, DeviceTextureRef& lastOutput)
+{
+	auto& flipFlop = mFlipFlops[handle.Hdl];
+	lastInput = flipFlop.Textures[1-flipFlop.CurrentRead];
+	lastOutput = flipFlop.Textures[flipFlop.CurrentRead];
+}
+
 RGResourceHandle RGBuilder::MakeTexture2D(DeviceTextureDesc const& desc)
 {
 	mTextures.emplace_back(mDevice->CreateTexture2D(desc));

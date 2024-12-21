@@ -28,7 +28,7 @@ private:
 	bool hemisphere = true;
 	float stdDev = 2.f;
 	bool blur = true;
-	bool mDebugPixel = true;
+	bool mDebugPixel = false;
 	RGShaderResources mSRVs;
 	RGResourceHandle mAOTexture;
 	RGResourceHandle mSecondaryTexture;

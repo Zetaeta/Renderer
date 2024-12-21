@@ -72,7 +72,6 @@ public:
 		CurrentRead = 0;
 	}
 
-private:
 	DeviceTextureRef Textures[2];
 	u8 CurrentRead = 0;
 };
@@ -111,6 +110,8 @@ public:
 	:mDevice(device) { }
 	RGResourceHandle AddFixedSRV(ResourceView view);
 	RGResourceHandle MakeFlipFlop(DeviceTextureRef tex1, DeviceTextureRef tex2);
+
+	void GetFlipFlopState(RGResourceHandle handle, DeviceTextureRef& lastInput, DeviceTextureRef& lastOutput);
 
 	RGResourceHandle MakeTexture2D(DeviceTextureDesc const& desc);
 

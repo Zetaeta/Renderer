@@ -26,6 +26,23 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 			RLOG(LogDX11Shader, Info, "%s: %s", pair.first.c_str(), pair.second.c_str());
 		}
 	}
+	switch (shaderType)
+	{
+	case rnd::EShaderType::Vertex:
+		macros.push_back({"VERTEX", "1"});
+		break;
+	case rnd::EShaderType::Pixel:
+		macros.push_back({"PIXEL", "1"});
+		break;
+	case rnd::EShaderType::Geometry:
+		macros.push_back({"GEOMETRY", "1"});
+		break;
+	case rnd::EShaderType::Compute:
+		macros.push_back({"COMPUTE", "1"});
+		break;
+	default:
+		break;
+	}
 	macros.push_back({nullptr, nullptr});
 
 	fs::create_directories(mOutDir);
@@ -71,7 +88,7 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 			{
 				RLOG(LogGlobal, Info, "Output: %s\n", (const char*) errBlob->GetBufferPointer());
 			}
-			ZE_ASSERT(false);
+			DebugBreak();
 			return nullptr;
 		}
 	}

@@ -177,8 +177,8 @@ PixelLightingInput GetLightingInput(BasePassPSIn interp)
 
 #if USE_NORMAL
 	result.normal = normalize(interp.normal);
-    result.roughness = roughness;
-    result.metalness = matMetalness;
+    result.roughness = roughness + roughnessMod;
+    result.metalness = matMetalness + metalnessMod;
 #if TEXTURED
 	if (useNormalMap)
 	{
@@ -194,6 +194,8 @@ PixelLightingInput GetLightingInput(BasePassPSIn interp)
 		result.roughness += fullRough.g;
 		result.metalness += fullRough.r;
 	}
+    result.roughness = clamp(result.roughness, 0.08, 1);
+    result.metalness = clamp(result.metalness, 0, 1);
 #endif
 #endif
     result.viewDir = normalize(interp.viewDir);

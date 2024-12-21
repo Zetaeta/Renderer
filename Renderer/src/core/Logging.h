@@ -26,7 +26,7 @@ public:
 	}
 };
 
-constexpr size_t LogBufferSize = 1024;
+constexpr size_t LogBufferSize = 4096;
 namespace LogPrivate
 {
 	extern thread_local char sBuffer[LogBufferSize];

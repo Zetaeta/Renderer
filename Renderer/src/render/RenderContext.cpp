@@ -14,6 +14,7 @@
 #include "passes/GBufferPass.h"
 #include "passes/DeferredShadingPass.h"
 #include "passes/SSAOPass.h"
+#include "passes/SsrPass.h"
 
 namespace rnd
 {
@@ -42,6 +43,7 @@ void RenderContext::SetupRenderTarget()
 	DeviceTextureDesc dsDesc = mTarget->Desc;
 
 	DeviceTextureDesc primaryRTDesc = mTarget->Desc;
+	primaryRTDesc.Format = ETextureFormat::RGBA8_Unorm_SRGB;
 	primaryRTDesc.DebugName = "Primary RT";
 	primaryRTDesc.Flags = ETextureFlags::TF_RenderTarget | ETextureFlags::TF_SRGB | ETextureFlags::TF_SRV;
 	mPrimaryTarget = mDevice->CreateTexture2D(primaryRTDesc);
@@ -135,17 +137,18 @@ void RenderContext::SetupRenderTarget()
 	mDebugCubePass = static_cast<RenderCubemap*>(mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::FRONT, "DebugCube")).get());
 	memset(Settings.LayersEnabled, 1, Denum(EShadingLayer::Count));
 
-	SetupPostProcess();
+
+	mPingPongHandle = mRGBuilder.MakeFlipFlop(mPrimaryTarget, mPPTarget);
+	auto stencilHdl = mRGBuilder.AddFixedSRV({mDSTex, SRV_StencilBuffer});
+	mPPPasses.push_back(MakeOwning<SsrPass>(this, RGShaderResources({gbAlbedo, gbNormal, gbDS, mPingPongHandle}), mPingPongHandle));
+	mPPPasses.push_back(MakeOwning<PostProcessPass>(this, GetShader<OutlinePPPS>(), mPingPongHandle, RGShaderResources({mPingPongHandle, stencilHdl}), "Outline"));
+	mPPPasses.emplace_back(MakeOwning<WavyEffectPPPass>(this, mPingPongHandle, RGShaderResources({mPingPongHandle})))->SetEnabled(false);
 
 	BuildGraph();
  }
 
 void RenderContext::SetupPostProcess()
 {
-	mPingPongHandle = mRGBuilder.MakeFlipFlop(mPrimaryTarget, mPPTarget);
-	auto stencilHdl = mRGBuilder.AddFixedSRV({mDSTex, SRV_StencilBuffer});
-	mPPPasses.push_back(MakeOwning<PostProcessPass>(this, GetShader<OutlinePPPS>(), mPingPongHandle, RGShaderResources({mPingPongHandle, stencilHdl}), "Outline"));
-	mPPPasses.emplace_back(MakeOwning<WavyEffectPPPass>(this, mPingPongHandle, RGShaderResources({mPingPongHandle})))->SetEnabled(false);
 }
 
 
@@ -164,10 +167,6 @@ void RenderContext::SetupPostProcess()
 		}
 	}
 
-	if (Settings.EnablePixelDebug)
-	{
-		ShowPixelDebug();
-	}
 
 	if (mUseMSAA)
 	{
@@ -214,6 +213,11 @@ void RenderContext::Postprocessing()
 		{
 			pass->ExecuteWithProfiling(*this);
 		}
+	}
+
+	if (Settings.EnablePixelDebug)
+	{
+		ShowPixelDebug();
 	}
 
 	if (static_cast<RGFlipFlop*>(mRGBuilder[mPingPongHandle])->IsOdd())
@@ -529,7 +533,9 @@ void RenderContext::ShowPixelDebug()
 	mDeviceCtx->SetVertexShader(vs);
 	mDeviceCtx->SetShaderResources(EShaderType::Pixel, Single<ResourceView const>(mRGBuilder.GetSRV(mPixelDebugTex)));
 	auto tri = mDevice->BasicMeshes.GetFullScreenTri();
-	mDeviceCtx->SetRTAndDS(mMainRT, IDepthStencil::Ref{});
+	DeviceTextureRef lastRT, _;
+	mRGBuilder.GetFlipFlopState(mPingPongHandle, _, lastRT);
+	mDeviceCtx->SetRTAndDS(lastRT->GetRT(), IDepthStencil::Ref{});
 	mDeviceCtx->DrawMesh(tri);
 }
 

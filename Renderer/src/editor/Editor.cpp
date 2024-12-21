@@ -205,7 +205,7 @@ void Editor::Tick(float dt)
 	{
 		if (!ImGui::GetIO().WantCaptureMouse)
 		{
-			if (isMouseDown)
+			if (isRightMouseDown)
 			{
 				OnRightClick();
 			}

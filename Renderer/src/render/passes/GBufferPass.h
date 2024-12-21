@@ -12,8 +12,12 @@ public:
 	virtual void Accept(SceneComponent const* sceneComp, MeshPart const* mesh) override;
 	virtual void BeginRender() override;
 	void Build(RGBuilder& builder) override;
+	void AddControls() override;
 	RGRenderTargetRef mAlbedoRT;
 	RGRenderTargetRef mNormalRT;
 	RGDepthStencilRef mDSV;
+
+	float roughnessMod = 0;
+	float metalnessMod = 0;
 };
 }

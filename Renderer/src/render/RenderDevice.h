@@ -27,10 +27,38 @@ struct PooledCBHandle : CBHandle
 class ICBPool
 {
 public:
+	template<typename T>
+	PooledCBHandle AcquireConstantBuffer(T const& data)
+	{
+		return AcquireConstantBuffer(sizeof(T), {reinterpret_cast<const byte*>(&data), sizeof(data)});
+	}
 	[[nodiscard]] virtual PooledCBHandle AcquireConstantBuffer(u32 size, std::span<const byte> initialData) = 0;
 	virtual void	 ReleaseConstantBuffer(PooledCBHandle handle) = 0;
 
 	virtual ~ICBPool() {}
+};
+
+class ScopedCBClaim
+{
+public:
+	template<typename... Args>
+	ScopedCBClaim(ICBPool* pool, Args... args)
+	:mPool(pool)
+	{
+		mHandle = pool->AcquireConstantBuffer(std::forward<Args>(args)...);
+	}
+	~ScopedCBClaim()
+	{
+		mPool->ReleaseConstantBuffer(mHandle);
+	}
+
+	operator CBHandle()
+	{
+		return mHandle;
+	}
+private:
+	PooledCBHandle mHandle;
+	ICBPool* mPool;
 };
 
 class IRenderDevice

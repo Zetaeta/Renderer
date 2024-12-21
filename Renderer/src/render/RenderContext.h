@@ -35,6 +35,8 @@ namespace rnd { class IRenderDevice; }
 namespace rnd
 {
 
+struct PixelDebuggingSwitch : SHADER_PERM_BOOL("PIXEL_DEBUGGING");
+
 namespace CB
 {
 #define CBENTRY(name)\

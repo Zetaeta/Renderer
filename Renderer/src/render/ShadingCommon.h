@@ -18,6 +18,8 @@ struct PerFramePSData
 	int debugMode = 0;
 	float debugGrayscaleExp = 1;
 	int brdf = 0;
+	float roughnessMod = 0;
+	float metalnessMod = 0;
 };
 
 __declspec(align(16))
@@ -31,6 +33,8 @@ struct PFPSDirLight// : PerFramePSData
 	int debugMode = 0;
 	float debugGrayscaleExp = 1;
 	int brdf = 0;
+	float roughnessMod = 0;
+	float metalnessMod = 0;
 };
 
 __declspec(align(16))
@@ -44,6 +48,8 @@ struct PFPSPointLight// : PerFramePSData
 	int debugMode = 0;
 	float debugGrayscaleExp = 1;
 	int brdf = 0;
+	float roughnessMod = 0;
+	float metalnessMod = 0;
 };
 
 __declspec(align(16))
@@ -59,6 +65,8 @@ struct PFPSSpotLight// : PerFramePSData
 	int debugMode = 0;
 	float debugGrayscaleExp = 1;
 	int brdf = 0;
+	float roughnessMod = 0;
+	float metalnessMod = 0;
 };
 
 void SetupShadingLayer(RenderContext const* renderContext, EShadingLayer lightType, u32 lightIdx);

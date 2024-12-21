@@ -1202,8 +1202,18 @@ void DX11Renderer::SetUAVs(EShaderType shader, Span<UnorderedAccessView const> u
 		views[i] = uavs[i].Get<ID3D11UnorderedAccessView*>();
 	}
 	mMaxUAVs[shader] = max(mMaxUAVs[shader], NumCast<u32>(startIdx + uavs.size()));
-	ZE_ASSERT(shader == EShaderType::Compute);
-	pContext->CSSetUnorderedAccessViews(startIdx, NumCast<u32>(uavs.size()), &views[0], nullptr);
+	switch (shader)
+	{
+	case rnd::EShaderType::Pixel:
+		pContext->OMSetRenderTargetsAndUnorderedAccessViews(D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr, startIdx, NumCast<u32>(views.size()), &views[0], nullptr);
+		break;
+	case rnd::EShaderType::Compute:
+		pContext->CSSetUnorderedAccessViews(startIdx, NumCast<u32>(uavs.size()), &views[0], nullptr);
+		break;
+	default:
+		ZE_ASSERT(false);
+		break;
+	}
 }
 
 

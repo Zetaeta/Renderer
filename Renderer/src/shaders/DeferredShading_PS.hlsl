@@ -25,46 +25,14 @@ Texture2D ambientOcclusion : register(t4);
 
 SHADOWMAP_DECLARATION( : register(t5));
 
+#define GBUFFER_READ 1
+
 #include "Material.hlsli"
 
-float GetActualDepth(float depth)
-{
-    return depth;
-}
-
-PixelLightingInput UnpackGBuffer(float2 uv)
-{
-    PixelLightingInput result;
-    int3 texel = int3(screenSize * uv, 0.5);
-    float4 colRough = baseColourRough.Load(texel);
-    float4 normMet = sceneNormalMetal.Load(texel);
-    float4 emiss = sceneEmissive.Load(texel);
-    result.colour = colRough.xyz;
-    result.roughness = colRough.w;
-    result.normal = UnpackNormalFromUnorm(normMet.xyz);
-    result.metalness = normMet.w;
-    result.emissive = emiss.xyz;
-    
-    float bufferDepth = sceneDepth.Load(texel).x;
-    if (bufferDepth >= 1 || bufferDepth <= 0.00001)
-    {
-        discard;
-    }
-
-    float3 clipSpacePos = float3(uv.x * 2 - 1, 1 - uv.y * 2, GetActualDepth(bufferDepth));
-    float4 position = mul(screen2World, float4(clipSpacePos, 1));
-    result.worldPos = position.xyz / position.w;
-    result.viewDir = result.worldPos - cameraPos;
-    result.specularStrength = 1;
-    result.diffuseStrength = 1;
-    result.ambientStrength = 1;
-
-    return result;
-}
 
 float4 main(float2 uv : TexCoord) : SV_TARGET
 {
-    PixelLightingInput li = UnpackGBuffer(uv);
+    PixelLightingInput li = UnpackGBuffer(uv, screenSize);
 #if AMBIENT_OCCLUSION
     li.ambientStrength *= ambientOcclusion.Sample(splr, uv);
 #endif

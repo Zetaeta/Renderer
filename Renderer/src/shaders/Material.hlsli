@@ -3,40 +3,7 @@
 #define MATERIAL_HLSLI
 
 #include "DeferredShadingCommon.hlsli"
-
-struct PixelLightingInput
-{
-    float3 colour;
-#if TRANSLUCENT || MASKED
-    float opacity;
-#endif
-    float3 normal;
-    float roughness;
-#if EMISSIVE
-    float3 emissive;
-#endif
-    float metalness;
-    float3 worldPos;
-    float ambientStrength;
-    float3 viewDir;
-    float diffuseStrength;
-    float specularStrength;
-};
-
-float square(float f)
-{
-	return f*f;
-}
-float squareLen(float3 v)
-{
-	return dot(v,v);
-}
-
-
-#define pdot(a,b) saturate(dot(a,b));
-
-static const float PI = 3.14159265f;
-static const float dielectricF0 = 0.04;
+#include "Maths.hlsli"
 
 #define BLINN
 float3 ComputeLighting_BlinnPhong(float3 normal, float3 diffuseCol, float3 lightCol, float3 lightDir, float roughness, float3 viewDir, float metalness, float diffuseStrength, float specularStrength)

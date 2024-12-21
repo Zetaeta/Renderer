@@ -33,6 +33,8 @@ cbuffer PerFramePSData : register(b0) {
 	int debugMode;
 	float debugGrayscaleExp;
 	int brdf = 0;
+    float roughnessMod;
+    float metalnessMod;
 };
 
 
