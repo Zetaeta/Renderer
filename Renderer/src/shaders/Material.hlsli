@@ -41,7 +41,8 @@ float3 ComputeLighting_GGX(float3 normal, float3 diffuseCol, float3 lightCol, fl
 	float NL = pdot(normal, lightDir);
 
 	float3 specularCol = metalness * diffuseCol + (1-metalness) * float3(dielectricF0,dielectricF0,dielectricF0);
-	float3 Fresnel = specularCol + (1-specularCol) * pow(1-NL, 5);
+    float fresnelStrength = pow(1 - NL, 5);
+	float3 Fresnel = specularCol + (1-specularCol) * fresnelStrength;
 	float NDF = (NH > 0) * alphasq / (PI * pow(NH * NH * (alphasq - 1) + 1, 2));
 	float k = alpha/2;
 
@@ -51,7 +52,7 @@ float3 ComputeLighting_GGX(float3 normal, float3 diffuseCol, float3 lightCol, fl
 
 	float3 specularPart = lightCol * (Fresnel * GeomShadowing * NDF) / max((4 * NL * NV),0.0001) * specularStrength;
 	
-	float3 diffusePart = (1-metalness) * diffuseCol * lightCol * diffuseStrength;
+    float3 diffusePart = (1 - metalness) * (1 - fresnelStrength) * diffuseCol * lightCol * diffuseStrength;
 
     return (diffusePart + specularPart) * NL;
 }

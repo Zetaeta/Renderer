@@ -52,6 +52,16 @@ float3 GGXSpecularReflection(float3 normal, float3 diffuseCol, float roughness, 
 	return (Fresnel * GeomShadowing * NDF) / max((4 * NL * NV),0.0001) * specularStrength;
 }
 
+float3 ReflectionStrength(float3 normal, float3 diffuseCol, float roughness, float3 viewDir, float metalness, float specularStrength)
+{
+	viewDir = -viewDir;
+	float NL = pdot(normal, viewDir);
+	float3 specularCol = metalness * diffuseCol + (1-metalness) * float3(dielectricF0,dielectricF0,dielectricF0);
+	float3 Fresnel = specularCol + (1-specularCol) * pow(1-NL, 5);
+    return clamp(Fresnel / roughness, 0, 1);
+
+}
+
 struct ScreenLocation
 {
     uint2 pos;
@@ -66,7 +76,9 @@ bool IsValid(ScreenLocation loc, uint2 screenSize)
 
 float PerspectiveLerpDepth(float start, float end, float alpha)
 {
-    return (start * end) / lerp(end, start, alpha); // Perspective correct interpolation
+//    return (start * end) / lerp(end, start, alpha); // Perspective correct interpolation
+    // depth buffer is already 1/z lol
+    return lerp(start, end, alpha);
 }
 
 void DebugPixel(uint2 basePixel, uint2 outPixel, float4 colour)
@@ -83,9 +95,34 @@ void DebugPixel(uint2 basePixel, uint2 outPixel, float4 colour)
 #endif
 }
 
+// line = point + t * dir. returns dir
+float LinePlaneIntersection(float3 startPoint, float3 direction, float4 planeEquation)
+{
+    return -dot(planeEquation, float4(startPoint, 1)) / dot(planeEquation, float4(direction, 0));
+
+}
+bool IsObscuredOrOffscreen(uint2 rayPos, float rayDepth, uint2 screenSize, float hitBias, out float depthDiff)
+{
+    if (rayPos.x < 0 || rayPos.y < 0 || rayPos.x >= screenSize.x || rayPos.y >= screenSize.y)
+    {
+        depthDiff = -1;
+        return true;
+    }
+    float depthAtPos = sceneDepth.Load(int3(rayPos, 0));
+    depthDiff = rayDepth + hitBias - depthAtPos;
+    return depthDiff > 0;
+}
+
 ScreenLocation ScreenTrace(uint2 screenSize, uint2 startPixel, float startDepth, float3 startPosWld, float3 directionWld, float maxDist, float resolution, uint maxRefineSteps, float distThreshold)
 {
     float2 startUv = float2(startPixel) / screenSize;
+    float4 nearPlaneEq = projWorld[2];
+    // Clip line against near plane
+    if (dot(nearPlaneEq, float4(directionWld, 0)) < 0)
+    {
+        maxDist = min(maxDist, 0.80 * LinePlaneIntersection(startPosWld, directionWld, nearPlaneEq));
+    }
+
     float3 endPosWld = startPosWld + directionWld * maxDist;
     float4 endPosH = mul(projWorld, float4(endPosWld, 1));
     float3 endPosClp = endPosH.xyz / endPosH.w;
@@ -96,10 +133,6 @@ ScreenLocation ScreenTrace(uint2 screenSize, uint2 startPixel, float startDepth,
     float pixelLengthSq = squareLen(endPixel - startPixel);
     float pixelLength = sqrt(pixelLengthSq);
     float2 step = float2(endPixel - startPixel) / (pixelLength * max(resolution, 0.00001));
-    //for (int i = 0; i < 10; ++i)
-    //{
-    //    DebugPixel(startPixel, startPixel + i * step, float4(1, 0, 1, 1));
-    //}
     float stepLen = length(step);
     float length1 = 0.f;
 //    float lastDepth 
@@ -107,6 +140,11 @@ ScreenLocation ScreenTrace(uint2 screenSize, uint2 startPixel, float startDepth,
     ScreenLocation invalid;
     invalid.bufferDepth = 0;
     invalid.pos = screenSize;
+
+    if (stepLen < 0.8)
+    {
+        return invalid;
+    }
 
     float lastDepth = startDepth;
     float currDepth;
@@ -117,15 +155,29 @@ ScreenLocation ScreenTrace(uint2 screenSize, uint2 startPixel, float startDepth,
     float length0;
     // Phase 1 : coarse jumping
     uint numSteps = 0;
-    while(length1 <= pixelLength && numSteps++ < 128)
+    #if PIXEL_DEBUGGING
+    if (startPixel.x == debugPixel.x && startPixel.y == debugPixel.y)
+    {
+        uint steps = 0;
+        float debugLength = 0;
+        float2 outPixel = startPixel;
+        while (debugLength < pixelLength && steps++ < 128)
+        {
+            debugLength += step;
+            outPixel += step;
+            pixelDebug[round(outPixel)] = float4(endPosClp.z < 0,0,1,1);
+        }
+    }
+#endif
+    while(length1 <= pixelLength && numSteps++ < 1024)
     {
         length1 += stepLen;
         pixel1 += step;
         currPixelu = round(pixel1);
-        if (currPixelu.x < 0 || currPixelu.y < 0 || currPixelu.x >= screenSize.x || currPixelu.y >= screenSize.y)
-        {
-            return invalid;
-        }
+        //if (currPixelu.x < 0 || currPixelu.y < 0 || currPixelu.x >= screenSize.x || currPixelu.y >= screenSize.y)
+        //{
+        //    return invalid;
+        //}
 
 //#if PIXEL_DEBUGGING
 //        if (debugPixel.x == startPixel.x && debugPixel.y == startPixel.y)
@@ -133,25 +185,32 @@ ScreenLocation ScreenTrace(uint2 screenSize, uint2 startPixel, float startDepth,
 //            pixelDebug[currPixelu] = float4(1,0.5,0,1);
 //        }
 //#endif
-        currDepth = sceneDepth.Load(int3(currPixelu, 0));
-        DebugPixel(startPixel, currPixelu, float4(1, 0, 0, 1));
+        DebugPixel(startPixel, currPixelu, float4(1, 0.5, 0.5, 1));
         float lineDepth = PerspectiveLerpDepth(startDepth, endPosClp.z, length1 / pixelLength);
-
-        if (currDepth < lineDepth + distThreshold)
+        currDepth = sceneDepth.Load(int3(currPixelu, 0));
+        float depthDiff;
+        if (IsObscuredOrOffscreen(currPixelu, lineDepth, screenSize, distThreshold, depthDiff))
         {
-            foundHit = true;
             DebugPixel(startPixel, currPixelu, float4(1, 0, 0, 1));
-            DebugPixel(startPixel, currPixelu + int2(1,0), float4(1, 0, 0, 1));
-            DebugPixel(startPixel, currPixelu - int2(1,0), float4(1, 0, 0, 1));
-            DebugPixel(startPixel, currPixelu - int2(0,1), float4(1, 0, 0, 1));
-            DebugPixel(startPixel, currPixelu + int2(0,1), float4(1, 0, 0, 1));
-            DebugPixel(startPixel, currPixelu + int2(0,2), float4(1, 0, 0, 1));
-            DebugPixel(startPixel, currPixelu + int2(2,0), float4(1, 0, 0, 1));
+            foundHit = true;
             break;
         }
 
+        //if (currDepth < lineDepth + distThreshold)
+        //{
+        //    foundHit = true;
+        //    DebugPixel(startPixel, currPixelu + int2(1,0), float4(1, 0, 0, 1));
+        //    DebugPixel(startPixel, currPixelu - int2(1,0), float4(1, 0, 0, 1));
+        //    DebugPixel(startPixel, currPixelu - int2(0,1), float4(1, 0, 0, 1));
+        //    DebugPixel(startPixel, currPixelu + int2(0,1), float4(1, 0, 0, 1));
+        //    DebugPixel(startPixel, currPixelu + int2(0,2), float4(1, 0, 0, 1));
+        //    DebugPixel(startPixel, currPixelu + int2(2,0), float4(1, 0, 0, 1));
+        //    break;
+        //}
+
         lastDepth = currDepth;
         length0 = length1;
+        pixel0 = pixel1;
 //        lastPixel = currPixelu;
     }
     // Phase 2: refinement (binary search)
@@ -159,6 +218,7 @@ ScreenLocation ScreenTrace(uint2 screenSize, uint2 startPixel, float startDepth,
     {
         return invalid;
     }
+    float depthDiff = 0;
     for (uint stepNo = 0; stepNo < maxRefineSteps; ++stepNo)
     {
         float2 nextPixel = (pixel1 + pixel0) / 2;
@@ -170,9 +230,9 @@ ScreenLocation ScreenTrace(uint2 screenSize, uint2 startPixel, float startDepth,
 
         float currLength = (length0 + length1) / 2;
         float lineDepth = PerspectiveLerpDepth(startDepth, endPosClp.z, currLength / pixelLength); // Perspective correct interpolation
-        currDepth = sceneDepth.Load(int3(nextPixelu, 0)).x;
+//        currDepth = sceneDepth.Load(int3(nextPixelu, 0)).x;
         DebugPixel(startPixel, nextPixelu, float4(0,1,0,1));
-        if (currDepth < lineDepth + distThreshold) // behind geometry
+        if (IsObscuredOrOffscreen(nextPixelu, lineDepth, screenSize, distThreshold, depthDiff)) // behind geometry
         {
             length1 = currLength;
             pixel1 = nextPixel;
@@ -184,12 +244,18 @@ ScreenLocation ScreenTrace(uint2 screenSize, uint2 startPixel, float startDepth,
         }
     }
 
-    DebugPixel(startPixel, round(pixel1), float4(0, 0, 1, 1));
+    if (abs(depthDiff) < 0.01)
+    {
+        DebugPixel(startPixel, round(pixel1), float4(0, 0, 1, 1));
 
-    ScreenLocation result;
-    result.bufferDepth = currDepth;
-    result.pos = round(pixel1);
-    return result;
+        ScreenLocation result;
+        result.bufferDepth = currDepth;
+        result.pos = round(pixel1);
+        return result;
+        
+    }
+    return invalid;
+
 }
 
 float3 CalcSSR(uint2 pixel)
@@ -206,7 +272,8 @@ float3 CalcSSR(uint2 pixel)
     }
     PixelLightingInput li = UnpackGBuffer(uv, screenSize);
 
-    float3 reflectionStrength = GGXSpecularReflection(li.normal, li.colour, li.roughness, li.viewDir, li.metalness, li.specularStrength);
+    float3 reflectionStrength = ReflectionStrength(li.normal, li.colour, li.roughness, li.viewDir, li.metalness, li.specularStrength);
+    reflectionStrength = clamp(reflectionStrength, 0, 10);
     if (squareLen(reflectionStrength) < reflectionThreshold * reflectionThreshold)
     {
         DebugPixel(pixel, pixel, float4(1, 1, 0, 1));
@@ -220,16 +287,21 @@ float3 CalcSSR(uint2 pixel)
 
     if (IsValid(result, screenSize))
     {
-        float3 hitNormal = sceneNormalMetal.Load(int3(result.pos, 0)).xyz;
-        float visibility = (1 + dot(hitNormal, -reflectionDir)) / 2;
+        float3 hitNormal = UnpackNormalFromUnorm(sceneNormalMetal.Load(int3(result.pos, 0)).xyz);
+        float visibility = dot(hitNormal, -reflectionDir);// / 2;
         DebugPixel(pixel, result.pos, float4(1, 0, 1, 1));
+
         if (visibility > 0)
        {
+            float4 resultPos = mul(screen2World, float4(float2(result.pos) / screenSize, result.bufferDepth, 1));
+            float distance = length(resultPos.xyz / resultPos.w - li.worldPos);
+            float falloff = 1 / clamp(distance, 1, 1000);
             DebugPixel(pixel, pixel, float4(1, 1, 1, 1));
         #if COMPUTE
             return visibility * reflectionStrength * inoutSceneColour[result.pos];
         #else
-            return visibility * reflectionStrength* inSceneColour.Load(int3(result.pos, 0));
+            return visibility * reflectionStrength * //falloff*
+            inSceneColour.Load(int3(result.pos, 0)).xyz;
         #endif
 
         }
@@ -248,5 +320,5 @@ void SSR_CS( uint3 pixCoord3 : SV_DispatchThreadID )
 
 float4 SSR_PS(float4 pixel : SV_Position) : SV_Target
 {
-    return inSceneColour.Load(int3(pixel.xy, 0)) * (1 + float4(CalcSSR(pixel.xy), 0));
+    return inSceneColour.Load(int3(pixel.xy, 0)) + float4(CalcSSR(pixel.xy), 0);
 }
