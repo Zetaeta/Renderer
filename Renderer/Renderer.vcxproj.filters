@@ -1,0 +1,706 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="3rd">
+      <UniqueIdentifier>{EE9A870B-5AA4-877C-E31F-9E7C4F28937C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="asset">
+      <UniqueIdentifier>{454F1B0F-B163-43C0-7AE5-E61FE6B83FF1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{AEFEE3F6-9AA0-0ECD-835B-22216F9C951D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core">
+      <UniqueIdentifier>{4E40957C-3A77-960D-E363-7C10CF79120F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="render">
+      <UniqueIdentifier>{E5CF2C19-D171-57EF-BA2C-6B43A66DDE3F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="render\dx11">
+      <UniqueIdentifier>{92E13EAA-FE96-B79F-878B-B176F33FAEA3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scene">
+      <UniqueIdentifier>{D3075810-3F1C-80C1-089E-232174717CF2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{4e4e4b61-f341-4936-b470-ab65a79966e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="editor">
+      <UniqueIdentifier>{3ee447f3-869d-4722-a2af-756dbd4b8c13}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="render\shaders">
+      <UniqueIdentifier>{72afd8f9-7644-43f4-81a5-535820a35a73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="render\passes">
+      <UniqueIdentifier>{3103cf5f-be24-4b81-af39-580a7de4074f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="container">
+      <UniqueIdentifier>{82464c34-8f4b-4d40-9877-12f21391d986}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\memory">
+      <UniqueIdentifier>{b8dde1b3-2309-4c02-97ff-07aa55f6e039}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="render\dx12">
+      <UniqueIdentifier>{7fc3d917-bca9-4856-8718-6dbcf6d1f65d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platform">
+      <UniqueIdentifier>{86de316a-5502-48f5-b420-57171930a3a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platform\windows">
+      <UniqueIdentifier>{fcde7f5b-e934-4be0-82e0-dc45b4cfdd21}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\3rd\stb_image.h">
+      <Filter>3rd</Filter>
+    </ClInclude>
+    <ClInclude Include="src\RenderApp.h" />
+    <ClInclude Include="src\asset\Asset.h">
+      <Filter>asset</Filter>
+    </ClInclude>
+    <ClInclude Include="src\asset\AssetManager.h">
+      <Filter>asset</Filter>
+    </ClInclude>
+    <ClInclude Include="src\asset\Mesh.h">
+      <Filter>asset</Filter>
+    </ClInclude>
+    <ClInclude Include="src\asset\ObjReader.h">
+      <Filter>asset</Filter>
+    </ClInclude>
+    <ClInclude Include="src\asset\Texture.h">
+      <Filter>asset</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\ImguiControls.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\Input.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\InputImgui.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\InputWalnut.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\JsonDeserializer.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\JsonSerializer.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\Material.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\BaseObject.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\ClassTypeInfo.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\ContainerTypeInfo.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Hash.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\PointerTypeInfo.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Rotator.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Transform.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\TypeInfo.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\TypeInfoTest.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Types.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Utils.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\WinUtils.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Maths.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\DeviceTexture.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\ImageRenderer.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\Memory.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RTRenderer.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RastRenderer.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RenderManager.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\Renderer.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11Backend.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11Ctx.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11Cubemap.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11Material.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11Renderer.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11Texture.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11TextureBase.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\ImageRenderMgrDX11.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\RenderManagerDX11.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\UserCamera.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\LightObject.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\Lights.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\Scene.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\SceneComponent.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\SceneObject.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\SharedD3D11.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\Camera.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\ConstantBuffer.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11ConstantBuffer.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\TypeInfoUtils.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Matrix.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\SceneRenderPass.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\ForwardRenderPass.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RenderContext.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11RenderTarget.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\ShadowmapsPass.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RenderDeviceCtx.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\AABB.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\scene\ScreenObject.h">
+      <Filter>scene</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\RefCounted.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\editor\Editor.h">
+      <Filter>editor</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Name.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\editor\ScreenObjManager.h">
+      <Filter>editor</Filter>
+    </ClInclude>
+    <ClInclude Include="src\editor\HighlightSelectedPass.h">
+      <Filter>editor</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\MovableContiguousAllocator.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\BaseDefines.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\editor\Viewport.h">
+      <Filter>editor</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\BaseSerialized.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\WeakPtr.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Logging.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\Shader.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\DeviceShader.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\WorkerThread.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\ShaderManager.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RenderScreenIds.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11ShaderCompiler.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11Device.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\shaders\ShaderDeclarations.h">
+      <Filter>render\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\passes\PostProcessPass.h">
+      <Filter>render\passes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\DeviceMesh.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RndFwd.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\VertexAttributes.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\container\SmallMap.h">
+      <Filter>container</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\VertexTypes.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\BasicMeshes.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\container\EnumArray.h">
+      <Filter>container</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\CommonEnums.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\memory\CopyableMemory.h">
+      <Filter>core\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\DataLayout.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\passes\DeferredShadingPass.h">
+      <Filter>render\passes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\DeviceResource.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11CBPool.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx11\DX11Timer.h">
+      <Filter>render\dx11</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx12\DX12Window.h">
+      <Filter>render\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\passes\GBufferPass.h">
+      <Filter>render\passes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\GPUTimer.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\memory\GrowingImmobileObjectPool.h">
+      <Filter>core\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\MovableContiguousBumpAllocator.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RenderResourceManager.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RenderPass.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\ShadingCommon.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\memory\InplaceObject.h">
+      <Filter>core\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\OpaqueHandle.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\shaders\MaterialShader.h">
+      <Filter>render\shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\platform\Platform.h">
+      <Filter>platform</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\shaders\ShaderPermutation.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\SamplerState.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RenderGraph.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RenderDevice.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\RenderCubemap.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\passes\SSAOPass.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\passes\SsrPass.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\WavyEffectPPPass.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Random.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\platform\windows\WinApi.h">
+      <Filter>platform\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="src\container\Vector.h">
+      <Filter>container</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\3rd\stb_image.cpp">
+      <Filter>3rd</Filter>
+    </ClCompile>
+    <ClCompile Include="src\EntryPoint.cpp" />
+    <ClCompile Include="src\RenderApp.cpp" />
+    <ClCompile Include="src\asset\AssetManager.cpp">
+      <Filter>asset</Filter>
+    </ClCompile>
+    <ClCompile Include="src\asset\Mesh.cpp">
+      <Filter>asset</Filter>
+    </ClCompile>
+    <ClCompile Include="src\asset\ObjReader.cpp">
+      <Filter>asset</Filter>
+    </ClCompile>
+    <ClCompile Include="src\asset\Texture.cpp">
+      <Filter>asset</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\ImguiControls.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\JsonDeserializer.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\JsonSerializer.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\Material.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\BaseObject.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\ClassTypeInfo.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\Rotator.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\Transform.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\TypeInfo.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\Utils.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\RTRenderer.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\RastRenderer.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\RenderManager.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\Renderer.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11Backend.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11Ctx.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11Cubemap.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11Material.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11Renderer.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11Texture.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\RenderManagerDX11.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\UserCamera.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\LightObject.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\Lights.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\Scene.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\SceneComponent.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\SceneObject.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\Camera.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\SceneRenderPass.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\ForwardRenderPass.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11ConstantBuffer.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11RenderTarget.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\ConstantBuffer.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\ShadowmapsPass.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\RenderCubemap.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\ScreenObjManager.cpp">
+      <Filter>editor</Filter>
+    </ClCompile>
+    <ClCompile Include="src\scene\ScreenObject.cpp">
+      <Filter>scene</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\Editor.cpp">
+      <Filter>editor</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\HighlightSelectedPass.cpp">
+      <Filter>editor</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\MovableContiguousBumpAllocator.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\Viewport.cpp">
+      <Filter>editor</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\BaseSerialized.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\Logging.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\Shader.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\RenderContext.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\WorkerThread.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11ShaderCompiler.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\shaders\ShaderDeclarations.cpp">
+      <Filter>render\shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\BasicMeshes.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\VertexTypes.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\asset\Asset.cpp">
+      <Filter>asset</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\DataLayout.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\passes\DeferredShadingPass.cpp">
+      <Filter>render\passes</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\DX11Device.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx12\DX12Window.cpp">
+      <Filter>render\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\passes\GBufferPass.cpp">
+      <Filter>render\passes</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\RenderResourceManager.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\RenderPass.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\ShadingCommon.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\InputImgui.cpp">
+      <Filter>container</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\passes\PostProcessPass.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\ShaderManager.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\RenderGraph.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\passes\SSAOPass.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\passes\SsrPass.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\WavyEffectPPPass.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\windows\WindowsPlatform.cpp">
+      <Filter>platform\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\Random.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx11\SharedD3D11.cpp">
+      <Filter>render\dx11</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="src\shaders\2D_PS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\2D_VS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\BGPixelShader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\BGVertexShader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\PlainPixelShader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\PlainVertexShader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\PointShadow_PS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\PointShadow_VS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\TexVertexShader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\DeferredShading_PS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\Downsample.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\SSAO_CS.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\TexPixelShader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\ScreenSpaceReflections.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\GaussianBlur.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="src\shaders\PerLightShading.hlsli">
+      <Filter>shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\shaders\VertexShader.hlsli">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="src\core\TypeInfo.inl">
+      <Filter>core</Filter>
+    </None>
+    <None Include="src\shaders\DeferredShadingCommon.hlsli">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="src\shaders\Maths.hlsli">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="src\shaders\Material.hlsli">
+      <Filter>shaders</Filter>
+    </None>
+  </ItemGroup>
+</Project>

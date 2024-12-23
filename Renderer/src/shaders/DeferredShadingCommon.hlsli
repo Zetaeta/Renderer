@@ -62,7 +62,7 @@ PixelLightingInput UnpackGBuffer(float2 uv, uint2 screenSize)
     float3 clipSpacePos = float3(uv.x * 2 - 1, 1 - uv.y * 2, GetActualDepth(bufferDepth));
     float4 position = mul(screen2World, float4(clipSpacePos, 1));
     result.worldPos = position.xyz / position.w;
-    float3 cameraPos = Dehomogenize(mul(screen2World, float4(0,0,0,1)));
+    float3 cameraPos = Dehomogenize(mul(screen2World, float4(0,0,-1,0)));
     result.viewDir = result.worldPos - cameraPos;
     result.specularStrength = 1;
     result.diffuseStrength = 1;

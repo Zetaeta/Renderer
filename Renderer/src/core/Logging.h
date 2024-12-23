@@ -49,6 +49,12 @@ void RLog(LogCategory const& category, ELogVerbosity verbosity, char const* fmt,
 	}
 }
 
+inline void RLogVa(LogCategory const& category, ELogVerbosity verbosity, char const* fmt, va_list args)
+{
+	int len = vsnprintf(LogPrivate::sBuffer, LogBufferSize, fmt, args);
+	LogPrivate::LogImpl(category, verbosity, String(LogPrivate::sBuffer, len));
+}
+
 #define DEFINE_LOG_CATEGORY_STATIC(...) static DEFINE_LOG_CATEGORY_IMPL(__VA_ARGS__)
 #define DEFINE_LOG_CATEGORY(...) DEFINE_LOG_CATEGORY_IMPL(__VA_ARGS__)
 #define DECLARE_LOG_CATEGORY(Name, ...) extern LogCategory const Name;
@@ -57,6 +63,7 @@ void RLog(LogCategory const& category, ELogVerbosity verbosity, char const* fmt,
 DECLARE_LOG_CATEGORY(LogGlobal);
 
 #define RLOG(category, verb, ...) RLog(category, ELogVerbosity::verb, __VA_ARGS__)
+//#define RLOGVA(category, verb, format, val) RLogVa(category, ELogVerbosity::verb, format, val)
 
 class LogConsumerThread : public WorkerThread
 {

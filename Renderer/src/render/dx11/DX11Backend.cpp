@@ -21,6 +21,7 @@
 #include <editor/Editor.h>
 #include "render/dx11/DX11Texture.h"
 #include "core/Logging.h"
+#include "render/dx12/DX12Window.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -119,6 +120,28 @@ ComPtr<ID3D11DepthStencilView> dsv;
 
 DEFINE_LOG_CATEGORY_STATIC(LogDX11Backend)
 
+bool CharEqualsIgnoreCase(char a, char b)
+{
+	return std::tolower(static_cast<u8>(a)) == std::tolower(static_cast<u8>(b));
+}
+
+bool EqualsIgnoreCase(String const& a, String const& b)
+{
+	return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), CharEqualsIgnoreCase);
+}
+
+bool HasArg(const String& arg, int argc, char** argv)
+{
+	for (int i = 1; i < argc; ++i)
+	{
+		if (EqualsIgnoreCase(arg, argv[i]))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
 
 // Main code
 int MainDX11(int argc, char** argv)
@@ -203,6 +226,12 @@ int MainDX11(int argc, char** argv)
 	Editor*			  editor = Editor::Create(&input, &renderMgr);
 	renderMgr.CreateInitialScene();
 //	std::shared_ptr<rnd::dx11::DX11Texture> bbTex = nullptr;
+
+	OwningPtr<dx12::DX12Window> dx12Win = nullptr;
+	if (HasArg("-dx12", argc, argv))
+	{
+		dx12Win MakeOwning<dx12::DX12Window>(1500, 900, L"DX12", TripleBuffered);
+	}
 
 	// Main loop
 	bool done = false;
@@ -354,9 +383,8 @@ int MainDX11(int argc, char** argv)
 									 // g_pSwapChain->Present(0, 0); // Present without vsync
 	}
 	Editor::Destroy();
+	dx12Win = nullptr;
 	}
-	logThread.Flush();
-	logThread.RequestStop();
 
 	// Cleanup
 	ImGui_ImplDX11_Shutdown();
@@ -364,6 +392,9 @@ int MainDX11(int argc, char** argv)
 	ImGui::DestroyContext();
 
 	CleanupDeviceD3D();
+
+	logThread.Flush();
+	logThread.RequestStop();
 	::DestroyWindow(hwnd);
 	::UnregisterClassW(wc.lpszClassName, wc.hInstance);
 	logThread.Join();

@@ -18,7 +18,14 @@
 #define RMOVE_DEFAULT(ClassName) ClassName(ClassName&& other) noexcept = default;\
 								ClassName& operator=(ClassName&& other) noexcept = default;
 
-#define RASSERT_IMPL(expr, stringexpr, ...) assert(expr)
+void AssertionFailed(bool fatal, const char* file, u32 line, const char* fmt, ...);
+
+#define RASSERT_IMPL(expr, stringexpr, ...)\
+	if (!(expr))\
+	{\
+		AssertionFailed(true, __FILE__, __LINE__, "Assertion failed: " #expr);\
+		assert(false);\
+	}
 
 #define ZE_ASSERT(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
 #define RCHECK(expr, ...) ((expr) || ([&] { RASSERT_IMPL(false, #expr); return false; })())
