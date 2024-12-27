@@ -4,11 +4,15 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <span>
 
 template<typename T>
 using Vector = std::vector<T>;
 
 using String = std::string;
+
+template<typename T>
+using Span = std::span<T>;
 
 //class String : public std::string
 //{

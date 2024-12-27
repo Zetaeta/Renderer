@@ -4,8 +4,6 @@
 #include <memory>
 #include <span>
 
-template<typename T>
-using Span = std::span<T>;
 
 template<typename T>
 Span<T> Single(T& value)

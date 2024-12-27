@@ -49,6 +49,9 @@
     <Filter Include="platform\windows">
       <UniqueIdentifier>{fcde7f5b-e934-4be0-82e0-dc45b4cfdd21}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\dx12">
+      <UniqueIdentifier>{68ba4ff2-16c1-49b5-80ca-36bbbef5bb8f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\3rd\stb_image.h">
@@ -409,6 +412,30 @@
     <ClInclude Include="src\container\Vector.h">
       <Filter>container</Filter>
     </ClInclude>
+    <ClInclude Include="src\platform\windows\Window.h">
+      <Filter>platform\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx12\DX12DescriptorHeap.h">
+      <Filter>render\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx12\SharedD3D12.h">
+      <Filter>render\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx12\DX12Test.h">
+      <Filter>render\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="src\container\MovableObjectPool.h">
+      <Filter>core\memory</Filter>
+    </ClInclude>
+    <ClInclude Include="src\platform\windows\WinEvent.h">
+      <Filter>platform\windows</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx12\DX12SyncPoint.h">
+      <Filter>render\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx12\DX12UploadBuffer.h">
+      <Filter>render\dx12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -635,6 +662,18 @@
     <ClCompile Include="src\render\dx11\SharedD3D11.cpp">
       <Filter>render\dx11</Filter>
     </ClCompile>
+    <ClCompile Include="src\platform\windows\Window.cpp">
+      <Filter>platform\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platform\windows\WinEvent.cpp">
+      <Filter>platform\windows</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx12\DX12UploadBuffer.cpp">
+      <Filter>render\dx12</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx12\DX12SyncPoint.cpp">
+      <Filter>render\dx12</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">
@@ -685,6 +724,9 @@
     <FxCompile Include="src\shaders\PerLightShading.hlsli">
       <Filter>shaders</Filter>
     </FxCompile>
+    <FxCompile Include="src\shaders\dx12\Test.hlsl">
+      <Filter>shaders\dx12</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\VertexShader.hlsli">
@@ -702,5 +744,6 @@
     <None Include="src\shaders\Material.hlsli">
       <Filter>shaders</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

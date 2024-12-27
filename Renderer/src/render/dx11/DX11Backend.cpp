@@ -216,7 +216,7 @@ int MainDX11(int argc, char** argv)
 	// IM_ASSERT(font != nullptr);
 
 	// Our state
-	bool   show_demo_window = true;
+	bool   show_demo_window = false;
 	bool   show_another_window = false;
 	ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	InputImgui input;
@@ -230,7 +230,7 @@ int MainDX11(int argc, char** argv)
 	OwningPtr<dx12::DX12Window> dx12Win = nullptr;
 	if (HasArg("-dx12", argc, argv))
 	{
-		dx12Win MakeOwning<dx12::DX12Window>(1500, 900, L"DX12", TripleBuffered);
+		dx12Win = MakeOwning<dx12::DX12Window>(1500, 900, L"DX12", TripleBuffered);
 	}
 
 	// Main loop
@@ -280,6 +280,11 @@ int MainDX11(int argc, char** argv)
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
+
+		if (dx12Win)
+		{
+			dx12Win->Tick();
+		}
 
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)

@@ -28,6 +28,7 @@ void AssertionFailed(bool fatal, const char* file, u32 line, const char* fmt, ..
 	}
 
 #define ZE_ASSERT(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
+#define ZE_ASSERT_DEBUG(expr, ...) ZE_ASSERT(expr, __VA_ARGS__)
 #define RCHECK(expr, ...) ((expr) || ([&] { RASSERT_IMPL(false, #expr); return false; })())
 #define ZE_ENSURE(expr, ...) RCHECK(expr, __VA_ARGS__)
 #define ZE_REQUIRE(expr, ...) \
