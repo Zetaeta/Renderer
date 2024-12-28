@@ -65,7 +65,7 @@ SSAOPass::SSAOPass(RenderContext* rCtx, RGShaderResources&& srvs, RGUnorderedAcc
 :RenderPass(rCtx, "SSAO"), mSRVs(std::move(srvs)), mAOTexture(uavs.Handles[0])
 {
 	SSAO_CS::FrameData temp;
-	mCB = rCtx->GetCBPool()->AcquireConstantBuffer(sizeof(SSAO_CS::FrameData), {reinterpret_cast<const u8*>(&temp), sizeof(temp)});
+	mCB = rCtx->GetCBPool()->AcquireConstantBuffer(ECBLifetime::Static, sizeof(SSAO_CS::FrameData), {reinterpret_cast<const u8*>(&temp), sizeof(temp)});
 	DeviceTextureDesc aoDesc = rCtx->GetPrimaryRT()->Desc;
 	aoDesc.Format = ETextureFormat::R16_Float;
 	aoDesc.Flags = TF_SRV | TF_UAV;

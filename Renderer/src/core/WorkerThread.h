@@ -6,7 +6,7 @@ class WorkerThread
 {
 public:
 	void Start();
-	void RequestStop();
+	virtual void RequestStop();
 	void Join();
 
 

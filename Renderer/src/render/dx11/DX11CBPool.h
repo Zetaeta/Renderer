@@ -34,7 +34,7 @@ public:
 	constexpr static u32 SmallestPoolLog = 4;
 	constexpr static u32 SmallestPoolBytes = Pow2(SmallestPoolLog); // 16
 
-	PooledCBHandle AcquireConstantBuffer(u32 size, std::span<const byte> initialData) override
+	PooledCBHandle AcquireConstantBuffer(ECBLifetime lifetime, u32 size, std::span<const byte> initialData) override
 	{
 		static u8 dummy[4096];
 

@@ -5,6 +5,7 @@
 #include "render/dx11/DX11ShaderCompiler.h"
 #include "d3dcompiler.h"
 #include "DX12Window.h"
+#include "core/Random.h"
 
 namespace rnd
 {
@@ -24,8 +25,12 @@ public:
 
 DX12Test::DX12Test(ID3D12Device_* device)
 {
+	D3D12_ROOT_PARAMETER cbParam{};
+	cbParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	cbParam.Descriptor = {0, 0};
+	cbParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc;
-	rootSigDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+	rootSigDesc.Init(1, &cbParam, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 	ComPtr<ID3DBlob> signature;
 	ComPtr<ID3DBlob> error;
 	HR_ERR_CHECK(D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
@@ -55,7 +60,10 @@ DX12Test::DX12Test(ID3D12Device_* device)
 
 void DX12Test::Render(ID3D12GraphicsCommandList_& cmdList)
 {
+	float4 cbData {Random::Range(0.f, 1.f),Random::Range(0.f, 1.f),Random::Range(0.f, 1.f),1};
+	auto cbHandle = GetRHI().GetCBPool().AcquireConstantBuffer(ECBLifetime::Dynamic, cbData);
 	cmdList.SetGraphicsRootSignature(mRootSig.Get());
+	cmdList.SetGraphicsRootConstantBufferView(0, cbHandle.UserData.As<D3D12_GPU_VIRTUAL_ADDRESS>());
 	cmdList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 //o	cmdList.IASetVertexBuffers(0,)
 	cmdList.DrawInstanced(3, 1, 0, 0);

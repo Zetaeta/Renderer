@@ -23,16 +23,21 @@ struct PooledCBHandle : CBHandle
 	u64 Id = 0;
 };
 
+enum class ECBLifetime : u8
+{
+	Dynamic, // Exists for <= 1 frame. May be kept in upload heap.
+	Static // exists for >1 frame
+};
 
 class ICBPool
 {
 public:
 	template<typename T>
-	PooledCBHandle AcquireConstantBuffer(T const& data)
+	PooledCBHandle AcquireConstantBuffer(ECBLifetime lifetime, T const& data)
 	{
-		return AcquireConstantBuffer(sizeof(T), {reinterpret_cast<const byte*>(&data), sizeof(data)});
+		return AcquireConstantBuffer(lifetime, sizeof(T), {reinterpret_cast<const byte*>(&data), sizeof(data)});
 	}
-	[[nodiscard]] virtual PooledCBHandle AcquireConstantBuffer(u32 size, std::span<const byte> initialData) = 0;
+	[[nodiscard]] virtual PooledCBHandle AcquireConstantBuffer(ECBLifetime lifetime, u32 size, std::span<const byte> initialData) = 0;
 	virtual void	 ReleaseConstantBuffer(PooledCBHandle handle) = 0;
 
 	virtual ~ICBPool() {}
@@ -45,7 +50,7 @@ public:
 	ScopedCBClaim(ICBPool* pool, Args... args)
 	:mPool(pool)
 	{
-		mHandle = pool->AcquireConstantBuffer(std::forward<Args>(args)...);
+		mHandle = pool->AcquireConstantBuffer(ECBLifetime::Dynamic, std::forward<Args>(args)...);
 	}
 	~ScopedCBClaim()
 	{

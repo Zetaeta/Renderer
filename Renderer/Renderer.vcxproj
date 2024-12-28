@@ -149,6 +149,7 @@
     <ClInclude Include="src\container\Vector.h" />
     <ClInclude Include="src\core\BaseDefines.h" />
     <ClInclude Include="src\core\BaseSerialized.h" />
+    <ClInclude Include="src\core\CoreTypes.h" />
     <ClInclude Include="src\core\Logging.h" />
     <ClInclude Include="src\core\Matrix.h" />
     <ClInclude Include="src\core\memory\CopyableMemory.h" />
@@ -210,7 +211,9 @@
     <ClInclude Include="src\render\dx11\DX11ShaderCompiler.h" />
     <ClInclude Include="src\render\dx11\DX11Timer.h" />
     <ClInclude Include="src\render\dx11\SharedD3D11.h" />
+    <ClInclude Include="src\render\dx12\DX12CBPool.h" />
     <ClInclude Include="src\render\dx12\DX12DescriptorHeap.h" />
+    <ClInclude Include="src\render\dx12\DX12RHI.h" />
     <ClInclude Include="src\render\dx12\DX12SyncPoint.h" />
     <ClInclude Include="src\render\dx12\DX12UploadBuffer.h" />
     <ClInclude Include="src\render\dx12\DX12Window.h" />
@@ -378,6 +381,8 @@
     <ClCompile Include="src\render\dx11\DX11RenderTarget.cpp" />
     <ClCompile Include="src\render\dx11\DX11ShaderCompiler.cpp" />
     <ClCompile Include="src\render\dx11\SharedD3D11.cpp" />
+    <ClCompile Include="src\render\dx12\DX12CBPool.cpp" />
+    <ClCompile Include="src\render\dx12\DX12DescriptorHeap.cpp" />
     <ClCompile Include="src\render\dx12\DX12SyncPoint.cpp" />
     <ClCompile Include="src\render\dx12\DX12UploadBuffer.cpp" />
     <ClCompile Include="src\render\dx12\DX12Window.cpp" />

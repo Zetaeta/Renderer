@@ -16,7 +16,7 @@ WavyEffectPPPass::WavyEffectPPPass(RenderContext* rCtx, RGRenderTargetRef dest, 
 	:PostProcessPass(rCtx, rCtx->GetShader<WavyPPPS>(), dest, std::move(resources), "HeatHaze")
 {
 	float f = 0;
-	mCB = rCtx->DeviceCtx()->CBPool->AcquireConstantBuffer(sizeof(WavyCB), std::span<byte>{ reinterpret_cast<byte*>(&f), sizeof(float) });
+	mCB = rCtx->DeviceCtx()->CBPool->AcquireConstantBuffer(ECBLifetime::Static, sizeof(WavyCB), std::span<byte>{ reinterpret_cast<byte*>(&f), sizeof(float) });
 }
 
 

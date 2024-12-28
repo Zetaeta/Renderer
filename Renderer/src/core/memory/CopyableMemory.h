@@ -5,7 +5,7 @@
 
 using byte = unsigned char;
 
-template<size_t Size, size_t Alignment = 1>
+template<size_t Size, size_t Alignment = 8>
 struct CopyableMemory
 {
 	alignas(Alignment)

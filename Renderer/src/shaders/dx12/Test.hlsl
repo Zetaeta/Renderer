@@ -1,3 +1,8 @@
+cbuffer PSCB
+{
+    float4 colour;
+};
+
 float4 TestVS( uint vertId : SV_VertexID ) : SV_POSITION
 {
     float4 position = float4(0, 0, 0.5, 1);
@@ -8,5 +13,5 @@ float4 TestVS( uint vertId : SV_VertexID ) : SV_POSITION
 
 float4 TestPS() : SV_Target
 {
-    return float4(1, 0, 0, 1);
+    return colour;
 }

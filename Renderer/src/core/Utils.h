@@ -1,5 +1,5 @@
 #pragma once
-#include "core/Maths.h"
+#include "CoreTypes.h"
 #include "core/Types.h"
 #include <string>
 #include <vector>
@@ -28,6 +28,8 @@ void AssertionFailed(bool fatal, const char* file, u32 line, const char* fmt, ..
 	}
 
 #define ZE_ASSERT(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
+// An assertion that will always evaluate the containing expression even if assertions are disabled
+#define CHECK_SUCCEEDED(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
 #define ZE_ASSERT_DEBUG(expr, ...) ZE_ASSERT(expr, __VA_ARGS__)
 #define RCHECK(expr, ...) ((expr) || ([&] { RASSERT_IMPL(false, #expr); return false; })())
 #define ZE_ENSURE(expr, ...) RCHECK(expr, __VA_ARGS__)

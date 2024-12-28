@@ -16,6 +16,8 @@ namespace rnd
 namespace dx12
 {
 
+static DX12RHI* sRHI = nullptr;
+
 DX12Window::DX12Window(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers)
 :Window(width, height, name), mNumBuffers(numBuffers)
 {
@@ -29,16 +31,29 @@ DX12Window::DX12Window(u32 width, u32 height, wchar_t const* name, ESwapchainBuf
 
 	CreateDeviceAndCmdQueue();
 
+	ZE_ASSERT(sRHI == nullptr);
+	sRHI = this;
+
 	DX12SyncPointPool::Create(mDevice.Get());
 
 	mFenceEvent = CreateEventW(nullptr, false, false, nullptr);
+	mCBPool = DX12CBPool(*this);
 
 	WaitForGPU();
 }
 
 DX12Window::~DX12Window()
 {
+	mCBPool.ReleaseResources();
 	DX12SyncPointPool::Destroy();
+
+	WaitFence(mCurrentFrame);
+	for (auto& deferredReleases : mDeferredReleaseResources)
+	{
+		deferredReleases.clear();
+	}
+	
+	sRHI = nullptr;
 }
 
 void DX12Window::Tick()
@@ -67,18 +82,18 @@ void DX12Window::Tick()
 
 	{
 		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			mRenderTargets[mFrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			mRenderTargets[mBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		cmd->ResourceBarrier(1, &barrier);
 	}
 	
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(mRTVHeap->GetCPUDescriptorHandleForHeapStart(), mFrameIndex, mRTVHeap.ElementSize);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(mRTVHeap->GetCPUDescriptorHandleForHeapStart(), mBufferIndex, mRTVHeap.ElementSize);
 	cmd->OMSetRenderTargets(1, &rtv, false, nullptr);
 	float const clearColor[4] = {0.5f, 0.5f, 0.5f, 1.f};
 	cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 
 	mTest->Render(*cmd.Get());
 	{
-		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mRenderTargets[mFrameIndex].Get(),
+		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mRenderTargets[mBufferIndex].Get(),
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		cmd->ResourceBarrier(1, &barrier);
 	}
@@ -88,14 +103,25 @@ void DX12Window::Tick()
 	EndFrame();
 }
 
-void DX12Window::StartFrame()
+u64 DX12Window::GetCompletedFrame() const
 {
-	if (mFrameFence->GetCompletedValue() < mFenceValues[mFrameIndex])
+	return mFrameFence->GetCompletedValue();
+}
+
+void DX12Window::WaitFence(u64 value)
+{
+	
+	if (mFrameFence->GetCompletedValue() < value)
 	{
-		HR_ERR_CHECK(mFrameFence->SetEventOnCompletion(mFenceValues[mFrameIndex], mFenceEvent));
+		HR_ERR_CHECK(mFrameFence->SetEventOnCompletion(value, mFenceEvent));
 		WaitForSingleObject(mFenceEvent, INFINITE);
 	}
-	mFenceValues[mFrameIndex] = mCurrentFenceValue + 1;
+}
+
+void DX12Window::StartFrame()
+{
+	WaitFence(mFenceValues[mFrameIndex]);
+	ProcessDeferredRelease(mFrameIndex);
 	//if (mFenceValue > 2)
 	//{
 
@@ -105,10 +131,13 @@ void DX12Window::StartFrame()
 void DX12Window::EndFrame()
 {
 	HR_ERR_CHECK(mSwapChain->Present(1, 0));
-	mCurrentFenceValue = mFenceValues[mFrameIndex];
+	++mCurrentFrame;
+	mFenceValues[mFrameIndex] = mCurrentFrame;
+//	mCurrentFrame = mFenceValues[mFrameIndex];
 
-	HR_ERR_CHECK(mCmdQueue->Signal(mFrameFence.Get(), mCurrentFenceValue));
-	mFrameIndex = mSwapChain->GetCurrentBackBufferIndex();
+	HR_ERR_CHECK(mCmdQueue->Signal(mFrameFence.Get(), mCurrentFrame));
+	mFrameIndex = mCurrentFrame % mNumBuffers;
+	mBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 }
 
 void DX12Window::WaitForGPU()
@@ -123,6 +152,16 @@ void DX12Window::WaitForGPU()
 	//WaitForSingleObject(mFenceEvent, INFINITE);
 	//mFenceValues[mFrameIndex] = mCurrentFenceValue;
 
+}
+
+void DX12Window::DeferredRelease(ComPtr<ID3D12Pageable>&& resource)
+{
+	mDeferredReleaseResources[mFrameIndex].emplace_back(std::move(resource));
+}
+
+void DX12Window::ProcessDeferredRelease(u32 frameIndex)
+{
+	mDeferredReleaseResources[frameIndex].clear();
 }
 
 void DX12Window::Resize_WndProc(u32 resizeWidth, u32 resizeHeight)
@@ -235,7 +274,7 @@ void DX12Window::ResizeSwapChain()
 void DX12Window::GetSwapChainBuffers()
 {
 
-	mFrameIndex = mSwapChain->GetCurrentBackBufferIndex();
+	mBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 	mRTVHeap = DX12DescriptorHeap(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, mNumBuffers);
 
 	// swapchain render targets
@@ -249,6 +288,16 @@ void DX12Window::GetSwapChainBuffers()
 		}
 	}
 	mTest = MakeOwning<DX12Test>(mDevice.Get());
+}
+
+ID3D12Device_* GetD3D12Device()
+{
+	return sRHI->Device();
+}
+
+DX12RHI& GetRHI()
+{
+	return *sRHI;
 }
 
 }

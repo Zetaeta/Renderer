@@ -394,12 +394,6 @@
     <ClInclude Include="src\render\RenderCubemap.h">
       <Filter>render</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\passes\SSAOPass.h">
-      <Filter>render</Filter>
-    </ClInclude>
-    <ClInclude Include="src\render\passes\SsrPass.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="src\render\WavyEffectPPPass.h">
       <Filter>render</Filter>
     </ClInclude>
@@ -434,6 +428,21 @@
       <Filter>render\dx12</Filter>
     </ClInclude>
     <ClInclude Include="src\render\dx12\DX12UploadBuffer.h">
+      <Filter>render\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\CoreTypes.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\passes\SSAOPass.h">
+      <Filter>render\passes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\passes\SsrPass.h">
+      <Filter>render\passes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx12\DX12CBPool.h">
+      <Filter>render\dx12</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\dx12\DX12RHI.h">
       <Filter>render\dx12</Filter>
     </ClInclude>
   </ItemGroup>
@@ -644,12 +653,6 @@
     <ClCompile Include="src\render\RenderGraph.cpp">
       <Filter>render</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\passes\SSAOPass.cpp">
-      <Filter>render</Filter>
-    </ClCompile>
-    <ClCompile Include="src\render\passes\SsrPass.cpp">
-      <Filter>render</Filter>
-    </ClCompile>
     <ClCompile Include="src\render\WavyEffectPPPass.cpp">
       <Filter>render</Filter>
     </ClCompile>
@@ -674,6 +677,14 @@
     <ClCompile Include="src\render\dx12\DX12SyncPoint.cpp">
       <Filter>render\dx12</Filter>
     </ClCompile>
+    <ClCompile Include="src\render\passes\SSAOPass.cpp">
+      <Filter>render\passes</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\passes\SsrPass.cpp">
+      <Filter>render\passes</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\dx12\DX12CBPool.cpp" />
+    <ClCompile Include="src\render\dx12\DX12DescriptorHeap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

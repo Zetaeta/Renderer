@@ -11,15 +11,10 @@
 #include <array>
 #include "DX12DescriptorHeap.h"
 #include "DX12SyncPoint.h"
+#include "DX12CBPool.h"
 
 namespace rnd
 {
-enum ESwapchainBufferCount : u8
-{
-	DoubleBuffered = 2,
-	TripleBuffered = 3,
-	MaxSwapchainBufferCount = TripleBuffered
-};
 
 namespace dx12
 {
@@ -39,35 +34,79 @@ public:
 	~DX12Window();
 
 	void Tick() override;
+
+	u64 GetCompletedFrame() const;
+	u64 GetCurrentFrame() const
+	{
+//		return mFra
+		return mCurrentFrame;
+	}
+	// Returns current frame % num buffers
+	u32 GetCurrentFrameIndex() const
+	{
+		return mFrameIndex;
+	}
+	void WaitForGPU();
+
+
+	void DeferredRelease(ComPtr<ID3D12Pageable>&& resource);
+
+	void ProcessDeferredRelease(u32 frameIndex);
+
+	ID3D12Device_* Device() const
+	{
+		return mDevice.Get();
+	}
+
+	u32 GetMaxActiveFrames() const
+	{
+		return mNumBuffers;
+	}
+
+	DX12CBPool& GetCBPool()
+	{
+		return mCBPool;
+	}
 private:
+	void WaitFence(u64 value);
 
 	void StartFrame();
 	void EndFrame();
-	void WaitForGPU();
 	void Resize_WndProc(u32 resizeWidth, u32 resizeHeight) override;
 	void OnDestroy_WndProc() override;
 
 	void CreateDeviceAndCmdQueue();
 	void ResizeSwapChain();
 	void GetSwapChainBuffers();
+
+
 	ComPtr<ID3D12CommandQueue> mCmdQueue;
 	ComPtr<ID3D12Device_> mDevice; 
 	ComPtr<IDXGISwapChain3> mSwapChain; 
 	ComPtr<ID3D12Fence> mFrameFence;
 	HANDLE mFenceEvent{};
-	u64 mCurrentFenceValue = 0;
+	u64 mCurrentFrame = 0;
 	std::array<u64, MaxSwapchainBufferCount> mFenceValues = {0,0,0};
 	OwningPtr<DX12Test> mTest;
 //	OwningPtr<DX12SyncPointPool> mSyncPoints;
 	std::array<ComPtr<ID3D12Resource_>, MaxSwapchainBufferCount> mRenderTargets;
+	std::array<Vector<ComPtr<ID3D12Pageable>>, MaxSwapchainBufferCount> mDeferredReleaseResources;
 	DX12DescriptorHeap mRTVHeap;
 	DX12CommandList mCmdList;
 	ESwapchainBufferCount mNumBuffers;
 	bool mClosed = false;
 	u32 mFrameIndex = 0;
+	u32 mBufferIndex = 0;
 	u32 mResizeWidth = 0;
 	u32 mResizeHeight = 0;
+
+	DX12CBPool mCBPool;
 };
+
+using DX12RHI = DX12Window;
+
+ID3D12Device_* GetD3D12Device();
+DX12RHI& GetRHI();
 
 }
 }

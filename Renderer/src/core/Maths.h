@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BaseDefines.h"
-#include <glm/glm.hpp>
+#include "CoreTypes.h"
 #include <glm/gtc/quaternion.hpp>
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/gtx/matrix_operation.hpp>
@@ -9,22 +9,11 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <bit>
+#include "Utils.h"
 
 
 #define ASSERT(...) assert(__VA_ARGS__)
 
-using namespace glm;
-
-using s32 = i32;
-using s64 = i64;
-using s16 = i16;
-using s8 = i8;
-
-using byte = u8;
-
-using uint2 = uvec2;
-using uint3 = uvec3;
-using uint4 = uvec4;
 
 template<typename T, int N, qualifier Q>
 constexpr auto operator,(const vec<N,T,Q>& v1, const vec<N,T,Q>& v2)
@@ -172,7 +161,7 @@ constexpr Unsigned RoundUpToPowerOf2(Unsigned value)
 		return 0;
 	}
 
-	return 1 << RoundUpLog2(value);
+	return 1ull << RoundUpLog2(value);
 } 
 
 template<typename Unsigned>
@@ -198,4 +187,23 @@ template<typename T, qualifier Q>
 vec<3,T, Q> DivideRoundUp(vec<3, T, Q> const& x, vec<3, T, Q> const& y)
 {
 	return {DivideRoundUp(x.x, y.x), DivideRoundUp(x.y, y.y), DivideRoundUp(x.z, y.z)};
+}
+
+// Returns a size aligned up from start to alignment
+template<typename SizeType>
+SizeType Align(SizeType start, SizeType alignment)
+{
+	SizeType mask = alignment - 1;
+	ZE_ASSERT((mask & alignment) == 0, "alignment must be a power of 2");
+	SizeType lowerBits = mask & start;
+	return (start + mask) & (~mask);
+	// equivalent to
+	// if (lowerBits) return (start & (~mask)) + alignment;
+	// else return start;
+}
+
+template<typename SizeType>
+SizeType RoundUpToMultipleP2(SizeType value, SizeType powerOf2)
+{
+	return Align(value, powerOf2);
 }

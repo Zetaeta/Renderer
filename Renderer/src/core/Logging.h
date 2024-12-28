@@ -9,7 +9,10 @@ enum class ELogVerbosity : u8
 	Error,
 	Warning,
 	Info,
-	Verbose
+	Verbose,
+	Count,
+
+	Flush
 };
 
 class LogCategory
@@ -55,6 +58,8 @@ inline void RLogVa(LogCategory const& category, ELogVerbosity verbosity, char co
 	LogPrivate::LogImpl(category, verbosity, String(LogPrivate::sBuffer, len));
 }
 
+void FlushLog();
+
 #define DEFINE_LOG_CATEGORY_STATIC(...) static DEFINE_LOG_CATEGORY_IMPL(__VA_ARGS__)
 #define DEFINE_LOG_CATEGORY(...) DEFINE_LOG_CATEGORY_IMPL(__VA_ARGS__)
 #define DECLARE_LOG_CATEGORY(Name, ...) extern LogCategory const Name;
@@ -68,7 +73,9 @@ DECLARE_LOG_CATEGORY(LogGlobal);
 class LogConsumerThread : public WorkerThread
 {
 public:
-	void Flush() {}
+	LogConsumerThread();
+	void Flush();
+	void RequestStop() override;
 
 protected:
 	virtual void DoWork() override;
