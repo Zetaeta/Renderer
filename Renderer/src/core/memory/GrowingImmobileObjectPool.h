@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Maths.h"
+#include "BaseUtils.h"
 
 struct Noop
 {
@@ -14,14 +15,16 @@ struct Noop
 //using Pair = std::pair;
 
 template<typename T, size_t PageSize = 256, bool ListUsed = false, typename Initializer = Noop, typename SizeType = u32>
-class GrowingImmobileObjectPool
+class GrowingImmobileObjectPool : public PoolUsageTracker<ListUsed, SizeType>
 {
+	using PoolUsageTracker<ListUsed, SizeType>::TrackUsed;
+	using PoolUsageTracker<ListUsed, SizeType>::GrowUsedTracker;
 public:
 	GrowingImmobileObjectPool(Initializer&& init = {})
 		: mInit(init)
 	{
 		mPages.emplace_back().reserve(PageSize);
-		mInUse.resize(PageSize);
+		GrowUsedTracker(PageSize);
 	}
 
 	// Returns true if new
@@ -33,20 +36,14 @@ public:
 			mFreeObjects.pop_back();
 			id = freeIdx;
 			object = &this->operator[](freeIdx);
-			if constexpr (ListUsed)
-			{
-				mInUse[freeIdx] = true;
-			}
+			TrackUsed(freeIdx, true);
 			return false;
 		}
 
 		if (mPages.empty() || mPages.back().size() == PageSize)
 		{
 			mPages.emplace_back().reserve(PageSize);
-			if constexpr (ListUsed)
-			{
-				mInUse.resize(mInUse.size() + PageSize);
-			}
+			GrowUsedTracker(PageSize);
 		}
 
 		Vector<T>& lastPage = mPages.back();
@@ -54,10 +51,7 @@ public:
 		mInit(newObj);
 		SizeType idx = NumCast<SizeType>((mPages.size() - 1) * PageSize + (lastPage.size() - 1));
 		id = idx;
-		if constexpr (ListUsed)
-		{
-			mInUse[idx] = true;
-		}
+		TrackUsed(idx, true);
 		object = &newObj;
 		return true;
 	}
@@ -80,7 +74,7 @@ public:
 	{
 		if constexpr (ListUsed)
 		{
-			return mInUse[index];
+			return PoolUsageTracker<ListUsed, SizeType>::mInUse[index];
 		}
 		else
 		{
@@ -91,10 +85,7 @@ public:
 	T& Release(SizeType index)
 	{
 		mFreeObjects.push_back(index);
-		if constexpr (ListUsed)
-		{
-			mInUse[index] = false;
-		}
+		TrackUsed(index, false);
 		return operator[](index);
 	}
 	
@@ -106,7 +97,6 @@ public:
 
 	Vector<Vector<T>> mPages;
 	Vector<SizeType> mFreeObjects;
-	Vector<bool> mInUse;
 	Initializer mInit;
 };
 

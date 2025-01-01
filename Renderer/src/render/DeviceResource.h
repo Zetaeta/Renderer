@@ -3,6 +3,7 @@
 #include "core/Maths.h"
 #include <memory>
 #include <span>
+#include "core/memory/CopyableMemory.h"
 
 
 template<typename T>
@@ -38,6 +39,25 @@ enum class ECpuAccessFlags
 
 FLAG_ENUM(ECpuAccessFlags);
 
+//enum class EResourceType : u8
+//{
+//	Unknown		 = 0,
+//	Texture		 = 0x01,
+//	Buffer		 = 0x10,
+//	VertexBuffer = 0x11
+//};
+//
+
+enum class EResourceType : u8
+{
+	Unknown = 0,
+	Texture = 0x1,
+	Texture1D = 0x3,
+	Texture2D = 0x5,
+	Texture3D = 0x9,
+	Buffer = 0x10,
+	VertexBuffer = 0x20
+};
 
 class IDeviceResource
 {
@@ -46,11 +66,11 @@ public:
 	virtual MappedResource Map(u32 subResource, ECpuAccessFlags flags) = 0;
 	virtual void		   Unmap(u32 subResource) = 0;
 
-	virtual void* GetShaderResource(ShaderResourceId id = 0) = 0;
+	virtual CopyableMemory<8> GetShaderResource(ShaderResourceId id = 0) = 0;
 	template <typename T>
 	T GetShaderResource(ShaderResourceId id = 0)
 	{
-		return reinterpret_cast<T>(GetShaderResource(id));
+		return GetShaderResource(id).As<T>();
 	}
 
 	virtual void* GetUAV(UavId id = {}) = 0;

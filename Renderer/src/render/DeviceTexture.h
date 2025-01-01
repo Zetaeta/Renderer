@@ -16,14 +16,6 @@ enum class ETextureDimension : u8
 	TEX_CUBE
 };
 
-enum class EDeviceResourceType : u8
-{
-	Texture1D,
-	Texture2D,
-	Texture3D,
-	Buffer
-};
-
 struct DeviceChildDesc
 {
 	String DebugName;
@@ -96,7 +88,7 @@ FLAG_ENUM(ETextureFlags);
 
 struct DeviceResourceDesc : public DeviceChildDesc
 {
-	EDeviceResourceType ResourceType;
+	EResourceType ResourceType;
 };
 
 
@@ -104,7 +96,7 @@ struct DeviceTextureDesc : public DeviceResourceDesc
 {
 	DeviceTextureDesc()
 	{
-		ResourceType = EDeviceResourceType::Texture2D;
+		ResourceType = EResourceType::Texture2D;
 	}
 
 	ETextureFlags Flags = TF_SRV;
@@ -114,6 +106,9 @@ struct DeviceTextureDesc : public DeviceResourceDesc
 	u16 ArraySize = 1;
 	u8 NumMips = 1;
 	u8 SampleCount = 1;
+
+	u64 GetSize() const;
+	u32 GetRowPitch() const;
 };
 
 enum ECubemapDataFormat
@@ -180,4 +175,20 @@ using DeviceTextureRef = std::shared_ptr<IDeviceTexture>;
 //constexpr DeviceTextureRef INVALID_DEV_TEX = nullptr;
 #define INVALID_DEV_TEX nullptr
 
+enum class ETextureFormatContext : u8
+{
+	Resource,
+	SRV,
+	UAV,
+	RenderTarget,
+	DepthStencil = RenderTarget,
+	StencilSRV
+};
+
+
+
+
 }
+
+//size_t GetTextureSize(ETextureFormat format, u32 width, u32 height);
+//size_t GetTextureRowPitch(ETextureFormat format, u32 width, u32 height);

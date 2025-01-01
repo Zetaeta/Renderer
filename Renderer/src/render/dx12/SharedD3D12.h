@@ -12,8 +12,8 @@ using ID3D12Resource_ = ID3D12Resource;
 
 namespace rnd::dx12
 {
-class DX12Window;
-using DX12RHI = DX12Window;
+class DX12RHI;
+class DX12Allocator;
 
 }
 

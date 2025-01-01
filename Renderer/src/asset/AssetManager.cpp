@@ -44,7 +44,7 @@ RotTransform Mat2Trans(aiMatrix4x4 const& mat)
 	return RotTransform(_pos, _scale, _rot);
 }
 
-bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture, String const& meshPath, bool isImport)
+bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture, String const& meshPath, bool isImport, bool isSRGB)
 {
 	if (texPath.empty())
 	{
@@ -70,7 +70,7 @@ bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture,
 			{
 				continue;
 			}
-			outTexture = Texture::LoadFrom(ToString(path).c_str());
+			outTexture = Texture::LoadFrom(ToString(path).c_str(), isSRGB);
 			if (!outTexture.IsValid())
 			{
 				printf("Failed to import texture %s\n", ToString(path).c_str());
@@ -113,7 +113,7 @@ bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture,
 		}
 		fs::path assetPath = "assets/textures";
 		assetPath /= texPath;
-		outTexture = Texture::LoadFrom(ToString(assetPath).c_str());
+		outTexture = Texture::LoadFrom(ToString(assetPath).c_str(), isSRGB);
 		if (!outTexture.IsValid())
 		{
 			printf("Failed to load texture %s\n", texPath.c_str());
@@ -132,9 +132,9 @@ void AssetManager::Perform(MatLoadingJob& job)
 {
 	Material& mat = GetMaterial(job.m_Mat);
 	TextureRef albedo, normal, emissive, roughness;
-	LoadMatTexture(job.m_Albedo,	albedo, job.m_MeshPath, job.m_Import);
+	LoadMatTexture(job.m_Albedo,	albedo, job.m_MeshPath, job.m_Import, true);
 	LoadMatTexture(job.m_Normal,	normal, job.m_MeshPath, job.m_Import);
-	LoadMatTexture(job.m_Emissive,	emissive, job.m_MeshPath, job.m_Import);
+	LoadMatTexture(job.m_Emissive,	emissive, job.m_MeshPath, job.m_Import, true);
 	LoadMatTexture(job.m_Roughness, roughness, job.m_MeshPath, job.m_Import);
 
 	albedo->Format = ETextureFormat::RGBA8_Unorm_SRGB;
@@ -298,7 +298,8 @@ Scenelet::Ref AssetManager::AddScenelet(aiScene const* aiscene, AssetPath const&
 				material->DebugName = std::filesystem::path(job.m_Albedo).filename().string();
 			}
 
-			if (async)
+			if (async || true
+			)
 			{
 				m_LoadingJobs.push(job);
 			}

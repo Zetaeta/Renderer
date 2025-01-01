@@ -227,10 +227,10 @@ int MainDX11(int argc, char** argv)
 	renderMgr.CreateInitialScene();
 //	std::shared_ptr<rnd::dx11::DX11Texture> bbTex = nullptr;
 
-	OwningPtr<dx12::DX12Window> dx12Win = nullptr;
+	OwningPtr<dx12::DX12RHI> dx12Win = nullptr;
 	if (HasArg("-dx12", argc, argv))
 	{
-		dx12Win = MakeOwning<dx12::DX12Window>(1500, 900, L"DX12", TripleBuffered);
+		dx12Win = MakeOwning<dx12::DX12RHI>(1500, 900, L"DX12", TripleBuffered);
 	}
 
 	// Main loop

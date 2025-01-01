@@ -445,6 +445,18 @@
     <ClInclude Include="src\render\dx12\DX12RHI.h">
       <Filter>render\dx12</Filter>
     </ClInclude>
+    <ClInclude Include="src\render\dx12\DX12Upload.h" />
+    <ClInclude Include="src\render\dx12\DX12CommandQueue.h" />
+    <ClInclude Include="src\render\dx12\DX12Allocator.h" />
+    <ClInclude Include="src\core\memory\GrowingImmobilePool.h" />
+    <ClInclude Include="src\core\memory\BaseUtils.h" />
+    <ClInclude Include="src\render\dx12\DX12Texture.h" />
+    <ClInclude Include="src\thread\ThreadUtils.h" />
+    <ClInclude Include="src\render\dx12\DX12DescriptorAllocator.h" />
+    <ClInclude Include="src\render\dx12\FrameIndexedRingBuffer.h" />
+    <ClInclude Include="src\render\dx12\DX12DescriptorTableAllocator.h" />
+    <ClInclude Include="src\container\StaticQueue.h" />
+    <ClInclude Include="src\render\dx12\DX12Context.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -626,7 +638,7 @@
     <ClCompile Include="src\render\dx11\DX11Device.cpp">
       <Filter>render\dx11</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\dx12\DX12Window.cpp">
+    <ClCompile Include="src\render\dx12\DX12RHI.cpp">
       <Filter>render\dx12</Filter>
     </ClCompile>
     <ClCompile Include="src\render\passes\GBufferPass.cpp">
@@ -685,6 +697,15 @@
     </ClCompile>
     <ClCompile Include="src\render\dx12\DX12CBPool.cpp" />
     <ClCompile Include="src\render\dx12\DX12DescriptorHeap.cpp" />
+    <ClCompile Include="src\render\dx12\DX12Upload.cpp" />
+    <ClCompile Include="src\render\dx12\DX12Allocator.cpp" />
+    <ClCompile Include="src\render\dx12\DX12Texture.cpp" />
+    <ClCompile Include="src\render\DeviceTexture.cpp" />
+    <ClCompile Include="src\thread\ThreadUtils.cpp" />
+    <ClCompile Include="src\render\dx12\DX12DescriptorAllocator.cpp" />
+    <ClCompile Include="src\render\dx12\FrameIndexedRingBuffer.cpp" />
+    <ClCompile Include="src\render\dx12\DX12DescriptorTableAllocator.cpp" />
+    <ClCompile Include="src\render\dx12\DX12Context.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">
@@ -756,5 +777,8 @@
       <Filter>shaders</Filter>
     </None>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="Renderer.natvis" />
   </ItemGroup>
 </Project>

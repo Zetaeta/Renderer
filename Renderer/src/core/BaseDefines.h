@@ -13,3 +13,11 @@
 
 
 #define ZE_BUILD_EDITOR 1
+
+#ifdef _DEBUG
+#define ZE_DEBUG_BUILD 1
+#else
+#define ZE_DEBUG_BUILD 0
+#endif
+
+#define GARBAGE_VALUE 0xcc

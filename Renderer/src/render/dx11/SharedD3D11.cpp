@@ -7,7 +7,7 @@ namespace rnd
 namespace dx11
 {
 
-DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, EDxgiFormatContext context /*= EDxgiFormatContext::RESOURCE*/)
+DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, ETextureFormatContext context /*= EDxgiFormatContext::RESOURCE*/)
 {
 	switch (textureFormat)
 	{
@@ -21,13 +21,13 @@ DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, EDxgiFormatContext conte
 	{
 		switch (context)
 		{
-		case EDxgiFormatContext::Resource:
+		case ETextureFormatContext::Resource:
 			return DXGI_FORMAT_R24G8_TYPELESS;
-		case EDxgiFormatContext::SRV:
+		case ETextureFormatContext::SRV:
 			return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-		case EDxgiFormatContext::StencilSRV:
+		case ETextureFormatContext::StencilSRV:
 			return DXGI_FORMAT_X24_TYPELESS_G8_UINT;
-		case EDxgiFormatContext::RenderTarget:
+		case ETextureFormatContext::RenderTarget:
 			return DXGI_FORMAT_D24_UNORM_S8_UINT;
 		}
 		break;
@@ -36,11 +36,11 @@ DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, EDxgiFormatContext conte
 	{
 		switch (context)
 		{
-		case EDxgiFormatContext::Resource:
+		case ETextureFormatContext::Resource:
 			return DXGI_FORMAT_R32_TYPELESS;
-		case EDxgiFormatContext::DepthStencil:
+		case ETextureFormatContext::DepthStencil:
 			return DXGI_FORMAT_D32_FLOAT;
-		case EDxgiFormatContext::SRV:
+		case ETextureFormatContext::SRV:
 			return DXGI_FORMAT_R32_FLOAT;
 		default:
 			ZE_ASSERT(false);

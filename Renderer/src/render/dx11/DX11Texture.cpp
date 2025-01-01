@@ -91,7 +91,7 @@ void DX11Texture::CreateResources(TextureData textureData /*= {}*/)
 		textureDesc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
 	}
 
-	textureDesc.Format = GetDxgiFormat(desc.Format, EDxgiFormatContext::Resource);
+	textureDesc.Format = GetDxgiFormat(desc.Format, ETextureFormatContext::Resource);
 	//switch (desc.Format)
 	//{
 	//case ETextureFormat::RGBA8_Unorm:
@@ -281,7 +281,7 @@ void DX11Texture::CreateSRV()
 void DX11Texture::CreateUAV(u32 mip /*= 0*/)
 {
 	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
-	desc.Format = GetDxgiFormat(Desc.Format, EDxgiFormatContext::UAV);
+	desc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::UAV);
 	desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
 	desc.Texture2D.MipSlice = mip;
 	HR_ERR_CHECK(m_Ctx->pDevice->CreateUnorderedAccessView(m_Texture.Get(), &desc, &mUAV));
@@ -294,7 +294,7 @@ void DX11Texture::DestroyResources()
 	m_Texture = m_CpuTexture = nullptr;
 }
 
-void* DX11Texture::GetShaderResource(ShaderResourceId id)
+CopyableMemory<8> DX11Texture::GetShaderResource(ShaderResourceId id)
 {
 	switch (id)
 	{

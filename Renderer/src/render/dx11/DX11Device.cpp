@@ -69,7 +69,7 @@ DeviceMeshRef DX11Device::CreateDirectMesh(VertexAttributeDesc::Handle vertAtts,
 	sd.pSysMem = data;
 
 	HR_ERR_CHECK(mDevice->CreateBuffer(&bd, &sd, &buffer));
-	auto* mesh = new DX11DirectMesh;
+	auto* mesh = new DX11DirectMesh; //TODO
 	mesh->vBuff = std::move(buffer);
 	mesh->VertexCount = numVerts;
 	mesh->VertexAttributes = vertAtts;

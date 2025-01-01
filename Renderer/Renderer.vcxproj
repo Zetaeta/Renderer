@@ -146,14 +146,17 @@
     <ClInclude Include="src\container\EnumArray.h" />
     <ClInclude Include="src\container\MovableObjectPool.h" />
     <ClInclude Include="src\container\SmallMap.h" />
+    <ClInclude Include="src\container\StaticQueue.h" />
     <ClInclude Include="src\container\Vector.h" />
     <ClInclude Include="src\core\BaseDefines.h" />
     <ClInclude Include="src\core\BaseSerialized.h" />
     <ClInclude Include="src\core\CoreTypes.h" />
     <ClInclude Include="src\core\Logging.h" />
     <ClInclude Include="src\core\Matrix.h" />
+    <ClInclude Include="src\core\memory\BaseUtils.h" />
     <ClInclude Include="src\core\memory\CopyableMemory.h" />
     <ClInclude Include="src\core\memory\GrowingImmobileObjectPool.h" />
+    <ClInclude Include="src\core\memory\GrowingImmobilePool.h" />
     <ClInclude Include="src\core\memory\InplaceObject.h" />
     <ClInclude Include="src\core\MovableContiguousAllocator.h" />
     <ClInclude Include="src\core\MovableContiguousBumpAllocator.h" />
@@ -211,13 +214,21 @@
     <ClInclude Include="src\render\dx11\DX11ShaderCompiler.h" />
     <ClInclude Include="src\render\dx11\DX11Timer.h" />
     <ClInclude Include="src\render\dx11\SharedD3D11.h" />
+    <ClInclude Include="src\render\dx12\DX12Allocator.h" />
     <ClInclude Include="src\render\dx12\DX12CBPool.h" />
+    <ClInclude Include="src\render\dx12\DX12CommandQueue.h" />
+    <ClInclude Include="src\render\dx12\DX12Context.h" />
+    <ClInclude Include="src\render\dx12\DX12DescriptorAllocator.h" />
     <ClInclude Include="src\render\dx12\DX12DescriptorHeap.h" />
+    <ClInclude Include="src\render\dx12\DX12DescriptorTableAllocator.h" />
     <ClInclude Include="src\render\dx12\DX12RHI.h" />
     <ClInclude Include="src\render\dx12\DX12SyncPoint.h" />
+    <ClInclude Include="src\render\dx12\DX12Texture.h" />
+    <ClInclude Include="src\render\dx12\DX12Upload.h" />
     <ClInclude Include="src\render\dx12\DX12UploadBuffer.h" />
     <ClInclude Include="src\render\dx12\DX12Window.h" />
     <ClInclude Include="src\render\dx12\DX12Test.h" />
+    <ClInclude Include="src\render\dx12\FrameIndexedRingBuffer.h" />
     <ClInclude Include="src\render\dx12\SharedD3D12.h" />
     <ClInclude Include="src\render\ForwardRenderPass.h" />
     <ClInclude Include="src\render\GPUTimer.h" />
@@ -272,6 +283,7 @@
     <ClInclude Include="src\scene\Scene.h" />
     <ClInclude Include="src\scene\SceneComponent.h" />
     <ClInclude Include="src\scene\SceneObject.h" />
+    <ClInclude Include="src\thread\ThreadUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -376,16 +388,24 @@
     <ClCompile Include="src\render\BasicMeshes.cpp" />
     <ClCompile Include="src\render\ConstantBuffer.cpp" />
     <ClCompile Include="src\render\DataLayout.cpp" />
+    <ClCompile Include="src\render\DeviceTexture.cpp" />
     <ClCompile Include="src\render\dx11\DX11ConstantBuffer.cpp" />
     <ClCompile Include="src\render\dx11\DX11Device.cpp" />
     <ClCompile Include="src\render\dx11\DX11RenderTarget.cpp" />
     <ClCompile Include="src\render\dx11\DX11ShaderCompiler.cpp" />
     <ClCompile Include="src\render\dx11\SharedD3D11.cpp" />
+    <ClCompile Include="src\render\dx12\DX12Allocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12CBPool.cpp" />
+    <ClCompile Include="src\render\dx12\DX12Context.cpp" />
+    <ClCompile Include="src\render\dx12\DX12DescriptorAllocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12DescriptorHeap.cpp" />
+    <ClCompile Include="src\render\dx12\DX12DescriptorTableAllocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12SyncPoint.cpp" />
+    <ClCompile Include="src\render\dx12\DX12Texture.cpp" />
+    <ClCompile Include="src\render\dx12\DX12Upload.cpp" />
     <ClCompile Include="src\render\dx12\DX12UploadBuffer.cpp" />
-    <ClCompile Include="src\render\dx12\DX12Window.cpp" />
+    <ClCompile Include="src\render\dx12\DX12RHI.cpp" />
+    <ClCompile Include="src\render\dx12\FrameIndexedRingBuffer.cpp" />
     <ClCompile Include="src\render\ForwardRenderPass.cpp" />
     <ClCompile Include="src\render\passes\DeferredShadingPass.cpp" />
     <ClCompile Include="src\render\passes\GBufferPass.cpp" />
@@ -492,6 +512,7 @@
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
+    <ClCompile Include="src\thread\ThreadUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\nativefiledialog\build\vs2010\nfd.vcxproj">
@@ -624,6 +645,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dist|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="Renderer.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

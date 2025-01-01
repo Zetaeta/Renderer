@@ -3,7 +3,7 @@
 #include "render/RenderResourceManager.h"
 std::shared_ptr<Texture> const Texture::EMPTY = Create(0, 0, "empty", nullptr);
 
-TextureRef Texture::LoadFrom(char const* fileName)
+TextureRef Texture::LoadFrom(char const* fileName, bool isSRGB)
 {
 	int x, y, comp;
 	unsigned char* data = stbi_load(fileName, &x, &y, &comp, 4);
@@ -12,7 +12,8 @@ TextureRef Texture::LoadFrom(char const* fileName)
 	{
 		return TextureRef {};
 	}
-	TextureRef result = (x > 0 && y > 0) ? Texture::Create(x,y, fileName,data) : Texture::EMPTY;
+	TextureRef result = (x > 0 && y > 0) ? Texture::Create(x,y, fileName,data , isSRGB ? ETextureFormat::RGBA8_Unorm_SRGB : ETextureFormat::RGBA8_Unorm
+		) : Texture::EMPTY;
 	return result;
 }
 

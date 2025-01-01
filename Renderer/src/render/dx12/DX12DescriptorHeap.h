@@ -21,7 +21,15 @@ public:
 
 	void ReleaseResources();
 
+	static u32 DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+
+	static void GetDescriptorSizes(ID3D12Device_* device);
+
 	ID3D12DescriptorHeap* operator->()
+	{
+		return Heap.Get();
+	}
+	ID3D12DescriptorHeap* GetHeap() const
 	{
 		return Heap.Get();
 	}

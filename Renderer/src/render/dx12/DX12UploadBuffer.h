@@ -2,8 +2,7 @@
 
 #include "SharedD3D12.h"
 #include <queue>
-
-using Queue = std::queue;
+#include "FrameIndexedRingBuffer.h"
 
 namespace rnd::dx12
 {
@@ -11,7 +10,7 @@ namespace rnd::dx12
 /**
  * A ring-buffered upload heap
  */
-class DX12UploadBuffer
+class DX12UploadBuffer : FrameIndexedRingBuffer
 {
 public:
 	DX12UploadBuffer() = default;
@@ -25,13 +24,14 @@ public:
 	struct Allocation
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS GPUAddress;
+		u64 Offset;
 		// Write address may be invalidated by any subsequent calls to Reserve
 		void* WriteAddress; 
 	};
 
 	Allocation Reserve(u64 size, u64 alignment);
 
-	ID3D12Resource* GetCurrentHeap()
+	ID3D12Resource* GetCurrentBuffer()
 	{
 		return mUploadHeap.Get();
 	}
@@ -45,21 +45,21 @@ protected:
 	}
 	Allocation MakeAllocation(u64 offset)
 	{
-		return {mUploadHeap->GetGPUVirtualAddress() + offset, GetWriteAddress(offset)};
+		return {mUploadHeap->GetGPUVirtualAddress() + offset, offset, GetWriteAddress(offset)};
 	}
 	void CreateHeap(size_t size);
 	void ClearHeap();
-	bool TryReserve(u64 size, u64 alignment, u64& outStart);
+//	bool TryReserve(u64 size, u64 alignment, u64& outStart);
 	ComPtr<ID3D12Resource> mUploadHeap;
 
-	struct FrameWindow
-	{
-		u64 Frame;
-		u64 Start;
-		u64 End;
-	};
-	std::queue<FrameWindow> mFrames;
-	u64 mSize = 0;
+	//struct FrameWindow
+	//{
+	//	u64 Frame;
+	//	u64 Start;
+	//	u64 End;
+	//};
+	//std::queue<FrameWindow> mFrames;
+	//u64 mSize = 0;
 	u8* mHeapData = nullptr;
 };
 

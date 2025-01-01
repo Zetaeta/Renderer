@@ -86,7 +86,7 @@ public:
 	void CreateRenderTarget(D3D11_TEXTURE2D_DESC const& textureDesc);
 	void CreateSRV(D3D11_TEXTURE2D_DESC const& textureDesc);
 
-	void* GetShaderResource(ShaderResourceId id) override;
+	CopyableMemory<8> GetShaderResource(ShaderResourceId id) override;
 
 	ComPtr<ID3D11ShaderResourceView> m_SRV = nullptr;
 	ComPtr<ID3D11ShaderResourceView> m_StencilSRV = nullptr;

@@ -869,11 +869,11 @@ void DX11Renderer::Copy(DeviceResourceRef dst, DeviceResourceRef src)
 	// Invalid cast, but ResourceType will always be in the same place
 	switch (static_cast<IDeviceTexture*>(src.get())->Desc.ResourceType)
 	{
-	case EDeviceResourceType::Texture2D:
+	case EResourceType::Texture2D:
 	{
 		DX11Texture* src11 = static_cast<DX11Texture*>(src.get());
 		DX11Texture* dst11 = static_cast<DX11Texture*>(dst.get());
-		RCHECK(dst11->Desc.ResourceType == EDeviceResourceType::Texture2D);
+		RCHECK(dst11->Desc.ResourceType == EResourceType::Texture2D);
 		pContext->CopyResource(dst11->GetTexture(), src11->GetTexture());
 		break;
 	}
@@ -1642,7 +1642,7 @@ inline u32 GetSubresourceIdx(DeviceSubresource const& Subresource)
 
 void DX11Renderer::ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src)
 {
-	DXGI_FORMAT format = GetDxgiFormat(Dest.Resource->Desc.Format, EDxgiFormatContext::RenderTarget);
+	DXGI_FORMAT format = GetDxgiFormat(Dest.Resource->Desc.Format, ETextureFormatContext::RenderTarget);
 	ID3D11Resource* dst = Dest.Resource->GetData<ID3D11Resource>();
 	ID3D11Resource* src = Src.Resource->GetData<ID3D11Resource>();
 	u32				dstIdx = GetSubresourceIdx(Dest);

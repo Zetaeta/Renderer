@@ -11,6 +11,8 @@ using std::string;
 using std::make_shared;
 using namespace rnd;
 
+TextureRef gDirt;
+
  RenderManager::RenderManager(Input* input)
 	: m_Camera(input), mScene(&m_AssMan)
 {
@@ -19,9 +21,14 @@ using namespace rnd;
 	int			   x, y, comp;
 	unsigned char* data = stbi_load("content/Dirt.png", &x, &y, &comp, 4);
 	fprintf(stdout, "width: %d, height: %d, comp: %d\n", x, y, comp);
-	TextureRef dirt = (x > 0 && y > 0) ? Texture::Create(x, y, "dirt", data, ETextureFormat::RGBA8_Unorm_SRGB) : Texture::EMPTY;
+	gDirt = (x > 0 && y > 0) ? Texture::Create(x, y, "dirt", data, ETextureFormat::RGBA8_Unorm_SRGB) : Texture::EMPTY;
 	stbi_image_free(data);
-	mScene.Materials() = { make_shared<Material>("Red", vec4{ 1.f, 0.f, 0.f, 1.f }, 1.f, 10), make_shared<Material>("Dirt", vec4{ 0.f, 0.f, 0.f, 1.f }, 1.f, 500, 1.f, dirt), make_shared<Material>("Yellow", vec4{ 1.f, 1.f, 0.f, 1.f }) };
+	mScene.Materials() =
+	{
+		make_shared<Material>("Red", vec4{ 1.f, 0.f, 0.f, 1.f }, 1.f, 10),
+		make_shared<Material>("Dirt", vec4{ 0.f, 0.f, 0.f, 1.f }, 1.f, 500, 1.f, gDirt),
+		make_shared<Material>("Yellow", vec4{ 1.f, 1.f, 0.f, 1.f })
+	};
 	auto mesh = MeshPart::Cube(1);
 	ComputeNormals(mesh);
 	auto		   cube = m_AssMan.AddMesh({ AssetPath("/Memory/cube"), std::move(mesh) });

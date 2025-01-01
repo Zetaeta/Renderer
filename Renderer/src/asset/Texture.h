@@ -56,7 +56,7 @@ public:
 	Texture(size_type width, size_type height, std::string const& name = "(unnamed)", u8 const* data = nullptr, ETextureFormat format = ETextureFormat::RGBA8_Unorm);
 	~Texture();
 
-	static TextureRef LoadFrom(char const* fileName);
+	static TextureRef LoadFrom(char const* fileName, bool isSRGB = true);
 
 	u32 const* GetData() const
 	{
@@ -66,6 +66,19 @@ public:
 	size_type const width;
 	size_type const height;
 	const TextureId Id;
+
+	rnd::DeviceTextureDesc MakeDesc()
+	{
+		rnd::DeviceTextureDesc desc;
+		desc.ArraySize = 1;
+		desc.DebugName = m_Name;
+		desc.Width = width;
+		desc.Height = height;
+		desc.Format = Format;
+		desc.Flags = rnd::TF_SRV;
+		desc.NumMips = 1; //TODO
+		return desc;
+	}
 
 	#if !MULTI_RENDER_BACKEND
 	rnd::DeviceTextureRef const& GetDeviceTexture() const { return m_DeviceTex; }

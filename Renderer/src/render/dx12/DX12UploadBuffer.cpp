@@ -7,7 +7,7 @@ namespace rnd::dx12
 {
 
 DX12UploadBuffer::DX12UploadBuffer(size_t startSize)
-:mSize(startSize)
+:FrameIndexedRingBuffer(startSize)
 {
 	CreateHeap(startSize);
 }
@@ -36,66 +36,67 @@ DX12UploadBuffer::Allocation DX12UploadBuffer::Reserve(u64 size, u64 alignment)
 	ClearHeap();
 
 	u64 newSize = RoundUpToPowerOf2(NumCast<u64>(max(size, mSize) * 1.5f));
+	FrameIndexedRingBuffer::Reset(newSize);
 	CreateHeap(newSize);
 	CHECK_SUCCEEDED(TryReserve(size, alignment, result));
 	return MakeAllocation(result);
 }
 
-bool DX12UploadBuffer::TryReserve(u64 size, u64 alignment, u64& outStart)
-{
-	if (size > mSize)
-	{
-		return false;
-	}
-
-	u64 currFrame = GetRHI().GetCurrentFrame();
-	if (mFrames.empty())
-	{
-		mFrames.push({currFrame, 0, size});
-		outStart = 0;
-		return true;
-	}
-
-	FrameWindow& current = mFrames.back();
-	u64 start = Align(current.End, alignment);
-	u64 completedFrame = GetRHI().GetCompletedFrame();
-	if (start + size > mSize)
-	{
-		while (!mFrames.empty() && mFrames.front().End > current.End)
-		{
-			if (completedFrame >= mFrames.front().Frame)
-			{
-				mFrames.pop();
-			}
-			else
-			{
-				return false;
-			}
-		}
-		start = 0;
-	}
-	while (!mFrames.empty() && mFrames.front().Start < start + size)
-	{
-		if (completedFrame >= mFrames.front().Frame)
-		{
-			mFrames.pop();
-		}
-		else
-		{
-			return false;
-		}
-	}
-
-	if (mFrames.empty())
-	{
-		mFrames.push({currFrame, 0, size});
-		outStart = 0;
-		return true;
-	}
-	mFrames.back().End = start + size;
-	outStart = start;
-	return true;
-}
+//bool DX12UploadBuffer::TryReserve(u64 size, u64 alignment, u64& outStart)
+//{
+//	if (size > mSize)
+//	{
+//		return false;
+//	}
+//
+//	u64 currFrame = GetRHI().GetCurrentFrame();
+//	if (mFrames.empty())
+//	{
+//		mFrames.push({currFrame, 0, size});
+//		outStart = 0;
+//		return true;
+//	}
+//
+//	FrameWindow& current = mFrames.back();
+//	u64 start = Align(current.End, alignment);
+//	u64 completedFrame = GetRHI().GetCompletedFrame();
+//	if (start + size > mSize)
+//	{
+//		while (!mFrames.empty() && mFrames.front().End > current.End)
+//		{
+//			if (completedFrame >= mFrames.front().Frame)
+//			{
+//				mFrames.pop();
+//			}
+//			else
+//			{
+//				return false;
+//			}
+//		}
+//		start = 0;
+//	}
+//	while (!mFrames.empty() && mFrames.front().Start < start + size)
+//	{
+//		if (completedFrame >= mFrames.front().Frame)
+//		{
+//			mFrames.pop();
+//		}
+//		else
+//		{
+//			return false;
+//		}
+//	}
+//
+//	if (mFrames.empty())
+//	{
+//		mFrames.push({currFrame, 0, size});
+//		outStart = 0;
+//		return true;
+//	}
+//	mFrames.back().End = start + size;
+//	outStart = start;
+//	return true;
+//}
 
 DX12UploadBuffer::~DX12UploadBuffer()
 {

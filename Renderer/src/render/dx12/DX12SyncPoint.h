@@ -49,9 +49,9 @@ public:
 		return evt;
 	}
 
-	void Release();
+	void Release() const;
 
-	bool Wait(u32 forMS = INFINITE) const
+	bool Wait(u32 forMS = INFINITE, bool thenRelease = true) const
 	{
 		if (IsPassed())
 		{
@@ -61,6 +61,10 @@ public:
 		auto evt = GetCompletionEvent();
 		bool result = evt.Wait(forMS);
 		wnd::ReleaseEvent(evt);
+		if (thenRelease)
+		{
+			Release();
+		}
 		return result;
 	}
 private:

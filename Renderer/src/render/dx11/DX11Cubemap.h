@@ -44,22 +44,21 @@ public:
 	IDepthStencil::Ref GetDS() override;
 
 
- MappedResource Map(u32 subResource, ECpuAccessFlags flags) override;
+	 MappedResource Map(u32 subResource, ECpuAccessFlags flags) override;
 
 
- void Unmap(u32 subResource) override;
+	 void Unmap(u32 subResource) override;
 
 
- void CreateSRV() override
- {
-	 throw std::logic_error("The method or operation is not implemented.");
- }
+	 void CreateSRV() override
+	 {
+		 throw std::logic_error("The method or operation is not implemented.");
+	 }
 
-
- void* GetShaderResource(ShaderResourceId id) override
- {
-	 return srv.Get();
- }
+	 CopyableMemory<8> GetShaderResource(ShaderResourceId id) override
+	 {
+		 return srv.Get();
+	 }
 
  private:
 	DX11Cubemap(DX11Ctx& ctx);

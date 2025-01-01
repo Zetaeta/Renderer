@@ -4,6 +4,7 @@
 #include <core/Types.h>
 #include <core/Maths.h>
 #include <core/Utils.h>
+#include "render/DeviceTexture.h"
 
 
 enum class ETextureFormat : u8;
@@ -29,17 +30,7 @@ void SetResourceName(const ResourcePtr& resource, const String& str)
 	}
 }
 
-enum class EDxgiFormatContext : u8
-{
-	Resource,
-	SRV,
-	UAV,
-	RenderTarget,
-	DepthStencil = RenderTarget,
-	StencilSRV
-};
-
-DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, EDxgiFormatContext context = EDxgiFormatContext::Resource);
+DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, ETextureFormatContext context = ETextureFormatContext::Resource);
 
 }
 }
