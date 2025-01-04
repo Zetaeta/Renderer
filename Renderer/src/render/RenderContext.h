@@ -227,6 +227,7 @@ public:
 
 	void ShowPixelDebug();
 
+	RenderTextureManager TextureManager;
 private:
 
 	Vector<IDeviceTexture::Ref> tempRemember;

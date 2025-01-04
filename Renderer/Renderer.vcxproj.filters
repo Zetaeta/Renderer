@@ -464,6 +464,8 @@
     <ClInclude Include="src\render\dxcommon\SharedD3D.h" />
     <ClInclude Include="src\render\dxcommon\DXGIUtils.h" />
     <ClInclude Include="src\render\shaders\ShaderReflection.h" />
+    <ClInclude Include="src\render\RenderTextureManager.h" />
+    <ClInclude Include="src\render\RenderMaterial.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -718,6 +720,8 @@
     <ClCompile Include="src\render\dx12\DX12ShaderCompiler.cpp" />
     <ClCompile Include="src\render\VertexAttributes.cpp" />
     <ClCompile Include="src\render\dxcommon\DXGIUtils.cpp" />
+    <ClCompile Include="src\render\RenderTextureManager.cpp" />
+    <ClCompile Include="src\render\RenderMaterial.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

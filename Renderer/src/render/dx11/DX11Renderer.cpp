@@ -197,7 +197,7 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 	CBPool = &mCBPool;
 	Device = this;
 	myDevice = this;
-	TextureManager = &m_Ctx.psTextures;
+//	TextureManager = &m_Ctx.psTextures;
 	m_Ctx.pDevice = pDevice;
 	m_Ctx.pContext = pContext;
 	m_Ctx.m_Renderer = this;
@@ -219,7 +219,6 @@ DX11Renderer::~DX11Renderer()
 {
 	mTextures.clear();
 	m_Materials.clear();
-	m_Ctx.psTextures = {};
 	mRCtx = {};
 	m_EmptyTexture = nullptr;
  }
@@ -252,8 +251,6 @@ void DX11Renderer::DrawControls()
 		mShaderMgr.RecompileAll(true);
 	}
 
-	ImGui::DragFloat("Dir shadowmap scale", &m_DirShadowSize);
-	ImGui::DragFloat("Point shadow factor", &m_PointShadowFactor, 0.1f);
 	ImGui::DragInt("Debug mode", reinterpret_cast<int*>(&mRCtx->Settings.ShadingDebugMode), 0.5, 0, Denum(EShadingDebugMode::COUNT));
 	ImGui::DragFloat("Debug greyscale exponent", &mRCtx->Settings.DebugGrayscaleExp, 0.1f, 0, 10);
 	ImGui::DragInt2("Viewer size", &mViewerSize.x, 1.f, 0, 2500);
@@ -510,7 +507,7 @@ void DX11Renderer::Render(const Scene& scene)
 	pContext->PSSetShader(nullptr, nullptr, 0);
 	pContext->VSSetShader(nullptr, nullptr, 0);
 
-	m_Ctx.psTextures.UnBind(m_Ctx);
+	mRCtx->TextureManager.UnBind(this);
 	EndFrameTimer();
 }
 
@@ -635,7 +632,7 @@ void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useM
 
 	if (useMaterial)
 	{
-		m_Materials[mesh.material]->Bind(m_Ctx, layer);
+		m_Materials[mesh.material]->Bind(*mRCtx, layer);
 	}
 
 	const UINT stride = Sizeof(mesh.vertices[0]);
@@ -646,7 +643,7 @@ void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useM
 	pContext->IASetVertexBuffers(0, 1, meshData.vBuff.GetAddressOf(), &stride, &offset);
 	pContext->IASetIndexBuffer(meshData.iBuff.Get(),DXGI_FORMAT_R16_UINT, 0);
 	pContext->DrawIndexed(Size(mesh.triangles) * 3,0,0);
-	m_Materials[mesh.material]->UnBind(m_Ctx);
+	m_Materials[mesh.material]->UnBind(*mRCtx);
 }
 
 void DX11Renderer::DrawMesh(IDeviceMesh* mesh)
@@ -756,10 +753,10 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 {
 	Material&					  mat = m_Scene->GetMaterial(mid);
 	std::lock_guard lock{ mat.GetUpdateMutex() };
-	std::unique_ptr<DX11Material>& result = m_Materials[mid];
+	std::unique_ptr<RenderMaterial>& result = m_Materials[mid];
 	if (mat.albedo->IsValid())
 	{
-		auto texMat = std::make_unique<DX11TexturedMaterial>(&m_MatTypes[MAT_TEX], mat.GetMatType());
+		auto texMat = std::make_unique<TexturedRenderMaterial>(&m_MatTypes[MAT_TEX], mat.GetMatType());
 		if (mat.albedo.IsValid())
 		{
 			texMat->m_Albedo = PrepareTexture(*mat.albedo, true);
@@ -790,7 +787,7 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 	}
 	else
 	{
-		result = std::make_unique<DX11Material>(&m_MatTypes[MAT_PLAIN], mat.GetMatType());
+		result = std::make_unique<RenderMaterial>(&m_MatTypes[MAT_PLAIN], mat.GetMatType());
 	}
 	mat.DeviceMat = result.get();
 }
@@ -944,12 +941,12 @@ void DX11Renderer::UnregisterTexture(DX11Cubemap* tex)
 	std::erase_if(m_CubemapRegistry, [tex](auto* other) {return other == tex; });
 }
 
-DX11Material* DX11Renderer::GetDefaultMaterial(int matType)
+RenderMaterial* DX11Renderer::GetDefaultMaterial(int matType)
 {
 	auto& materialType = m_MatTypes[matType];
 	if (!IsValid(materialType.m_Default))
 	{
-		materialType.m_Default = std::make_unique<DX11Material>(&materialType, E_MT_OPAQUE);
+		materialType.m_Default = std::make_unique<RenderMaterial>(&materialType, E_MT_OPAQUE);
 		
 	}
 	return materialType.m_Default.get();
@@ -1061,7 +1058,7 @@ void DX11Renderer::DispatchCompute(ComputeDispatch args)
 
 void DX11Renderer::ClearResourceBindings()
 {
-	m_Ctx.psTextures.UnBind(m_Ctx);
+	mRCtx->TextureManager.UnBind(this);
 	ID3D11ShaderResourceView* const* dummyViews = reinterpret_cast<ID3D11ShaderResourceView* const*>(ZerosArray);
 	pContext->PSSetShaderResources(0, mMaxShaderResources[EShaderType::Pixel], dummyViews);
 	pContext->VSSetShaderResources(0, mMaxShaderResources[EShaderType::Vertex], dummyViews);

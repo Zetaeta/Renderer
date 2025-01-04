@@ -5,10 +5,10 @@
 
 // Array indexed by enums
 template<typename T, typename Enum, Enum Size = Enum::Count>
-class EnumArray : public std::array<T, Denum(Enum::Count)>
+class EnumArray : public std::array<T, Denum(Size)>
 {
 public:
-	using std::array<T, Denum(Enum::Count)>::operator[];
+	using std::array<T, Denum(Size)>::operator[];
 	T& operator[](Enum index)
 	{
 		return operator[](Denum(index));

@@ -490,6 +490,13 @@ bool FindIgnoreCase(const std::string_view& haystack, const std::string_view& ne
 
 extern unsigned char const ZerosArray[1024];
 
+template<typename T>
+T const* GetZeroData(size_t requiredSize)
+{
+	ZE_ASSERT(requiredSize * sizeof(T) < sizeof(ZerosArray));
+	return reinterpret_cast<T const*>(ZerosArray);
+}
+
 template<typename InContainer, typename OutContainer>
 void Append(OutContainer to, InContainer from)
 {

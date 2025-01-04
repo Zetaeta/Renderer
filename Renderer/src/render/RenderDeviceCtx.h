@@ -6,6 +6,7 @@
 #include <common/Material.h>
 #include "Shader.h"
 #include "GPUTimer.h"
+#include "RenderTextureManager.h"
 
 
 struct MeshPart;
@@ -83,40 +84,6 @@ enum class EDSClearMode : u8
 
 FLAG_ENUM(EDSClearMode);
 
-enum ETextureSlot : u8
-{
-	E_TS_DIFFUSE = 0,
-	E_TS_NORMAL,
-	E_TS_ROUGHNESS,
-	E_TS_EMISSIVE,
-	E_TS_SHADOWMAP,
-	E_TS_ENVIRONMENT,
-	E_TS_COUNT
-};
-
-using TextureSlotFlags = u64;
-
-constexpr TextureSlotFlags 
-	F_TS_DIFFUSE = 1 << E_TS_DIFFUSE,
-	F_TS_NORMAL = 1 << E_TS_NORMAL,
-	F_TS_ROUGHNESS = 1 << E_TS_ROUGHNESS,
-	F_TS_EMISSIVE = 1 << E_TS_EMISSIVE,
-	F_TS_SHADOWMAP = 1 << E_TS_SHADOWMAP,
-	F_TS_ENVIRONMENT = 1 << E_TS_ENVIRONMENT;
-
-class IRenderTextureManager
-{
-public:
-	virtual void SetTexture(ETextureSlot slot, IDeviceTexture::Ref texture) = 0;
-
-	TextureSlotFlags& Flags() { return m_Flags; }
-	void SetFlags(TextureSlotFlags flags) { m_Flags |= flags; }
-	void UnsetFlags(TextureSlotFlags flags) { m_Flags &= ~flags; }
-	void ClearFlags(TextureSlotFlags mask = 0) { m_Flags &= mask; }
-protected:
-	u64 m_Flags = 0;
-};
-
 enum class EShaderType : u8;
 
 using Primitive = MeshPart;
@@ -192,7 +159,6 @@ public:
 
 	ICBPool* CBPool = nullptr;
 	IRenderDevice* Device;
-	IRenderTextureManager* TextureManager;
 	class MaterialManager* MatManager;
 };
 

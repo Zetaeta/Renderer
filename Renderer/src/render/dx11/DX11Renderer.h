@@ -139,7 +139,7 @@ public:
 
 	void UnregisterTexture(DX11Cubemap* tex);
 
-	DX11Material* GetDefaultMaterial(int matType);
+	RenderMaterial* GetDefaultMaterial(int matType);
 
 	IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData) override;
 	IDeviceTexture::Ref CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData) override;
@@ -160,7 +160,7 @@ public:
 	//constexpr static u32 const MAT_COUNT = 5;
 
 	std::vector<DX11MaterialType> m_MatTypes;
-	std::vector<std::unique_ptr<DX11Material>> m_Materials;
+	std::vector<std::unique_ptr<RenderMaterial>> m_Materials;
 
 	EnumArray<u32, EShaderType> mMaxShaderResources = {};
 	EnumArray<u32, EShaderType> mMaxUAVs = {};
@@ -267,8 +267,6 @@ protected:
 
 	u64 mFrameNum = 0;
 
-
-
 	float m_Scale;
 	u32 m_Width;
 	u32 m_Height;
@@ -284,8 +282,6 @@ protected:
 
 	bool m_TextureViewer = false;
 	float m_TexViewExp = 1.f;
-	float m_DirShadowSize = 10;
-	float m_PointShadowFactor = 0.5f;
 
 	StencilState mStencilState;
 	EDepthMode mDepthMode = EDepthMode::Less;

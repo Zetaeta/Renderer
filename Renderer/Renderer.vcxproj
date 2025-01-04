@@ -253,9 +253,11 @@
     <ClInclude Include="src\render\RenderDevice.h" />
     <ClInclude Include="src\render\RenderDeviceCtx.h" />
     <ClInclude Include="src\render\RenderGraph.h" />
+    <ClInclude Include="src\render\RenderMaterial.h" />
     <ClInclude Include="src\render\RenderPass.h" />
     <ClInclude Include="src\render\RenderResourceManager.h" />
     <ClInclude Include="src\render\RenderScreenIds.h" />
+    <ClInclude Include="src\render\RenderTextureManager.h" />
     <ClInclude Include="src\render\RndFwd.h" />
     <ClInclude Include="src\render\SamplerState.h" />
     <ClInclude Include="src\render\SceneRenderPass.h" />
@@ -428,8 +430,10 @@
     <ClCompile Include="src\render\RenderContext.cpp" />
     <ClCompile Include="src\render\RenderCubemap.cpp" />
     <ClCompile Include="src\render\RenderGraph.cpp" />
+    <ClCompile Include="src\render\RenderMaterial.cpp" />
     <ClCompile Include="src\render\RenderPass.cpp" />
     <ClCompile Include="src\render\RenderResourceManager.cpp" />
+    <ClCompile Include="src\render\RenderTextureManager.cpp" />
     <ClCompile Include="src\render\SceneRenderPass.cpp" />
     <ClCompile Include="src\render\RTRenderer.cpp">
       <ExternalWarningLevel>Level3</ExternalWarningLevel>

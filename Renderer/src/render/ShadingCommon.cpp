@@ -7,7 +7,7 @@ namespace rnd
 {
 
 
-void SetupShadingLayer(RenderContext const* renderContext, EShadingLayer layer, u32 index)
+void SetupShadingLayer(RenderContext* renderContext, EShadingLayer layer, u32 index)
 {
 	IRenderDeviceCtx* deviceCtx = renderContext->DeviceCtx();
 	Scene const& scene = renderContext->GetScene();
@@ -86,7 +86,7 @@ void SetupShadingLayer(RenderContext const* renderContext, EShadingLayer layer, 
 	default:
 		break;
 	}
-	deviceCtx->TextureManager->SetTexture(E_TS_SHADOWMAP, lrd.mShadowMap);
+	renderContext->TextureManager.SetTexture(E_TS_SHADOWMAP, lrd.mShadowMap);
 
 }
 
