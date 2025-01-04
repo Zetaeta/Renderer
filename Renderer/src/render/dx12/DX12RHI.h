@@ -37,6 +37,7 @@ struct DX12CommandList
 
 struct DX12DirectMesh : public IDeviceMesh
 {
+	void OnFullyReleased() override;
 	ComPtr<ID3D12Resource> mResource;
 	D3D12_VERTEX_BUFFER_VIEW view;
 };
@@ -149,6 +150,8 @@ public:
 	OwningPtr<LiveObjectReporter> GetLiveObjectReporter();
 
 	ID3D12PipelineState* GetPSO(GraphicsPSODesc const& PSODesc);
+
+	void FreeDirectMesh(DX12DirectMesh* mesh);
 
 private:
 	void WaitFence(u64 value);

@@ -277,6 +277,7 @@
     <ClInclude Include="src\render\shaders\MaterialShader.h" />
     <ClInclude Include="src\render\shaders\ShaderDeclarations.h" />
     <ClInclude Include="src\render\shaders\ShaderPermutation.h" />
+    <ClInclude Include="src\render\shaders\ShaderReflection.h" />
     <ClInclude Include="src\render\ShadingCommon.h" />
     <ClInclude Include="src\render\ShadowmapsPass.h" />
     <ClInclude Include="src\render\VertexAttributes.h" />

@@ -24,18 +24,20 @@ struct DX11MaterialType : public MaterialArchetype
 	ComPtr<ID3D11VertexShader> m_VertexShader;
 	ComPtr<ID3D11InputLayout> m_InputLayout;
 	std::unique_ptr<class DX11Material> m_Default;
-	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) override;
+	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType) override;
 	
 	using Ref = RefPtr<DX11MaterialType>;
-	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer);
+	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer, EMatType matType);
+	bool mGotVSCBData = false;
+	bool mGotPSCBData = false;
 
 };
 
 class DX11Material : public IDeviceMaterial
 {
 public:
-	DX11Material(DX11MaterialType::Ref matType)
-		: IDeviceMaterial(matType) {}
+	DX11Material(DX11MaterialType::Ref matType, EMatType opacity)
+		: IDeviceMaterial(matType), mMatType(opacity) {}
 
 
 	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer);
@@ -45,14 +47,16 @@ public:
 	}
 
 	void Bind(rnd::RenderContext& rctx, EShadingLayer layer) override;
+protected:
+	EMatType mMatType;
 };
 
 class DX11TexturedMaterial : public DX11Material
 {
 public:
 
-	DX11TexturedMaterial(DX11MaterialType::Ref matType, std::shared_ptr<DX11Texture> const& albedo = nullptr)
-		: DX11Material(matType), m_Albedo(albedo) {}
+	DX11TexturedMaterial(DX11MaterialType::Ref matType, EMatType opacity, std::shared_ptr<DX11Texture> const& albedo = nullptr)
+		: DX11Material(matType, opacity), m_Albedo(albedo) {}
 
 	
 	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer) override;

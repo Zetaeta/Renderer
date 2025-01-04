@@ -31,6 +31,41 @@ private:
 	mutable std::atomic<u32> mRefCount;
 };
 
+class SelfDestructingRefCounted
+{
+public:
+	SelfDestructingRefCounted()
+		: mRefCount(0) {}
+	template<typename TOther>
+	SelfDestructingRefCounted(TOther&& other) noexcept
+		: mRefCount(0)
+	{
+	}
+	u32 AddRef() const
+	{
+		return ++mRefCount;
+	}
+	u32 Release()
+	{
+		u32 newRefCount = --mRefCount;
+		if (newRefCount == 0)
+		{
+			OnFullyReleased();
+		}
+		return newRefCount;
+	}
+
+	u32 GetRefCount() const
+	{
+		return mRefCount.load(std::memory_order_acquire);
+	}
+
+	virtual void OnFullyReleased() {}
+
+private:
+	mutable std::atomic<u32> mRefCount;
+};
+
 template<typename T>
 concept RefCountedType = std::derived_from<T, RefCountedObject>;
 

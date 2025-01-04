@@ -7,7 +7,7 @@
 template<typename T, size_t PageSize = 256, bool ListUsed = false, typename SizeType = u32, typename Destructor = DefaultDestruct, typename Constructor = DefaultConstruct<T>>
 class GrowingImmobilePool : public PoolUsageTracker<ListUsed, SizeType>
 {
-	static_assert(sizeof(T) >= sizeof(void*), "Free-list requires at least pointer size");
+	static_assert(sizeof(T) >= sizeof(SizeType), "Free-list requires at least pointer size");
 	using PoolUsageTracker<ListUsed, SizeType>::TrackUsed;
 	using PoolUsageTracker<ListUsed, SizeType>::CheckUsed;
 	using PoolUsageTracker<ListUsed, SizeType>::GrowUsedTracker;
@@ -19,7 +19,12 @@ public:
 	{
 	}
 
-	constexpr static bool CacheIndexAfterPointer = sizeof(T) >= sizeof(void*) + sizeof(SizeType);
+	~GrowingImmobilePool()
+	{
+		ZE_ENSURE(mUsedSize == 0);
+	}
+
+//	constexpr static bool CacheIndexAfterPointer = sizeof(T) >= sizeof(void*) + sizeof(SizeType);
 
 	void AddPage()
 	{
@@ -31,19 +36,20 @@ public:
 	// Returns true if new
 	T* Acquire()
 	{
-		if (mFirstFree)
+		++mUsedSize;
+		if (mFirstFree != (SizeType) -1)
 		{
-			if constexpr (CacheIndexAfterPointer)
-			{
-				SizeType index = *reinterpret_cast<SizeType*>(reinterpret_cast<u8*>(mFirstFree) + sizeof(T));
-				TrackUsed(index, true);
-			}
-			else
+			//if constexpr (CacheIndexAfterPointer)
+			//{
+			//	SizeType index = *reinterpret_cast<SizeType*>(reinterpret_cast<u8*>(mFirstFree) + sizeof(T));
+			//	TrackUsed(index, true);
+			//}
+			//else
 			{
 				TrackUsed(mFirstFree, true);
 			}
-			u8* nextFree = *reinterpret_cast<u8* const*>(mFirstFree);
-			T& result = mConstruct(nextFree);
+			SizeType nextFree = *reinterpret_cast<SizeType const*>(Access(mFirstFree));
+			T& result = mConstruct(Access(nextFree));
 			mFirstFree = nextFree;
 			return &result;
 		}
@@ -73,17 +79,18 @@ public:
 
 	void Release(T&& val)
 	{
+		--mUsedSize;
 		//T& val = operator[](index);
 		mDestruct(val);
-		*reinterpret_cast<u8**>(&val) = mFirstFree;
+		*reinterpret_cast<u32*>(&val) = mFirstFree;
 		SizeType index = GetIndex(&val);
-		if constexpr (sizeof(T) >= sizeof(void) + sizeof(SizeType))
-		{
-			// Store index after the next-free pointer so we don't have to calculate it later.
-			*reinterpret_cast<SizeType*>(reinterpret_cast<u8*>(&val) + sizeof(T)) = index;
-		}
+		//if constexpr (sizeof(T) >= sizeof(void*) + sizeof(SizeType))
+		//{
+		//	// Store index after the next-free pointer so we don't have to calculate it later.
+		//	*reinterpret_cast<SizeType*>(reinterpret_cast<u8*>(&val) + sizeof(T)) = index;
+		//}
 		TrackUsed(index, false);
-		mFirstFree = reinterpret_cast<u8*>(&val);
+		mFirstFree = index;
 	}
 
 	void TrackUsed(T* address, bool isUsed)
@@ -116,7 +123,7 @@ public:
 	{
 		SizeType pageIdx = index / PageSize;
 		SizeType objIdx = index % PageSize;
-		ZE_ASSERT(pageIdx < mPages.size() && objIdx < mPages[pageIdx].size());
+		ZE_ASSERT(pageIdx < mPages.size() && objIdx < PageSize);
 		return mPages[pageIdx][objIdx].Data;
 	}
 	
@@ -126,9 +133,10 @@ public:
 		return NumCast<SizeType>(size);
 	}
 
-	u8* mFirstFree = nullptr;
+	SizeType mFirstFree = (SizeType) -1;
 	Vector<std::unique_ptr<EntryType[]>> mPages;
 	u32 mLastPageSize = 0;
+	SizeType mUsedSize = 0;
 	Constructor mConstruct;
 	Destructor mDestruct;
 };

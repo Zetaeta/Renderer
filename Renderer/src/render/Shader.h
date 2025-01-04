@@ -81,7 +81,7 @@ public:
 
 	const ShaderDesc& GetRegisteredShader(u32 idx) const
 	{
-		return mRegisteredShaders[idx];
+		return mRegisteredShaders[idx - 1];
 	}
 
 	static ShaderRegistry& Get();
@@ -93,7 +93,7 @@ public:
 	u32 RegisterShaderType(char const* type, char const* shaderFile, char const* entryPoint)
 	{
 		mRegisteredShaders.emplace_back(ShaderDesc(type, shaderFile, entryPoint));
-		return NumCast<u32>(mRegisteredShaders.size() - 1);
+		return NumCast<u32>(mRegisteredShaders.size());
 	}
 };
 

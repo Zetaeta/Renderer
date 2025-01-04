@@ -463,6 +463,7 @@
     <ClInclude Include="src\render\dx12\DX12ShaderCompiler.h" />
     <ClInclude Include="src\render\dxcommon\SharedD3D.h" />
     <ClInclude Include="src\render\dxcommon\DXGIUtils.h" />
+    <ClInclude Include="src\render\shaders\ShaderReflection.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">

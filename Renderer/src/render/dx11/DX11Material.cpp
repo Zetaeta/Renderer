@@ -8,7 +8,7 @@ namespace dx11
 
 void DX11TexturedMaterial::Bind(DX11Ctx& ctx, EShadingLayer layer)
 {
-	Archetype->Bind(*ctx.mRCtx, layer);
+	Archetype->Bind(*ctx.mRCtx, layer, mMatType);
 	if (layer == EShadingLayer::NONE || layer == EShadingLayer::Depth)
 	{
 		ctx.psTextures.ClearFlags();
@@ -48,7 +48,7 @@ void DX11TexturedMaterial::UnBind(DX11Ctx& ctx)
 
 void DX11Material::Bind(DX11Ctx& ctx, EShadingLayer layer)
 {
-	Archetype->Bind(*ctx.mRCtx, layer);
+	Archetype->Bind(*ctx.mRCtx, layer, mMatType);
 	ctx.psTextures.ClearFlags();
 	if (layer == EShadingLayer::SPOTLIGHT || layer == EShadingLayer::DIRLIGHT || layer == EShadingLayer::POINTLIGHT)
 	{
@@ -62,22 +62,38 @@ void DX11Material::Bind(rnd::RenderContext& rctx, EShadingLayer layer)
 	Bind(static_cast<DX11Renderer*>(rctx.DeviceCtx())->m_Ctx, layer);
 }
 
-void DX11MaterialType::Bind(rnd::RenderContext& rctx, EShadingLayer layer)
+void DX11MaterialType::Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType)
 {
-	Bind(static_cast<DX11Renderer*>(rctx.DeviceCtx())->m_Ctx, layer);
+	Bind(static_cast<DX11Renderer*>(rctx.DeviceCtx())->m_Ctx, layer, matType);
 }
 
-void DX11MaterialType::Bind(DX11Ctx& ctx, EShadingLayer layer)
+void DX11MaterialType::Bind(DX11Ctx& ctx, EShadingLayer layer, EMatType matType)
 {
 	ctx.pContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
 	ctx.pContext->IASetInputLayout(m_InputLayout.Get());
 
 	auto& pixelShader = PixelShaders[layer >= EShadingLayer::NONE ? EShadingLayer::BASE : layer];
-	if (pixelShader == nullptr && Desc.mVSRegistryId != 0)
+	if (pixelShader == nullptr && Desc.mPSRegistryId != 0)
 	{
-		pixelShader = Desc.GetShader(ctx.mRCtx->GetShaderManager(), layer, EMatType::E_MT_TRANSL); // TODO: Proper opacity separation
-		CBData[ECBFrequency::PS_PerFrame].IsUsed = true; // TEMP fix
-		CBData[ECBFrequency::PS_PerInstance].IsUsed = true;
+		OwningPtr<IShaderReflector> reflector;
+		pixelShader = Desc.GetShader(ctx.mRCtx->GetShaderManager(), layer, matType, mGotPSCBData ? nullptr : &reflector);
+					CBData[ECBFrequency::PS_PerInstance].IsUsed = true;
+					CBData[ECBFrequency::PS_PerFrame].IsUsed = true;
+		//if (reflector)
+		//{
+		//	for (auto& cb : reflector->GetConstantBuffers())
+		//	{
+		//		if (FindIgnoreCase(cb.Name, "instance"))
+		//		{
+		//			CBData[ECBFrequency::PS_PerInstance].IsUsed = true;
+		//		}
+		//		else if (FindIgnoreCase(cb.Name, "frame"))
+		//		{
+		//			CBData[ECBFrequency::PS_PerFrame].IsUsed = true;
+		//		}
+		//	}
+		//	mGotPSCBData = true;
+		//}
 	}
 	if (pixelShader && pixelShader->GetDeviceShader())
 	{

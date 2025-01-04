@@ -8,6 +8,7 @@ namespace rnd
 
 void ShadowmapsPass::OnCollectFinished()
 {
+	mLayer = EShadingLayer::Depth;
 	DeviceCtx()->SetDepthStencilMode(EDepthMode::Less);
 	for (ELightType lightType = ELightType::START; lightType < ELightType::COUNT; ++lightType)
 	{

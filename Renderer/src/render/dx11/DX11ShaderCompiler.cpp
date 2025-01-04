@@ -13,75 +13,20 @@ DEFINE_LOG_CATEGORY_STATIC(LogDX11Shader);
 
 constexpr bool ShaderCompileDebugging = true;
 
-OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc,
-	const ShaderCompileEnv& env, EShaderType shaderType, VertexAttributeMask inputMask, bool forceRecompile)
+DX11ShaderCompiler::DX11ShaderCompiler(ID3D11Device* device) : mDevice(device)
 {
-	const String& file = desc.File;
-	Vector<D3D_SHADER_MACRO> macros;
-	macros.reserve(env.Defines.size() + 1);
-	for (auto const& pair : env.Defines)
+	mSrcDir = "src\\shaders";
+	mOutDir = "generated\\shaders";
+	for (EShaderType type = EShaderType::GraphicsStart; type < EShaderType::Count; ++type)
 	{
-		macros.push_back({ pair.first.c_str(), pair.second.c_str() });
-		if (ShaderCompileDebugging)
-		{
-			RLOG(LogDX11Shader, Info, "%s: %s", pair.first.c_str(), pair.second.c_str());
-		}
+		mTypeStrings[type] = GetShaderTypeString(type);
 	}
-	switch (shaderType)
-	{
-	case rnd::EShaderType::Vertex:
-		macros.push_back({"VERTEX", "1"});
-		break;
-	case rnd::EShaderType::Pixel:
-		macros.push_back({"PIXEL", "1"});
-		break;
-	case rnd::EShaderType::Geometry:
-		macros.push_back({"GEOMETRY", "1"});
-		break;
-	case rnd::EShaderType::Compute:
-		macros.push_back({"COMPUTE", "1"});
-		break;
-	default:
-		break;
-	}
-	macros.push_back({nullptr, nullptr});
+}
 
-	fs::create_directories(mOutDir);
-	auto			 srcName = std::format("{}.hlsl", file);
-	fs::path		 src = mSrcDir / srcName;
-	if (!ZE_ENSURE(fs::exists(src)))
-	{
-		return nullptr;
-	}
-	auto			 lastWrite = fs::last_write_time(src);
-	ComPtr<ID3DBlob> outBlob;
-	ComPtr<ID3DBlob> errBlob;
-	UINT			 flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(DEBUG) || defined(_DEBUG)
-	flags |= D3DCOMPILE_DEBUG;
-#endif
-
-	auto	 csoName = std::format("{}_{:x}.cso", file, id.PermuatationId);
-	fs::path cso = mOutDir / csoName;
-	if (forceRecompile || !fs::exists(cso) || fs::last_write_time(cso) < lastWrite)
-	{
-		if (outBlob = dx::DXCompileFile(src.wstring().c_str(), desc.EntryPoint.c_str(), GetShaderTypeString(shaderType), Addr(macros), flags))
-		{
-			RLOG(LogGlobal, Verbose, "Saving to file %s\n", cso.string().c_str());
-			HR_ERR_CHECK(D3DWriteBlobToFile(outBlob.Get(), cso.c_str(), true));
-		}
-		else
-		{
-			DebugBreak();
-			return nullptr;
-		}
-	}
-	else
-	{
-		RLOG(LogGlobal, Info, "Reading precompiled shader %s from %s\n", file.c_str(), cso.string().c_str());
-		HR_ERR_CHECK(D3DReadFileToBlob(cso.c_str(), &outBlob));
-	}
-
+OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc,
+	const ShaderCompileEnv& env, EShaderType shaderType, VertexAttributeMask inputMask, OwningPtr<IShaderReflector>* outReflector, bool forceRecompile)
+{
+	ComPtr<ID3DBlob> outBlob = GetShaderBytecode(id, desc, env, shaderType, outReflector, forceRecompile);
 	switch (shaderType)
 	{
 		case EShaderType::Vertex:

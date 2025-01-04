@@ -5,6 +5,8 @@
 
 #include "core/WinUtils.h"
 #include "container/SmallMap.h"
+#include "render/shaders/ShaderReflection.h"
+#include "render/dxcommon/DXShaderCompiler.h"
 
 namespace fs = std::filesystem;
 
@@ -31,17 +33,14 @@ using DX11VertexShader = DX11Shader<ID3D11VertexShader>;
 using DX11GeometryShader = DX11Shader<ID3D11GeometryShader>;
 using DX11ComputeShader = DX11Shader<ID3D11ComputeShader>;
 
-class DX11ShaderCompiler final : public IShaderCompiler
+class DX11ShaderCompiler final : public IShaderCompiler, public FXCShaderCompiler
 {
 public:
-	DX11ShaderCompiler(ID3D11Device* device)
-		: mDevice(device) {}
+	DX11ShaderCompiler(ID3D11Device* device);
 	OwningPtr<IDeviceShader> CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc, const ShaderCompileEnv& env,
-		EShaderType ShaderType, VertexAttributeMask vsInputMask, bool forceRecompile) override final;
+		EShaderType ShaderType, VertexAttributeMask vsInputMask, OwningPtr<IShaderReflector>* outReflector, bool forceRecompile) override final;
 
 	char const* GetShaderTypeString(EShaderType shaderType);
-	fs::path const mSrcDir{ "src\\shaders" };
-	fs::path const mOutDir{ "generated\\shaders" };
 
 	//DX11Device* mMyDevice;
 	SmallMap<VertexAttributeMask, ComPtr<ID3DBlob>> mShadersForCIL;

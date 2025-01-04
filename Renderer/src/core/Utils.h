@@ -463,6 +463,11 @@ bool HasAnyFlags(E val, E flag)
 	return !!(val & flag);
 }
 
+inline bool HasAnyFlags(u32 val, u32 flag)
+{
+	return val & flag;
+}
+
 template<typename E>
 bool HasAllFlags(E val, E flags)
 {

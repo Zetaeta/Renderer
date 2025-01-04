@@ -8,6 +8,8 @@
 
 namespace rnd
 {
+
+class IShaderReflector;
 class ShaderManager
 {
 public:
@@ -18,7 +20,8 @@ public:
 	~ShaderManager();
 
 	template <typename ShaderType>
-	ShaderType const* GetCompiledShader(ShaderTypeId id = ShaderType::sRegistryId, ShaderType::Permutation const& permutation = {})
+	ShaderType const* GetCompiledShader(ShaderTypeId id = ShaderType::sRegistryId,
+		ShaderType::Permutation const& permutation = {}, OwningPtr<IShaderReflector>* outReflector= nullptr)
 	{
 		ShaderInstanceId instanceId{ id, permutation.GetUniqueId() };
 		if (auto it = mCompiledShaders.find(instanceId); it != mCompiledShaders.end())
@@ -34,12 +37,12 @@ public:
 		if constexpr (ShaderType::Type == EShaderType::Vertex)
 		{
 			auto inputSig = ShaderType::GetInputSignature(permutation);
-			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, inputSig);
+			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, inputSig, outReflector);
 			shader->InputSigInst = inputSig;
 		}
 		else
 		{
-			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type);
+			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, {}, outReflector);
 		}
 		shader->DeviceShader = std::move(deviceShader);
 		mCompiledShaders[instanceId] = shader;

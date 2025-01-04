@@ -1,7 +1,7 @@
 
 cbuffer PointShadow
 {
-#ifdef MASKED
+#if MASKED
 	float maskCutoff;
 #endif
 	float far;
@@ -11,18 +11,18 @@ struct PSOut {
 	float4 color : SV_Target;
 	float depth: SV_Depth;
 };
-#ifdef MASKED
+#if MASKED
 Texture2D baseColourWithMask;
 SamplerState splr;
 #endif
 
 PSOut main(float3 lightSpacePos: LightSpacePos
-#ifdef MASKED
+#if MASKED
 	, float2  uv: TexCoord
 #endif
 )
 {
-#ifdef MASKED
+#if MASKED
 	if (baseColourWithMask.Sample(splr, uv) < maskCutoff)
 	{
 		discard;

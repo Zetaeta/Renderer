@@ -24,19 +24,8 @@ namespace dx12
 
 static DX12RHI* sRHI = nullptr;
 
-class DX12ShaderCompiler : public IShaderCompiler
-{
-
-public:
-	OwningPtr<IDeviceShader> CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc, const ShaderCompileEnv& env, EShaderType ShaderType, VertexAttributeMask inputMask, bool forceRecompile) override
-	{
-		throw std::logic_error("The method or operation is not implemented.");
-		return nullptr;
-	}
-};
-
 DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers)
-:Window(width, height, name), IRenderDevice(&mShaderMgr), mShaderMgr(new DX12ShaderCompiler), mNumBuffers(numBuffers)
+:Window(width, height, name), IRenderDevice(&mShaderMgr), mShaderMgr(new DX12LegacyShaderCompiler), mNumBuffers(numBuffers)
 {
 	//WNDCLASSEX wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"DX12 window", nullptr };
 	//ZE_ASSERT(RegisterClassEx(&wc) != 0);
@@ -606,6 +595,12 @@ ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc const& PSODesc)
 	return pso.Get();
 }
 
+void DX12RHI::FreeDirectMesh(DX12DirectMesh* mesh)
+{
+	DeferredRelease(std::move(mesh->mResource));
+	mMeshes.Release(std::move(*mesh));
+}
+
 ID3D12Device_* GetD3D12Device()
 {
 	return sRHI->Device();
@@ -614,6 +609,11 @@ ID3D12Device_* GetD3D12Device()
 DX12RHI& GetRHI()
 {
 	return *sRHI;
+}
+
+void DX12DirectMesh::OnFullyReleased()
+{
+	GetRHI().FreeDirectMesh(this);
 }
 
 }

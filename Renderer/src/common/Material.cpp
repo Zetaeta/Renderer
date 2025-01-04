@@ -34,7 +34,8 @@ IDeviceMaterial* MaterialManager::GetDefaultMaterial(int matType)
 	return static_cast<rnd::dx11::DX11Renderer*>(mRenderer)->GetDefaultMaterial(matType);
 }
 
-rnd::MaterialPixelShader const* MaterialArchetypeDesc::GetShader(rnd::ShaderManager& shaderMgr, EShadingLayer layer, EMatType opacity) const
+rnd::MaterialPixelShader const* MaterialArchetypeDesc::GetShader(rnd::ShaderManager& shaderMgr, EShadingLayer layer,
+	EMatType opacity, OwningPtr<rnd::IShaderReflector>* outReflector) const
 {
 	using namespace rnd;
 
@@ -59,6 +60,9 @@ rnd::MaterialPixelShader const* MaterialArchetypeDesc::GetShader(rnd::ShaderMana
 	case EShadingLayer::BASE:
 		perm.Set<MaterialPixelShader::FwdBaseLayer>(true);
 		break;
+	case EShadingLayer::Depth:
+		perm.Set<MaterialPixelShader::FwdBaseLayer>(true);
+		break;
 	case EShadingLayer::DIRLIGHT:
 		perm.Set<MaterialPixelShader::FwdDirLight>(true);
 		break;
@@ -74,7 +78,7 @@ rnd::MaterialPixelShader const* MaterialArchetypeDesc::GetShader(rnd::ShaderMana
 	default:
 		return nullptr;
 	}
-	return shaderMgr.GetCompiledShader<rnd::MaterialPixelShader>(mPSRegistryId, perm);
+	return shaderMgr.GetCompiledShader<rnd::MaterialPixelShader>(mPSRegistryId, perm, outReflector);
 }
 
 MaterialArchetypeDesc CreateAndRegisterMatDesc(const char* name, const char* psFilename, const char* psEntryPoint,

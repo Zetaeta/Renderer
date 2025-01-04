@@ -167,7 +167,7 @@ void DX12Context::SetViewport(float width, float height, float TopLeftX, float T
 	};
 	mCmdList->RSSetViewports(1, &viewport);
 
-	CD3DX12_RECT scissor(0, 0, width, height);
+	CD3DX12_RECT scissor(0, 0, NumCast<u32>(width), NumCast<u32>(height));
 	mCmdList->RSSetScissorRects(1, &scissor);
 }
 

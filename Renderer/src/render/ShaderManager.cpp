@@ -9,7 +9,7 @@ void ShaderManager::RecompileAll(bool bForce)
 	{
 		auto& shaderInfo = ShaderRegistry::Get().GetRegisteredShader(id.ShaderId);
 		CompileInfo const& compileInfo = mCompileInfo[id];
-		shader->DeviceShader = mCompiler->CompileShader(id, shaderInfo, compileInfo.Env, compileInfo.Type, compileInfo.InputSignature, bForce);
+		shader->DeviceShader = mCompiler->CompileShader(id, shaderInfo, compileInfo.Env, compileInfo.Type, compileInfo.InputSignature, nullptr, bForce);
 	}
 }
 

@@ -17,7 +17,8 @@ class DX12LegacyShaderCompiler : public IShaderCompiler, public dx::FXCShaderCom
 {
 
 public:
-	OwningPtr<IDeviceShader> CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc, const ShaderCompileEnv& env, EShaderType ShaderType, VertexAttributeMask inputMask, bool forceRecompile) override;
+	OwningPtr<IDeviceShader> CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc, const ShaderCompileEnv& env,
+		EShaderType ShaderType, VertexAttributeMask inputMask, OwningPtr<IShaderReflector>* outReflector, bool forceRecompile) override;
 
 };
 }

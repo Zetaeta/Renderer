@@ -720,11 +720,11 @@ void DX11Renderer::DrawCubemap(ID3D11ShaderResourceView* srv, bool depth)
 
 	if (depth)
 	{
-		m_MatTypes[MAT_CUBE_DEPTH].Bind(m_Ctx, EShadingLayer::BASE);
+		m_MatTypes[MAT_CUBE_DEPTH].Bind(m_Ctx, EShadingLayer::BASE, E_MT_OPAQUE);
 	}
 	else
 	{
-		m_MatTypes[MAT_BG].Bind(m_Ctx, EShadingLayer::BASE);
+		m_MatTypes[MAT_BG].Bind(m_Ctx, EShadingLayer::BASE, E_MT_OPAQUE);
 	}
 	pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
 	//WriteCBuffer(m_VSPerFrameBuff)
@@ -782,12 +782,12 @@ void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	if (pbuff.renderMode <= 1)
 	{
-		m_MatTypes[MAT_2D].Bind(m_Ctx, EShadingLayer::BASE);
+		m_MatTypes[MAT_2D].Bind(m_Ctx, EShadingLayer::BASE, E_MT_OPAQUE);
 	}
 	else
 	{
 		m_PS2DCBuff.WriteData(ivec2(m_Width, m_Height));
-		m_MatTypes[MAT_2D_UINT].Bind(m_Ctx, EShadingLayer::BASE);
+		m_MatTypes[MAT_2D_UINT].Bind(m_Ctx, EShadingLayer::BASE, E_MT_OPAQUE);
 	}
 
 	auto* srv = tex->GetSRV();
@@ -958,7 +958,7 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 	std::unique_ptr<DX11Material>& result = m_Materials[mid];
 	if (mat.albedo->IsValid())
 	{
-		auto texMat = std::make_unique<DX11TexturedMaterial>(&m_MatTypes[MAT_TEX]);
+		auto texMat = std::make_unique<DX11TexturedMaterial>(&m_MatTypes[MAT_TEX], mat.GetMatType());
 		if (mat.albedo.IsValid())
 		{
 			texMat->m_Albedo = PrepareTexture(*mat.albedo, true);
@@ -989,7 +989,7 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 	}
 	else
 	{
-		result = std::make_unique<DX11Material>(&m_MatTypes[MAT_PLAIN]);
+		result = std::make_unique<DX11Material>(&m_MatTypes[MAT_PLAIN], mat.GetMatType());
 	}
 	mat.DeviceMat = result.get();
 }
@@ -1148,7 +1148,7 @@ DX11Material* DX11Renderer::GetDefaultMaterial(int matType)
 	auto& materialType = m_MatTypes[matType];
 	if (!IsValid(materialType.m_Default))
 	{
-		materialType.m_Default = std::make_unique<DX11Material>(&materialType);
+		materialType.m_Default = std::make_unique<DX11Material>(&materialType, E_MT_OPAQUE);
 		
 	}
 	return materialType.m_Default.get();
@@ -1803,6 +1803,7 @@ void GetCBInfo(ID3DBlob* shaderCode, DX11MaterialType& matType, ECBFrequency per
 
 DEFINE_MATERIAL_SHADER(TexturedMat, "TexVertexShader", "main", "TexPixelShader", "main");
 DEFINE_MATERIAL_SHADER(PlainMat, "PlainVertexShader", "main", "PlainPixelShader", "main");
+DEFINE_MATERIAL_SHADER(PointShadow, "PointShadow_VS", "main", "PointShadow_PS", "main");
 
 void DX11Renderer::LoadShaders(bool reload)
 {
@@ -1817,7 +1818,8 @@ void DX11Renderer::LoadShaders(bool reload)
 
 		CreateMatType2("Plain", MAT_PLAIN, "PlainVertexShader", PlainMat, ied, Size(ied), reload);
 		CreateMatType2("Textured", MAT_TEX, "TexVertexShader", TexturedMat, ied, Size(ied), reload);
-		CreateMatTypeUnshaded("PointShadow", MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied, Size(ied), reload);
+//		CreateMatTypeUnshaded("PointShadow", MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied, Size(ied), reload);
+		CreateMatType2("PointShadow", MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", PointShadow, ied, Size(ied), reload);
 		CreateMatTypeUnshaded("ScreenId", MAT_SCREEN_ID, "PlainVertexShader", "ScreenId_PS", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "SHADED", "0" } });
 		static DataLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
 		m_MatTypes[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;

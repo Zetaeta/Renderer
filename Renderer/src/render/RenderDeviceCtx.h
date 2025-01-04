@@ -81,6 +81,8 @@ enum class EDSClearMode : u8
 	DEPTH_STENCIL = 0x3
 };
 
+FLAG_ENUM(EDSClearMode);
+
 enum ETextureSlot : u8
 {
 	E_TS_DIFFUSE = 0,

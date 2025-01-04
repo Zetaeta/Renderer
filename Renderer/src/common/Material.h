@@ -15,6 +15,7 @@ namespace rnd
 class RenderContext;
 class IRenderDeviceCtx;
 class ShaderManager;
+class IShaderReflector;
 }
 
 enum EMatType
@@ -66,7 +67,7 @@ struct MaterialArchetypeDesc
 //	rnd::ShaderDesc mShaderDesc;
 	rnd::ShaderTypeId mVSRegistryId = 0;
 	rnd::ShaderTypeId mPSRegistryId = 0;
-	rnd::MaterialPixelShader const* GetShader(rnd::ShaderManager& shaderMgr, EShadingLayer layer, EMatType opacity) const;
+	rnd::MaterialPixelShader const* GetShader(rnd::ShaderManager& shaderMgr, EShadingLayer layer, EMatType opacity, OwningPtr<rnd::IShaderReflector>* outReflector = nullptr) const;
 };
 
 MaterialArchetypeDesc CreateAndRegisterMatDesc(const char* name, const char* psFilename, const char* psEntryPoint,
@@ -95,7 +96,7 @@ public:
 
 	EnumArray<RefPtr<rnd::MaterialPixelShader const>, EShadingLayer> PixelShaders;
 	
-	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) = 0;
+	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType) = 0;
 	String DebugName;
 };
 

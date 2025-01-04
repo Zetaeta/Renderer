@@ -1,5 +1,6 @@
 #include "DXShaderCompiler.h"
 #include "d3dcompiler.h"
+#include "d3d11shader.h"
 
 DEFINE_LOG_CATEGORY(LogShaderCompiler);
 
@@ -7,7 +8,8 @@ namespace rnd::dx
 {
 
 constexpr bool ShaderCompileDebugging = true;
-ComPtr<ID3DBlob> FXCShaderCompiler::GetShaderBytecode(ShaderInstanceId const& id, const ShaderDesc& desc, const ShaderCompileEnv& env, EShaderType shaderType, bool forceRecompile)
+ComPtr<ID3DBlob> FXCShaderCompiler::GetShaderBytecode(ShaderInstanceId const& id, const ShaderDesc& desc,
+	const ShaderCompileEnv& env, EShaderType shaderType, OwningPtr<IShaderReflector>* outReflector, bool forceRecompile)
 {
 	const String& file = desc.File;
 	Vector<D3D_SHADER_MACRO> macros;
@@ -73,6 +75,15 @@ ComPtr<ID3DBlob> FXCShaderCompiler::GetShaderBytecode(ShaderInstanceId const& id
 		RLOG(LogGlobal, Info, "Reading precompiled shader %s from %s\n", file.c_str(), cso.string().c_str());
 		HR_ERR_CHECK(D3DReadFileToBlob(cso.c_str(), &outBlob));
 	}
+
+	if (outReflector)
+	{
+		ComPtr<ID3D11ShaderReflection> reflectionData;
+		if (SUCCEEDED(D3DReflect(outBlob->GetBufferPointer(), outBlob->GetBufferSize(), IID_PPV_ARGS(&reflectionData))))
+		{
+			*outReflector = MakeOwning<DX11ShaderReflector>(std::move(reflectionData));
+		}
+	}
 	return outBlob;
 }
 
@@ -104,10 +115,29 @@ ComPtr<ID3DBlob> DXCompileFile(wchar_t const* filePath, char const* entryPoint, 
 		{
 			RLOG(LogGlobal, Info, "Output: %s\n", (const char*) errBlob->GetBufferPointer());
 		}
-		DebugBreak();
+		ZE_ENSURE(false);
 		return nullptr;
 	}
 }
 
+SmallVector<IShaderReflector::CBDesc, 4> DX11ShaderReflector::GetConstantBuffers()
+{
+	SmallVector<IShaderReflector::CBDesc, 4> result;
+	D3D11_SHADER_DESC desc;
+	mReflection->GetDesc(&desc);
+	for (u32 i = 0; i < desc.ConstantBuffers; ++i)
+	{
+		ID3D11ShaderReflectionConstantBuffer* cBuffer = mReflection->GetConstantBufferByIndex(i);
+		D3D11_SHADER_BUFFER_DESC			  cbDesc;
+		cBuffer->GetDesc(&cbDesc);
+		result.push_back({cbDesc.Name, cbDesc.Size});
+	}
+	return result;
+}
+
+DX11ShaderReflector::DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflection) :mReflection(std::move(reflection))
+{
+
+}
 
 }

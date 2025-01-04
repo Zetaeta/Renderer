@@ -10,6 +10,7 @@ namespace rnd
 {
 
 class ShaderCompileEnv;
+class IShaderReflector;
 
 class IDeviceShader
 {
@@ -21,7 +22,7 @@ class IShaderCompiler
 {
 public:
 	virtual OwningPtr<IDeviceShader> CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc,
-		const ShaderCompileEnv& env, EShaderType ShaderType, VertexAttributeMask inputMask = {}, bool forceRecompile = false) = 0;
+		const ShaderCompileEnv& env, EShaderType ShaderType, VertexAttributeMask inputMask = {}, OwningPtr<IShaderReflector>* outReflector = nullptr, bool forceRecompile = false) = 0;
 };
 
 

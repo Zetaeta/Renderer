@@ -25,7 +25,7 @@ enum class EDeviceMeshType : u8
 	INDEXED
 };
 
-class IDeviceMesh : public RefCountedObject
+class IDeviceMesh : public SelfDestructingRefCounted
 {
 public:
 	DeviceVertAttsRef VertexAttributes;
