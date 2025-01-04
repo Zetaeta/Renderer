@@ -12,6 +12,7 @@ DX12DescriptorHeap::DX12DescriptorHeap(ID3D12Device_* pDevice, D3D12_DESCRIPTOR_
 	desc.NumDescriptors = size;
 	desc.Flags = flags;
 	HR_ERR_CHECK(pDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&Heap)));
+	NAME_D3DOBJECT(Heap, GetHeapName());
 	ElementSize = pDevice->GetDescriptorHandleIncrementSize(type);
 }
 
@@ -48,6 +49,42 @@ void DX12DescriptorHeap::GetDescriptorSizes(ID3D12Device_* device)
 	{
 		DescriptorSizes[i] = device->GetDescriptorHandleIncrementSize(EnumCast<D3D12_DESCRIPTOR_HEAP_TYPE>(i));
 	}
+}
+
+String DX12DescriptorHeap::GetHeapName() const
+{
+	String type;
+	switch (Type)
+	{
+	case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
+		type = "SRV/UAV?CBV";
+		break;
+	case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
+		type = "Sampler";
+		break;
+	case D3D12_DESCRIPTOR_HEAP_TYPE_RTV:
+		type = "RTV";
+		break;
+	case D3D12_DESCRIPTOR_HEAP_TYPE_DSV:
+		type = "DSV";
+		break;
+	default:
+		break;
+	}
+
+	String visibility;
+	switch (Flags)
+	{
+	case D3D12_DESCRIPTOR_HEAP_FLAG_NONE:
+		visibility = "(non-shader visibile)";
+		break;
+	case D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE:
+		visibility = "(shader visibile)";
+		break;
+	default:
+		break;
+	}
+	return type + " descriptor heap " + visibility;
 }
 
 }

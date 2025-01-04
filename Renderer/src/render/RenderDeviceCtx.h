@@ -150,7 +150,7 @@ public:
 	virtual void DrawMesh(IDeviceMesh* mesh) = 0;
 	virtual void DispatchCompute(ComputeDispatch args) = 0;
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) = 0; 
-	virtual void			 SetConstantBuffers(EShaderType shaderType, IConstantBuffer** buffers, u32 numBuffers) = 0;
+	virtual void			 SetConstantBuffers(EShaderType shaderType, Span<IConstantBuffer* const> buffers) = 0;
 	virtual void			 SetConstantBuffers(EShaderType shaderType, std::span<CBHandle const>) = 0;
 
 	virtual void	 UpdateConstantBuffer(CBHandle handle, std::span<const byte> data) = 0;

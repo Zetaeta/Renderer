@@ -9,6 +9,9 @@ using byte = unsigned char;
 template<size_t Size, size_t Alignment = Size>
 struct CopyableMemory
 {
+	alignas(Alignment)
+	std::array<byte, Size> Data;
+
 	CopyableMemory() = default;
 
 	template<typename T>
@@ -39,20 +42,20 @@ struct CopyableMemory
 	CopyableMemory(CopyableMemory const& other) = default;
 	CopyableMemory& operator=(CopyableMemory const& other) = default;
 
-	alignas(Alignment)
-	std::array<byte, Size> Bytes;
-
 	template<typename T>
 		requires(FitsInMe<T>)
 	T& As()
 	{
-		return *reinterpret_cast<T*>(&Bytes[0]);
+		return *reinterpret_cast<T*>(&Data[0]);
 	}
 
 	template<typename T>
 		requires(FitsInMe<T>)
 	T const& As() const
 	{
-		return *reinterpret_cast<T const*>(&Bytes[0]);
+		return *reinterpret_cast<T const*>(&Data[0]);
 	}
 };
+
+template<size_t Size, size_t Alignment = Size>
+using OpaqueData = CopyableMemory<Size, Alignment>;

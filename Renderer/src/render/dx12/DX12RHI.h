@@ -16,6 +16,8 @@
 #include "render/ShaderManager.h"
 #include "core/memory/GrowingImmobilePool.h"
 #include "render/RenderDeviceCtx.h"
+#include "core/Hash.h"
+#include "DX12Context.h"
 
 namespace rnd { namespace dx12 { class DX12DescriptorTableAllocator; } }
 
@@ -113,6 +115,9 @@ public:
 
 	DX12DescriptorAllocator* GetDescriptorAllocator(EDescriptorType descType);
 
+	D3D12_CPU_DESCRIPTOR_HANDLE AllocateDescriptor(EDescriptorType descType);
+	void FreeDescriptor(EDescriptorType descType, D3D12_CPU_DESCRIPTOR_HANDLE descriptor); 
+
 	DX12DescriptorTableAllocator* GetResourceDescTableAlloc()
 	{
 		return mShaderResourceDescTables.get();
@@ -121,10 +126,36 @@ public:
 	{
 		return mSamplerDescTables.get();
 	}
+
+
+	class LiveObjectReporter
+	{
+	public:
+		~LiveObjectReporter()
+		{
+			Execute();
+		}
+		ComPtr<ID3D12DebugDevice1> DebugDevice;
+		void Execute()
+		{
+			if (DebugDevice)
+			{
+				DebugDevice->ReportLiveDeviceObjects(D3D12_RLDO_IGNORE_INTERNAL | D3D12_RLDO_DETAIL);
+				DebugDevice = nullptr;
+			}
+		}
+	};
+
+	OwningPtr<LiveObjectReporter> GetLiveObjectReporter();
+
+	ID3D12PipelineState* GetPSO(GraphicsPSODesc const& PSODesc);
+
 private:
 	void WaitFence(u64 value);
 
 	void StartFrame();
+	void WaitAndReleaseFrameIdx(u32 frameIdx);
+	void WaitAndReleaseFrame(u64 frame);
 	void EndFrame();
 	void Resize_WndProc(u32 resizeWidth, u32 resizeHeight) override;
 	void OnDestroy_WndProc() override;
@@ -147,11 +178,14 @@ private:
 	OwningPtr<DX12Allocator> mSimpleAllocator;
 	OwningPtr<DX12UploadBuffer> mUploadBuffer;
 	OwningPtr<DX12DescriptorAllocator> mShaderResourceDescAlloc;
+	OwningPtr<DX12DescriptorAllocator> mRTVAlloc;
+	OwningPtr<DX12DescriptorAllocator> mDSVAlloc;
 	OwningPtr<DX12DescriptorTableAllocator> mShaderResourceDescTables;
 	OwningPtr<DX12DescriptorTableAllocator> mSamplerDescTables;
 //	OwningPtr<DX12SyncPointPool> mSyncPoints;
 	std::array<ComPtr<ID3D12Resource_>, MaxSwapchainBufferCount> mRenderTargets;
 	std::array<Vector<ComPtr<ID3D12Pageable>>, MaxSwapchainBufferCount> mDeferredReleaseResources;
+	std::unordered_map<GraphicsPSODesc, ComPtr<ID3D12PipelineState>, GenericHash<>> mPSOs;
 	DX12DescriptorHeap mRTVHeap;
 	DX12CommandList mCmdList;
 	ESwapchainBufferCount mNumBuffers;

@@ -10,7 +10,6 @@ namespace fs = std::filesystem;
 
 namespace rnd
 {
-ComPtr<ID3DBlob> DXCompileFile(wchar_t const* filePath, char const* entryPoint, char const* shaderTarget, D3D_SHADER_MACRO const* macros, UINT flags );
 namespace dx11
 {
 

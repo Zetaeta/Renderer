@@ -95,7 +95,7 @@ public:
 	void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) override;
 	void ClearUAV(UnorderedAccessView uav, vec4 clearValues) override;
 	void ClearUAV(UnorderedAccessView uav, uint4 clearValues) override;
-	void SetConstantBuffers(EShaderType shader, IConstantBuffer** buffers, u32 numBuffers) override;
+	void SetConstantBuffers(EShaderType shader, Span<IConstantBuffer* const> buffers) override;
 	void SetConstantBuffers(EShaderType shaderType, std::span<CBHandle const> handles) override;
 	void ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src);
 	void	 UpdateConstantBuffer(CBHandle handle, std::span<const byte> data);

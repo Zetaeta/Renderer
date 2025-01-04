@@ -17,11 +17,6 @@ DX12Texture::DX12Texture(DeviceTextureDesc const& desc, TextureData data, Upload
 //	memcpy(writeAddress, data, desc.GetSize());
 //	UpdateSubresources()
 
-	D3D12_SUBRESOURCE_DATA srcData{};
-	srcData.pData = data;
-	srcData.RowPitch = desc.GetRowPitch();
-	UpdateSubresources<1>(upload.UploadCmdList, mResource.Get(), upload.Buffer.GetCurrentBuffer(), offset,
-		0u, desc.NumMips == 0 ? 1u : desc.NumMips, &srcData); // TODO mips
 	TransitionState(upload.UploadCmdList, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
 	//CD3DX12_TEXTURE_COPY_LOCATION dest(mResource.Get(), 0);
 	//CD3DX12_TEXTURE_COPY_LOCATION src(upload.OutUploadResource.Get(), 0);
@@ -44,6 +39,7 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 	clearVal.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::RenderTarget);
 	Zero(clearVal.Color);
 	mResource = rhi.GetAllocator(EResourceType::Texture)->Allocate(resourceDesc, upload ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON, useClearVal ? &clearVal : nullptr);
+	SetResourceName(mResource, Desc.DebugName);
 
 	if (!!(Desc.Flags & TF_SRV))
 	{
@@ -55,14 +51,28 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 		srvDesc.Texture2D.MipLevels = Desc.NumMips;
 		rhi.Device()->CreateShaderResourceView(mResource.Get(), &srvDesc, mSrvDesc);
 	}
-
-	if (upload)
+	if (!!(Desc.Flags & TF_RenderTarget))
 	{
-		u64 uploadSize = GetRequiredIntermediateSize(mResource.Get(), 0, Desc.NumMips); // TODO mips
-		auto alloc = upload->Buffer.Reserve(uploadSize, Desc.SampleCount > 1 ? D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT
-																			: D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
-		return alloc.Offset;
+		RenderTargetDesc rtDesc;
+		rtDesc.DebugName = Desc.DebugName + " RT";
+		rtDesc.Format = Desc.Format;
+		rtDesc.Dimension = ETextureDimension::TEX_2D;
+		rtDesc.Width = Desc.Width;
+		rtDesc.Height = Desc.Height;
+		D3D12_RENDER_TARGET_VIEW_DESC dxDesc {};
+		dxDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::RenderTarget);
+		if (Desc.SampleCount > 1)
+		{
+			dxDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+			dxDesc.Texture2D = {};
+		}
+		else
+		{
+			dxDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+		}
+		mRtv = std::make_shared<DX12RenderTarget>(rtDesc, mResource.Get(), dxDesc);
 	}
+
 	return 0;
 }
 
@@ -76,20 +86,24 @@ D3D12_RESOURCE_DESC DX12Texture::MakeResourceDesc()
 	resourceDesc.MipLevels = Desc.NumMips;
 	resourceDesc.SampleDesc.Count = Desc.SampleCount;
 	resourceDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::Resource);
+	if (Desc.Flags & TF_RenderTarget)
+	{
+		resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+	}
 	return resourceDesc;
 }
 
-DXGI_FORMAT DX12Texture::GetDxgiFormat(ETextureFormat textureFormat, ETextureFormatContext context /* = EDxgiFormatContext::Resource */)
+//DXGI_FORMAT DX12Texture::GetDxgiFormat(ETextureFormat textureFormat, ETextureFormatContext context /* = EDxgiFormatContext::Resource */)
+//{
+//	return GetDxgiFormat(textureFormat, context);
+//}
+
+OpaqueData<8> DX12Texture::GetTextureHandle() const
 {
-	return dx11::GetDxgiFormat(textureFormat, context);
+	return mResource.Get();
 }
 
-void* DX12Texture::GetTextureHandle() const
-{
-	throw std::logic_error("The method or operation is not implemented.");
-}
-
-void* DX12Texture::GetData() const
+OpaqueData<8> DX12Texture::GetData() const
 {
 	throw std::logic_error("The method or operation is not implemented.");
 }
@@ -124,7 +138,7 @@ CopyableMemory<8> DX12Texture::GetShaderResource(ShaderResourceId id /*= 0*/)
 	return mSrvDesc.ptr;
 }
 
-void* DX12Texture::GetUAV(UavId id /*= */)
+OpaqueData<8> DX12Texture::GetUAV(UavId id /*= */)
 {
 	throw std::logic_error("The method or operation is not implemented.");
 }
@@ -132,6 +146,39 @@ void* DX12Texture::GetUAV(UavId id /*= */)
 void DX12Texture::TransitionState(ID3D12GraphicsCommandList_* cmdList, D3D12_RESOURCE_STATES fromState, D3D12_RESOURCE_STATES toState)
 {
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mResource.Get(), fromState, toState);
+	cmdList->ResourceBarrier(1, &barrier);
+	mLastState = toState;
+}
+
+void DX12Texture::TransitionTo(ID3D12GraphicsCommandList_* cmdList, D3D12_RESOURCE_STATES toState)
+{
+	TransitionState(cmdList, mLastState, toState);
+}
+
+DX12Texture::~DX12Texture()
+{
+	auto& rhi = GetRHI();
+	if (IsValid(mSrvDesc))
+	{
+		rhi.FreeDescriptor(EDescriptorType::SRV, mSrvDesc);
+	}
+
+}
+
+DX12RenderTarget::~DX12RenderTarget()
+{
+	if (IsValid(DescriptorHdl))
+	{
+		GetRHI().FreeDescriptor(EDescriptorType::SRV, DescriptorHdl);
+	}
+}
+
+DX12RenderTarget::DX12RenderTarget(RenderTargetDesc const& desc, ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC const& dxDesc)
+:IRenderTarget(desc), mResource(resource)
+{
+	auto& rhi = GetRHI();
+	DescriptorHdl = rhi.GetDescriptorAllocator(EDescriptorType::RTV)->Allocate(EDescriptorType::RTV);
+	rhi.Device()->CreateRenderTargetView(resource, &dxDesc, DescriptorHdl);
 }
 
 }

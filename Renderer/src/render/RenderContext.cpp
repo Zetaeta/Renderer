@@ -473,7 +473,7 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 				cbs[index++] = psPerInst;
 			}
 
-			DeviceCtx()->SetConstantBuffers(EShaderType::Pixel, cbs, index);
+			DeviceCtx()->SetConstantBuffers(EShaderType::Pixel, cbs);
 		}
 	}
 
@@ -498,7 +498,7 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 		{
 			cbs[index++] = &static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerFrameVSCB();
 		}
-		DeviceCtx()->SetConstantBuffers(EShaderType::Vertex, cbs, index);
+		DeviceCtx()->SetConstantBuffers(EShaderType::Vertex, cbs);
 	}
 	DeviceCtx()->DrawMesh(*primitive, layer, matOverride == nullptr);
 }

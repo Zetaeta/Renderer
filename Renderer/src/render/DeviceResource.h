@@ -16,9 +16,9 @@ namespace rnd
 {
 
 #define DEFINE_DEVICE_RESOURCE_GETTER(FunctionName)\
-	virtual void* FunctionName() const = 0;\
+	virtual OpaqueData<8> FunctionName() const = 0;\
 	template<typename T>\
-	T* FunctionName() { return static_cast<T*>(FunctionName()); }
+	T FunctionName() { return FunctionName().As<T>(); }
 
 struct MappedResource
 {
@@ -73,11 +73,11 @@ public:
 		return GetShaderResource(id).As<T>();
 	}
 
-	virtual void* GetUAV(UavId id = {}) = 0;
+	virtual OpaqueData<8> GetUAV(UavId id = {}) = 0;
 	template <typename T>
 	T GetUAV(UavId id = {})
 	{
-		return reinterpret_cast<T>(GetUAV(id));
+		return GetUAV(id).As<T>();
 	}
 };
 

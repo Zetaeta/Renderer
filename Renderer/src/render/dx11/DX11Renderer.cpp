@@ -21,6 +21,7 @@
 #include "../VertexAttributes.h"
 #include "render/ForwardRenderPass.h"
 #include "render/ShadingCommon.h"
+#include "render/dxcommon/DXGIUtils.h"
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -739,7 +740,7 @@ void DX11Renderer::DrawCubemap(ID3D11ShaderResourceView* srv, bool depth)
 
 void DX11Renderer::DrawCubemap(IDeviceTextureCube* cubemap)
 {
-	DrawCubemap(cubemap->GetTextureHandle<ID3D11ShaderResourceView>(), cubemap->IsDepthStencil());
+	DrawCubemap(cubemap->GetTextureHandle<ID3D11ShaderResourceView*>(), cubemap->IsDepthStencil());
 }
 
 void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
@@ -1558,7 +1559,7 @@ void DX11Renderer::ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMo
 void DX11Renderer::ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour)
 {
 	const float clearCol[4] = {clearColour.x, clearColour.y, clearColour.z, clearColour.w};
-	pContext->ClearRenderTargetView(rt->GetData<ID3D11RenderTargetView>(), clearCol);
+	pContext->ClearRenderTargetView(rt->GetData<ID3D11RenderTargetView*>(), clearCol);
 }
 
 void DX11Renderer::ClearUAV(UnorderedAccessView uav, vec4 clearValues)
@@ -1578,10 +1579,11 @@ void DX11Renderer::ClearUAV(UnorderedAccessView uav, uint4 clearValues)
 	}
 }
 
-void DX11Renderer::SetConstantBuffers(EShaderType shader, IConstantBuffer** buffers, u32 numBuffers)
+void DX11Renderer::SetConstantBuffers(EShaderType shader, Span<IConstantBuffer* const> buffers)
 {
 	constexpr u32 MAX_CONSTANT_BUFFERS = 14;
 	ID3D11Buffer* dx11Buffers[MAX_CONSTANT_BUFFERS];
+	u32 numBuffers = NumCast<u32>(buffers.size());
 	ZE_ASSERT(numBuffers <= MAX_CONSTANT_BUFFERS);
 	for (u32 i = 0; i < std::min(MAX_CONSTANT_BUFFERS, numBuffers); ++i)
 	{
@@ -1643,8 +1645,8 @@ inline u32 GetSubresourceIdx(DeviceSubresource const& Subresource)
 void DX11Renderer::ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src)
 {
 	DXGI_FORMAT format = GetDxgiFormat(Dest.Resource->Desc.Format, ETextureFormatContext::RenderTarget);
-	ID3D11Resource* dst = Dest.Resource->GetData<ID3D11Resource>();
-	ID3D11Resource* src = Src.Resource->GetData<ID3D11Resource>();
+	ID3D11Resource* dst = Dest.Resource->GetData<ID3D11Resource*>();
+	ID3D11Resource* src = Src.Resource->GetData<ID3D11Resource*>();
 	u32				dstIdx = GetSubresourceIdx(Dest);
 	u32				srcIdx = GetSubresourceIdx(Src);
 	pContext->ResolveSubresource(dst, dstIdx, src, srcIdx, format);

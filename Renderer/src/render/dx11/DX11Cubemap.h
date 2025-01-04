@@ -28,9 +28,9 @@ public:
 		return mDepthStencil->DepthStencils[i].Get();
 	}
 
-	void* GetTextureHandle() const { return GetSRV(); }
+	OpaqueData<8> GetTextureHandle() const { return GetSRV(); }
 
-	void* GetData() const override
+	OpaqueData<8> GetData() const override
 	{
 		return nullptr;
 	}

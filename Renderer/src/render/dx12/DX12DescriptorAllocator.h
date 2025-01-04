@@ -25,6 +25,7 @@ enum class EDescriptorType : u8
 class DX12DescriptorAllocator
 {
 public:
+	virtual ~DX12DescriptorAllocator() {}
 	virtual D3D12_CPU_DESCRIPTOR_HANDLE Allocate(EDescriptorType type) = 0;
 	virtual void Free(D3D12_CPU_DESCRIPTOR_HANDLE handle);
 

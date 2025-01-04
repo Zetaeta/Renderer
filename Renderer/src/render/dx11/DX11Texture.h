@@ -40,12 +40,12 @@ public:
 		return m_SRV.Get();
 	}
 
-	void* GetData() const override
+	OpaqueData<8> GetData() const override
 	{
 		return m_Texture.Get();
 	}
 
-	void* GetTextureHandle() const override { return GetSRV(); }
+	OpaqueData<8> GetTextureHandle() const override { return GetSRV(); }
 
 	ID3D11ShaderResourceView* GetSRV() const
 	{

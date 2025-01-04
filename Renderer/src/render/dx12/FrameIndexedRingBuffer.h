@@ -1,11 +1,7 @@
 #pragma once
 
 #include "SharedD3D12.h"
-#include <queue>
 #include "container/StaticQueue.h"
-
-template<typename T>
-using Queue = std::queue<T>;
 
 namespace rnd::dx12
 {

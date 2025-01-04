@@ -12,6 +12,8 @@
 #include "thread/ThreadUtils.h"
 #include "DX12Texture.h"
 #include "DX12DescriptorAllocator.h"
+#include "DX12ShaderCompiler.h"
+#include "render/dxcommon/DXGIUtils.h"
 
 #pragma comment(lib, "d3d12.lib")
 
@@ -60,6 +62,8 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 	mUploader = DX12Uploader(mDevice.Get());
 
 	mShaderResourceDescAlloc = MakeOwning<DX12SeparableDescriptorAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 64 * 1024, false);
+	mRTVAlloc = MakeOwning<DX12SeparableDescriptorAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 64, false);
+	mDSVAlloc = MakeOwning<DX12SeparableDescriptorAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 64, false);
 	mShaderResourceDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	mSamplerDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
@@ -70,9 +74,13 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 
 DX12RHI::~DX12RHI()
 {
+	mTest = nullptr;
 	mUploadBuffer = nullptr;
 	mCBPool.ReleaseResources();
 	DX12SyncPointPool::Destroy();
+	mRTVAlloc = nullptr;
+	mDSVAlloc = nullptr;
+	mShaderResourceDescAlloc = nullptr;
 
 	WaitFence(mCurrentFrame);
 	for (auto& deferredReleases : mDeferredReleaseResources)
@@ -147,10 +155,24 @@ void DX12RHI::WaitFence(u64 value)
 	}
 }
 
+void DX12RHI::WaitAndReleaseFrame(u64 frame)
+{
+	ZE_ASSERT(frame < mCurrentFrame);
+	WaitFence(frame);
+	ProcessDeferredRelease(frame % mNumBuffers);
+}
+
+
+void DX12RHI::WaitAndReleaseFrameIdx(u32 frameIdx)
+{
+	
+	WaitFence(mFenceValues[frameIdx]);
+	ProcessDeferredRelease(frameIdx);
+}
+
 void DX12RHI::StartFrame()
 {
-	WaitFence(mFenceValues[mFrameIndex]);
-	ProcessDeferredRelease(mFrameIndex);
+	WaitAndReleaseFrameIdx(mFrameIndex);
 	//if (mFenceValue > 2)
 	//{
 
@@ -348,24 +370,35 @@ bool DX12RHI::ShouldDirectUpload(EResourceType resourceType, u64 size)
 
 IDeviceTexture::Ref DX12RHI::CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData /*= nullptr*/)
 {
-	if (initialData == nullptr)
+	auto result = std::make_shared<DX12Texture>(desc);
+	if (!initialData)
 	{
-		return std::make_shared<DX12Texture>(desc);
+		return result;
 	}
+
+	u64 uploadSize = GetRequiredIntermediateSize(result->GetTextureHandle<ID3D12Resource*>(), 0, desc.NumMips); // TODO mips
+	auto alloc = mUploadBuffer->Reserve(uploadSize, desc.SampleCount > 1 ? D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT
+																		: D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+	D3D12_SUBRESOURCE_DATA srcData{};
+	srcData.pData = initialData;
+	srcData.RowPitch = desc.GetRowPitch();
 
 	if (ShouldDirectUpload(desc.ResourceType))
 	{
-		DX12Texture::UploadTools upload {*mUploadBuffer, mCmdList.CmdList.Get()};
-		return std::make_shared<DX12Texture>(desc, initialData, upload);
+		UpdateSubresources<1>(mCmdList.CmdList.Get(), result->GetTextureHandle<ID3D12Resource*>(), mUploadBuffer->GetCurrentBuffer(), alloc.Offset,
+			0u, desc.NumMips == 0 ? 1u : desc.NumMips, &srcData); // TODO mips
+		result->UpdateCurrentState(D3D12_RESOURCE_STATE_COPY_DEST);
 	}
 	else // synchronous upload on copy queue for now
 	{
 		auto& uploadCtx = mUploader.StartUpload();
-		DX12Texture::UploadTools upload {*mUploadBuffer, uploadCtx.CmdList.Get()};
-		auto result = std::make_shared<DX12Texture>(desc, initialData, upload);
+		UpdateSubresources<1>(uploadCtx.CmdList.Get(), result->GetTextureHandle<ID3D12Resource*>(), mUploadBuffer->GetCurrentBuffer(), alloc.Offset,
+			0u, desc.NumMips == 0 ? 1u : desc.NumMips, &srcData); // TODO mips
 		uploadCtx.FinishUploadSynchronous();
-		return result;
+		result->UpdateCurrentState(D3D12_RESOURCE_STATE_COMMON); // decays to common after used on copy queue
 	}
+
+	return result;
 }
 
 DX12DescriptorAllocator* DX12RHI::GetDescriptorAllocator(EDescriptorType descType)
@@ -376,9 +409,201 @@ DX12DescriptorAllocator* DX12RHI::GetDescriptorAllocator(EDescriptorType descTyp
 	case EDescriptorType::UAV:
 	case EDescriptorType::CBV:
 		return mShaderResourceDescAlloc.get();
+	case EDescriptorType::RTV:
+		return mRTVAlloc.get();
+	case EDescriptorType::DSV:
+		return mDSVAlloc.get();
 	default:
 		return nullptr;
 	}
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE DX12RHI::AllocateDescriptor(EDescriptorType descType)
+{
+	return GetDescriptorAllocator(descType)->Allocate(descType);
+}
+
+void DX12RHI::FreeDescriptor(EDescriptorType descType, D3D12_CPU_DESCRIPTOR_HANDLE descriptor)
+{
+	GetDescriptorAllocator(descType)->Free(descriptor);
+}
+
+OwningPtr<rnd::dx12::DX12RHI::LiveObjectReporter> DX12RHI::GetLiveObjectReporter()
+{
+	auto result = MakeOwning<LiveObjectReporter>();
+	HR_ERR_CHECK(mDevice.As<ID3D12DebugDevice1>(&result->DebugDevice));
+	return result;
+}
+
+static D3D12_SHADER_BYTECODE GetBytecode(Shader const* shader)
+{
+	IDeviceShader* ds = shader ? shader->GetDeviceShader() : nullptr;
+	if (ds == nullptr)
+	{
+		return {};
+	}
+	auto& blob = static_cast<DX12Shader*>(ds)->Bytecode;
+	return {blob->GetBufferPointer(), blob->GetBufferSize()};
+}
+
+static void ApplyBlendState(EBlendState state, D3D12_BLEND_DESC& outDesc)
+{
+	auto& rtb = outDesc.RenderTarget[0];
+	outDesc = CD3DX12_BLEND_DESC(CD3DX12_DEFAULT{});
+	if (state == (EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE))
+	{
+		return;
+	}
+
+	rtb.BlendEnable = true;
+	if (!!(state & EBlendState::COL_ADD))
+	{
+		rtb.SrcBlend = D3D12_BLEND_ONE;
+		rtb.DestBlend = D3D12_BLEND_ONE;
+	}
+	else if (HasAllFlags(state, EBlendState::COL_BLEND_ALPHA | EBlendState::COL_OBSCURE_ALPHA))
+	{
+		rtb.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		rtb.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	}
+	else if (HasAnyFlags(state, EBlendState::COL_BLEND_ALPHA))
+	{
+
+		rtb.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		rtb.DestBlend = D3D12_BLEND_ONE;
+	}
+
+	if (HasAnyFlags(state, EBlendState::ALPHA_ADD))
+	{
+		rtb.SrcBlendAlpha = D3D12_BLEND_ONE;
+		rtb.DestBlendAlpha = D3D12_BLEND_ONE;
+	}
+	else if (HasAnyFlags(state, EBlendState::ALPHA_OVERWRITE))
+	{
+		rtb.SrcBlendAlpha = D3D12_BLEND_ZERO;
+		rtb.DestBlendAlpha = D3D12_BLEND_ONE;
+	}
+	else if (HasAnyFlags(state, EBlendState::ALPHA_MAX))
+	{
+		rtb.BlendOpAlpha = D3D12_BLEND_OP_MAX;
+		rtb.SrcBlendAlpha = D3D12_BLEND_ONE;
+		rtb.DestBlendAlpha = D3D12_BLEND_ONE;
+	}
+}
+
+static void ApplyDepthMode(EDepthMode mode, D3D12_DEPTH_STENCIL_DESC& outDesc)
+{
+	if (HasAnyFlags(mode, EDepthMode::NoWrite))
+	{
+		outDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	}
+	else
+	{
+		outDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	}
+
+	mode &= ~EDepthMode::NoWrite;
+	outDesc.DepthEnable = true;
+	switch (mode)
+	{
+	case EDepthMode::Disabled:
+		outDesc.DepthEnable = false;
+		break;
+	case EDepthMode::Less:
+		outDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		break;
+	case EDepthMode::LessEqual:
+		outDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		break;
+	case EDepthMode::Equal:
+		outDesc.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
+		break;
+	case EDepthMode::GreaterEqual:
+		outDesc.DepthFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+		break;
+	case EDepthMode::Greater:
+		outDesc.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+		break;
+	default:
+		ZE_ASSERT(false);
+		break;
+	}
+}
+
+static void ApplyStencilMode(EStencilMode mode, D3D12_DEPTH_STENCIL_DESC& outDesc)
+{
+	if (HasAllFlags(mode, EStencilMode::Overwrite))
+	{
+		outDesc.StencilEnable = true;
+		outDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		outDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+	}
+	if (HasAllFlags(mode, EStencilMode::IgnoreDepth))
+	{
+		outDesc.StencilEnable = true;
+		outDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+		outDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+		outDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_REPLACE;
+		outDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_REPLACE;
+	}
+	if (HasAnyFlags(mode, EStencilMode::IgnoreDepth))
+	{
+		outDesc.BackFace = outDesc.FrontFace;
+	}
+}
+
+ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc const& PSODesc)
+{
+	auto& pso = mPSOs[PSODesc];
+	if (pso == nullptr)
+	{
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
+		desc.pRootSignature = PSODesc.RootSig.Get();
+		desc.VS = GetBytecode(PSODesc.Shaders[EShaderType::Vertex]);
+		desc.PS = GetBytecode(PSODesc.Shaders[EShaderType::Pixel]);
+		desc.GS = GetBytecode(PSODesc.Shaders[EShaderType::Geometry]);
+		desc.DS = GetBytecode(PSODesc.Shaders[EShaderType::TessEval]);
+		desc.HS = GetBytecode(PSODesc.Shaders[EShaderType::TessControl]);
+		ApplyBlendState(PSODesc.BlendState, desc.BlendState);
+		desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT{});
+		ApplyDepthMode(PSODesc.DepthMode, desc.DepthStencilState);
+		ApplyStencilMode(PSODesc.StencilMode, desc.DepthStencilState);
+		
+		SmallVector<D3D12_INPUT_ELEMENT_DESC, 8> inputElements;
+		{
+			VertexAttributeDesc const& vertAtts = VertexAttributeDesc::GetRegistry().Get(PSODesc.VertexLayoutHdl);
+			u32 const totalAtts = NumCast<u32>(vertAtts.Layout.Entries.size());
+			u32 usedAtts = 0;
+			for (u32 i=0; i<totalAtts; ++i)
+			{
+				DataLayoutEntry const& entry = vertAtts.Layout.Entries[i];
+				//if ((VertexAttributeDesc::SemanticMap[entry.mName] & requiredAtts) == 0)
+				//{
+				//	continue;
+				//}
+				++usedAtts;
+				D3D12_INPUT_ELEMENT_DESC& desc = inputElements.emplace_back();
+				Zero(desc);
+				desc.Format = GetFormatForType(entry.mType);
+				desc.SemanticName = GetNameData(entry.mName);
+				desc.AlignedByteOffset = NumCast<u32>(entry.mOffset);
+				desc.InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+			}
+		}
+		desc.InputLayout.NumElements = NumCast<u32>(inputElements.size());
+		desc.InputLayout.pInputElementDescs = Addr(inputElements);
+		desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		desc.NumRenderTargets = PSODesc.NumRTs;
+		for (u32 i = 0; i < 8; ++i)
+		{
+			desc.RTVFormats[i] = PSODesc.RTVFormats[i];
+		}
+		desc.DSVFormat = PSODesc.DSVFormat;
+		desc.SampleDesc = PSODesc.SampleDesc;
+		mDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso));
+	}
+
+	return pso.Get();
 }
 
 ID3D12Device_* GetD3D12Device()

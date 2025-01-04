@@ -26,6 +26,7 @@ public:
 
 	SceneComponent()
 	{}
+	virtual ~SceneComponent() {}
 
 	SceneComponent(SceneObject* parent, String const& name = "", RotTransform const& trans = RotTransform{})
 		: m_Object(parent), m_Name(name), m_Transform(trans)

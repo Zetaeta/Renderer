@@ -39,6 +39,9 @@ public:
 	u32 ElementSize = 0;
 	D3D12_DESCRIPTOR_HEAP_TYPE Type = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
 	D3D12_DESCRIPTOR_HEAP_FLAGS Flags;
+
+private:
+	String GetHeapName() const;
 };
 
 }

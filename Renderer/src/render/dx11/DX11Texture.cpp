@@ -2,6 +2,7 @@
 #include "core/WinUtils.h"
 #include "render/dx11/DX11Ctx.h"
 #include "render/dx11/DX11Renderer.h"
+#include "render/dxcommon/DXGIUtils.h"
 
 namespace rnd
 {
@@ -214,6 +215,7 @@ void DX11Texture::CreateResources(TextureData textureData /*= {}*/)
 		DepthStencilDesc desc
 		{
 			.Dimension = ETextureDimension::TEX_2D,
+			.Format = Desc.Format,
 			.Width = width,
 			.Height = height,
 		};
@@ -233,6 +235,7 @@ void DX11Texture::CreateRenderTarget(D3D11_TEXTURE2D_DESC const& textureDesc)
 	RenderTargetDesc myRtDesc;
 	myRtDesc.DebugName = Desc.DebugName + " RT";
 	myRtDesc.Dimension = ETextureDimension::TEX_2D;
+	myRtDesc.Format = Desc.Format;
 	myRtDesc.Width = Desc.Width;
 	myRtDesc.Height = Desc.Height;
 	ComPtr<ID3D11RenderTargetView> RT;
@@ -308,7 +311,7 @@ CopyableMemory<8> DX11Texture::GetShaderResource(ShaderResourceId id)
 	}
 }
 
-void* DX11TextureBase::GetUAV(UavId id)
+OpaqueData<8> DX11TextureBase::GetUAV(UavId id)
 {
 	return GetUAV();
 }

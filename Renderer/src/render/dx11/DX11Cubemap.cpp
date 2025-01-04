@@ -52,7 +52,7 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 	SetResourceName(srv, desc.DebugName);
 	if (desc.Flags & TF_DEPTH)
 	{
-		DepthStencilDesc dsDesc{ std::format("{}DS", desc.DebugName), ETextureDimension::TEX_CUBE };
+		DepthStencilDesc dsDesc{ std::format("{}DS", desc.DebugName), ETextureDimension::TEX_CUBE, Desc.Format };
 		dsDesc.Width = faceWidth;
 		dsDesc.Height = faceHeight;
 		mDepthStencil = std::make_shared<DX11DepthStencil>(dsDesc);

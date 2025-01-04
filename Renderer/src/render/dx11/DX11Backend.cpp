@@ -228,9 +228,11 @@ int MainDX11(int argc, char** argv)
 //	std::shared_ptr<rnd::dx11::DX11Texture> bbTex = nullptr;
 
 	OwningPtr<dx12::DX12RHI> dx12Win = nullptr;
+	OwningPtr<dx12::DX12RHI::LiveObjectReporter> dx12LOR;
 	if (HasArg("-dx12", argc, argv))
 	{
 		dx12Win = MakeOwning<dx12::DX12RHI>(1500, 900, L"DX12", TripleBuffered);
+		dx12LOR = dx12Win->GetLiveObjectReporter();
 	}
 
 	// Main loop
@@ -389,6 +391,7 @@ int MainDX11(int argc, char** argv)
 	}
 	Editor::Destroy();
 	dx12Win = nullptr;
+	dx12LOR = nullptr;
 	}
 
 	// Cleanup

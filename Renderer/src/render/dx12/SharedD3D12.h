@@ -1,8 +1,10 @@
 #pragma once
 
 #include <d3d12.h>
+#include "core/CoreTypes.h"
 #include "core/Maths.h"
 #include "core/WinUtils.h"
+#include "render/dxcommon/SharedD3D.h"
 
 #define DXCALL(expr) HR_ERR_CHECK(expr)
 
@@ -12,8 +14,15 @@ using ID3D12Resource_ = ID3D12Resource;
 
 namespace rnd::dx12
 {
+using namespace rnd::dx;
+
 class DX12RHI;
 class DX12Allocator;
+
+constexpr bool IsValid(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
+{
+	return cpuHandle.ptr != 0;
+}
 
 }
 
@@ -23,4 +32,5 @@ enum ESwapchainBufferCount : u8
 	TripleBuffered = 3,
 	MaxSwapchainBufferCount = TripleBuffered
 };
+
 

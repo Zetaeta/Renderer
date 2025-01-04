@@ -9,6 +9,8 @@
 #include "render/VertexTypes.h"
 #include "asset/Texture.h"
 #include "DX12Context.h"
+#include "DX12RootSignature.h"
+#include "render/dxcommon/DXShaderCompiler.h"
 
 extern TextureRef gDirt;
 
@@ -24,14 +26,17 @@ public:
 
 	void Render(ID3D12GraphicsCommandList_& cmdList);
 
-	ComPtr<ID3D12RootSignature> mRootSig;
+//	ComPtr<ID3D12RootSignature> mRootSig;
 	ComPtr<ID3D12PipelineState> mPSO;
 	RefPtr<IDeviceMesh> mMesh;
 	IDeviceTexture::Ref mTexture;
+	DX12GraphicsRootSignature mRootSig;
 };
 
 DX12Test::DX12Test(ID3D12Device_* device)
 {
+#if 0
+	{
 	D3D12_ROOT_PARAMETER params[2];
 	Zero(params);
 	params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -52,9 +57,13 @@ DX12Test::DX12Test(ID3D12Device_* device)
 	ComPtr<ID3DBlob> error;
 	HR_ERR_CHECK(D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
 	HR_ERR_CHECK(device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&mRootSig)));
+	}
+#endif
 
-	ComPtr<ID3DBlob> vertexShader = DXCompileFile(L"src/shaders/dx12/Test.hlsl", "TestVS2", "vs_5_0", nullptr, D3DCOMPILE_ENABLE_STRICTNESS);;
-	ComPtr<ID3DBlob> pixelShader = DXCompileFile(L"src/shaders/dx12/Test.hlsl", "TestPS", "ps_5_0", nullptr, D3DCOMPILE_ENABLE_STRICTNESS);;
+	mRootSig = DX12GraphicsRootSignature::MakeStandardRootSig(0, 1);
+
+	ComPtr<ID3DBlob> vertexShader = dx::DXCompileFile(L"src/shaders/dx12/Test.hlsl", "TestVS2", "vs_5_0", nullptr, D3DCOMPILE_ENABLE_STRICTNESS);;
+	ComPtr<ID3DBlob> pixelShader = dx::DXCompileFile(L"src/shaders/dx12/Test.hlsl", "TestPS", "ps_5_0", nullptr, D3DCOMPILE_ENABLE_STRICTNESS);;
 
 	ZE_ASSERT(vertexShader && pixelShader);
 
@@ -92,8 +101,10 @@ void DX12Test::Render(ID3D12GraphicsCommandList_& cmdList)
 	float4 cbData {Random::Range(0.f, 1.f),Random::Range(0.f, 1.f),Random::Range(0.f, 1.f),1};
 	auto cbHandle = GetRHI().GetCBPool().AcquireConstantBuffer(ECBLifetime::Dynamic, cbData);
 	cmdList.SetGraphicsRootSignature(mRootSig.Get());
-	cmdList.SetGraphicsRootConstantBufferView(0, cbHandle.UserData.As<D3D12_GPU_VIRTUAL_ADDRESS>());
-	(DX12Context{&cmdList}).SetShaderResources(EShaderType::Pixel, Single<const ResourceView>(ResourceView(mTexture)));
+	cmdList.SetGraphicsRootConstantBufferView(mRootSig.RootCBVIndices[EShaderType::Pixel], cbHandle.UserData.As<D3D12_GPU_VIRTUAL_ADDRESS>());
+	DX12Context context{&cmdList};
+	context.SetGraphicsRootSignature(mRootSig);
+	context.SetShaderResources(EShaderType::Pixel, Single<const ResourceView>(ResourceView(mTexture)));
 	cmdList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	cmdList.IASetVertexBuffers(0, 1, &static_cast<DX12DirectMesh*>(mMesh.Get())->view);
 	cmdList.DrawInstanced(3, 1, 0, 0);

@@ -29,7 +29,7 @@ public:
 
 	void SetTexture(ETextureSlot slot, IDeviceTexture::Ref texture) override
 	{
-		SetTexture(slot, texture->GetTextureHandle<ID3D11ShaderResourceView>());
+		SetTexture(slot, texture->GetTextureHandle<ID3D11ShaderResourceView*>());
 	}
 
 	void Bind(DX11Ctx const& ctx);

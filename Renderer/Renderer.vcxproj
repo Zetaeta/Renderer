@@ -109,6 +109,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,6 +133,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
+      <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -164,6 +166,7 @@
     <ClInclude Include="src\core\Random.h" />
     <ClInclude Include="src\core\RefCounted.h" />
     <ClInclude Include="src\core\TypeInfoUtils.h" />
+    <ClInclude Include="src\core\TypeTraits.h" />
     <ClInclude Include="src\core\WeakPtr.h" />
     <ClInclude Include="src\core\WorkerThread.h" />
     <ClInclude Include="src\editor\Editor.h" />
@@ -222,6 +225,8 @@
     <ClInclude Include="src\render\dx12\DX12DescriptorHeap.h" />
     <ClInclude Include="src\render\dx12\DX12DescriptorTableAllocator.h" />
     <ClInclude Include="src\render\dx12\DX12RHI.h" />
+    <ClInclude Include="src\render\dx12\DX12RootSignature.h" />
+    <ClInclude Include="src\render\dx12\DX12ShaderCompiler.h" />
     <ClInclude Include="src\render\dx12\DX12SyncPoint.h" />
     <ClInclude Include="src\render\dx12\DX12Texture.h" />
     <ClInclude Include="src\render\dx12\DX12Upload.h" />
@@ -230,6 +235,9 @@
     <ClInclude Include="src\render\dx12\DX12Test.h" />
     <ClInclude Include="src\render\dx12\FrameIndexedRingBuffer.h" />
     <ClInclude Include="src\render\dx12\SharedD3D12.h" />
+    <ClInclude Include="src\render\dxcommon\DXGIUtils.h" />
+    <ClInclude Include="src\render\dxcommon\DXShaderCompiler.h" />
+    <ClInclude Include="src\render\dxcommon\SharedD3D.h" />
     <ClInclude Include="src\render\ForwardRenderPass.h" />
     <ClInclude Include="src\render\GPUTimer.h" />
     <ClInclude Include="src\render\OpaqueHandle.h" />
@@ -400,12 +408,16 @@
     <ClCompile Include="src\render\dx12\DX12DescriptorAllocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12DescriptorHeap.cpp" />
     <ClCompile Include="src\render\dx12\DX12DescriptorTableAllocator.cpp" />
+    <ClCompile Include="src\render\dx12\DX12RootSignature.cpp" />
+    <ClCompile Include="src\render\dx12\DX12ShaderCompiler.cpp" />
     <ClCompile Include="src\render\dx12\DX12SyncPoint.cpp" />
     <ClCompile Include="src\render\dx12\DX12Texture.cpp" />
     <ClCompile Include="src\render\dx12\DX12Upload.cpp" />
     <ClCompile Include="src\render\dx12\DX12UploadBuffer.cpp" />
     <ClCompile Include="src\render\dx12\DX12RHI.cpp" />
     <ClCompile Include="src\render\dx12\FrameIndexedRingBuffer.cpp" />
+    <ClCompile Include="src\render\dxcommon\DXGIUtils.cpp" />
+    <ClCompile Include="src\render\dxcommon\DXShaderCompiler.cpp" />
     <ClCompile Include="src\render\ForwardRenderPass.cpp" />
     <ClCompile Include="src\render\passes\DeferredShadingPass.cpp" />
     <ClCompile Include="src\render\passes\GBufferPass.cpp" />
@@ -478,6 +490,7 @@
     <ClCompile Include="src\render\shaders\ShaderDeclarations.cpp" />
     <ClCompile Include="src\render\ShadingCommon.cpp" />
     <ClCompile Include="src\render\ShadowmapsPass.cpp" />
+    <ClCompile Include="src\render\VertexAttributes.cpp" />
     <ClCompile Include="src\render\VertexTypes.cpp" />
     <ClCompile Include="src\render\WavyEffectPPPass.cpp" />
     <ClCompile Include="src\scene\Camera.cpp" />

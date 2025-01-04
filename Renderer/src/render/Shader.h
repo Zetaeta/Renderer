@@ -100,11 +100,18 @@ public:
 enum class EShaderType : u8
 {
 	Vertex,
-	Pixel,
 	Geometry,
+	TessControl,
+	TessEval,
+	Pixel,
 	Compute,
-	Count
+	Count,
+
+	GraphicsStart = Vertex,
+	GraphicsCount = Pixel + 1,
+	VertexPipelineCount = Pixel + 1
 };
+ITER_ENUM(EShaderType);
 
 class ShaderManager;
 

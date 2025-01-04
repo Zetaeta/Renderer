@@ -84,6 +84,11 @@ public:
 
 	void SetLayout(DataLayout::Ref layout);
 
+	Span<u8 const> GetView() const
+	{
+		return {Data.get(), DataSize};
+	}
+
 	u8* GetData(){ return Data.get(); }
 	DataLayout::Ref			  Layout;
 
@@ -166,6 +171,7 @@ public:
 	template<typename... Args>
 	IConstantBuffer(Args... args)
 		: mData(std::forward<Args>(args)...) {}
+	virtual ~IConstantBuffer() {}
 	ConstantBufferData& Data() { return mData; }
 	virtual void		Update() = 0;
 	virtual void		SetLayout(DataLayout::Ref layout) = 0;
@@ -178,6 +184,8 @@ public:
 	}
 
 protected:
+	RMOVE_DEFAULT(IConstantBuffer);
+	RCOPY_DEFAULT(IConstantBuffer);
 	ConstantBufferData mData;
 };
 

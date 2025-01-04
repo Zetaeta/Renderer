@@ -22,6 +22,7 @@ protected:
 
 	BaseSerialized* mOuter = nullptr;
 public:
+	virtual ~BaseSerialized() {} // may not be necessary
 	virtual void ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive = false);
 
 };

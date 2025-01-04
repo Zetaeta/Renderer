@@ -13,8 +13,8 @@ DX11DepthStencil::~DX11DepthStencil()
 	DepthStencils.clear();
 }
 
-DX11RenderTarget::DX11RenderTarget(RenderTargetDesc const& desc, ComPtr<ID3D11RenderTargetView> rt, ComPtr<ID3D11DepthStencilView> dsv /*= nullptr*/)
-	: IRenderTarget(desc), RenderTargets({ rt }), DepthStencil(dsv)
+DX11RenderTarget::DX11RenderTarget(RenderTargetDesc const& desc, ComPtr<ID3D11RenderTargetView> rt)
+	: IRenderTarget(desc), RenderTargets({ rt })
 {
 	rnd::dx11::SetResourceName(rt, desc.DebugName);
 }

@@ -2,6 +2,7 @@
 #include "render/RenderDevice.h"
 #include "DX12UploadBuffer.h"
 #include "DX12DescriptorHeap.h"
+#include "render/ConstantBuffer.h"
 
 // Whether to create CBV descriptors or just always use root signature CBVs
 #ifndef DX12_USE_CBV_DESCRIPTORS
@@ -51,6 +52,23 @@ private:
 		CBHandleStatic Static;
 		CBHandleDynamic Dynamic;
 	};
+};
+
+class DX12DynamicCB : public IConstantBuffer
+{
+public:
+	void Update() override
+	{
+		mDirty = false;
+	}
+
+	void SetLayout(DataLayout::Ref layout) {}
+
+	D3D12_GPU_VIRTUAL_ADDRESS Commit();
+
+	bool mDirty = true;
+	u64 mCurrentFrame = 0;
+	D3D12_GPU_VIRTUAL_ADDRESS  mLastAddress;
 };
 	
 }

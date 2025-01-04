@@ -2,8 +2,8 @@
 #include <unordered_map>
 
 template<typename Key, typename Value>
-class SmallMap : public std::unordered_map<Key, Value>
-{
+using SmallMap = std::unordered_map<Key, Value>;
+//{
 //public:
 //	FlatMap(size_t size = 0)
 //		: mKeys(size), mValues(size) {}
@@ -29,5 +29,5 @@ class SmallMap : public std::unordered_map<Key, Value>
 //private:
 //	std::vector<Key> mKeys;
 //	std::vector<Value> mValues;
-};
+//};
 

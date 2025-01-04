@@ -9,7 +9,7 @@ class Window
 {
 public:
 	Window(u32 width, u32 height, wchar_t const* name);
-	~Window();
+	virtual ~Window();
 
 	virtual void Tick();
 

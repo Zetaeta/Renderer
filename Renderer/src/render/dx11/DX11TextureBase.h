@@ -20,7 +20,7 @@ public:
 	}
 
 protected:
-	void* GetUAV(UavId id) override;
+	OpaqueData<8> GetUAV(UavId id) override;
 	DX11Ctx* m_Ctx;
 	ComPtr<ID3D11UnorderedAccessView> mUAV;
 };

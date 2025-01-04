@@ -22,6 +22,7 @@ void AssertionFailed(bool fatal, const char* file, u32 line, const char* fmt, ..
 	{
 		RLOG(LogCore, Error, "Platform error: %s", platformError.c_str());
 	}
+	FlushLog();
 }
 
 std::vector<std::string> Split(const std::string& s, char delim)

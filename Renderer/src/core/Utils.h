@@ -81,7 +81,11 @@ constexpr auto Denum(TEnum e)
 	constexpr bool operator !(EType enumVal)\
 	{\
 		return enumVal == 0;\
-	}
+	}\
+	constexpr EType operator~(EType enumVal)\
+	{\
+		return EnumCast<EType>(~Denum(enumVal));\
+	}\
 
 #define DECLARE_ENUM_UNOP(EType, op, valop)\
 	constexpr EType& operator op(EType& val)\
@@ -453,6 +457,19 @@ constexpr T EnumCast(TFrom from)
 	return static_cast<T>(from);
 }
 
+template<typename E>
+bool HasAnyFlags(E val, E flag)
+{
+	return !!(val & flag);
+}
+
+template<typename E>
+bool HasAllFlags(E val, E flags)
+{
+	return (val & flags) == flags;
+}
+
+
 template<typename T>
 using RefWrap = std::reference_wrapper<T>;
 
@@ -467,6 +484,12 @@ bool FindIgnoreCase(const std::string_view& haystack, const std::string_view& ne
 #define AT_START(block) static uint8_t sStaticInitializer##__LINE__ = [] { block }();
 
 extern unsigned char const ZerosArray[1024];
+
+template<typename InContainer, typename OutContainer>
+void Append(OutContainer to, InContainer from)
+{
+	to.insert(to.end(), from.begin(), from.end());
+}
 
 //template<typename... Args>
 //using Variant = std::Variant<Args...>;

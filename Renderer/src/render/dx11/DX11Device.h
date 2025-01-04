@@ -8,18 +8,6 @@
 #include "SharedD3D11.h"
 #include "DX11Ctx.h"
 
-template<typename T, size_t InlineSize>
-class SmallVector : public std::vector<T>
-{
-public:
-	SmallVector(size_t initialSize = 0)
-	{
-		this->reserve(InlineSize);
-		this->resize(initialSize);
-	}
-	// TODO: Actual implementation
-};
-
 namespace rnd
 {
 namespace dx11

@@ -10,22 +10,16 @@ namespace dx11
 class DX11RenderTarget : public IRenderTarget
 {
 public:
-	DX11RenderTarget(RenderTargetDesc const& desc, ComPtr<ID3D11RenderTargetView> rt, ComPtr<ID3D11DepthStencilView> dsv = nullptr);
-	bool HasColour() const override { return true; }
+	DX11RenderTarget(RenderTargetDesc const& desc, ComPtr<ID3D11RenderTargetView> rt);
 
-	bool HasDepth() const override { return false; }
-
-	void* GetRTData() override { return RenderTargets[0].Get(); }
-
-	void* GetDSData() override { return DepthStencil.Get(); }
-
-	void* GetData() const override { return RenderTargets[0].Get(); }
+	OpaqueData<8> GetRTData() override { return RenderTargets[0].Get(); }
+	OpaqueData<8> GetData() const override { return RenderTargets[0].Get(); }
 
 	ID3D11RenderTargetView* GetRTV() const { return RenderTargets[0].Get(); }
 	ID3D11RenderTargetView* GetRTV(u32 idx) const { return RenderTargets[idx].Get(); }
 
 	Vector<ComPtr<ID3D11RenderTargetView>> RenderTargets;
-	ComPtr<ID3D11DepthStencilView> DepthStencil;
+//	ComPtr<ID3D11DepthStencilView> DepthStencil;
 
 };
 
@@ -44,7 +38,7 @@ public:
 	{}
 	~DX11DepthStencil();
 
-	void* GetData() const override { return DepthStencils[0].Get(); }
+	OpaqueData<8> GetData() const override { return DepthStencils[0].Get(); }
 
 	ID3D11DepthStencilView* GetDSV() const
 	{

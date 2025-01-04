@@ -3,6 +3,7 @@
 #include "core/Maths.h"
 #include "core/Hash.h"
 #include "DataLayout.h"
+#include "container/SmallMap.h"
 
 namespace rnd
 {
@@ -24,7 +25,7 @@ public:
 	{
 		RCOPY_MOVE_PROTECT(Registry)
 	public:
-		Registry() = default;
+		Registry();
 //		Handle currentId = 0;
 		Handle Register(VertexAttributeDesc&& vertAtts)
 		{
@@ -39,6 +40,10 @@ public:
 	private:
 		std::vector<VertexAttributeDesc> mRegistry;
 	};
+
+	static SmallMap<Name, VertexAttributeMask> SemanticMap;
+	static void InitSemanticMap();
+
 
 	static Registry& GetRegistry()
 	{

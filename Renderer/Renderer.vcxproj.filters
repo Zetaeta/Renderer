@@ -457,6 +457,12 @@
     <ClInclude Include="src\render\dx12\DX12DescriptorTableAllocator.h" />
     <ClInclude Include="src\container\StaticQueue.h" />
     <ClInclude Include="src\render\dx12\DX12Context.h" />
+    <ClInclude Include="src\render\dx12\DX12RootSignature.h" />
+    <ClInclude Include="src\core\TypeTraits.h" />
+    <ClInclude Include="src\render\dxcommon\DXShaderCompiler.h" />
+    <ClInclude Include="src\render\dx12\DX12ShaderCompiler.h" />
+    <ClInclude Include="src\render\dxcommon\SharedD3D.h" />
+    <ClInclude Include="src\render\dxcommon\DXGIUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -706,6 +712,11 @@
     <ClCompile Include="src\render\dx12\FrameIndexedRingBuffer.cpp" />
     <ClCompile Include="src\render\dx12\DX12DescriptorTableAllocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12Context.cpp" />
+    <ClCompile Include="src\render\dx12\DX12RootSignature.cpp" />
+    <ClCompile Include="src\render\dxcommon\DXShaderCompiler.cpp" />
+    <ClCompile Include="src\render\dx12\DX12ShaderCompiler.cpp" />
+    <ClCompile Include="src\render\VertexAttributes.cpp" />
+    <ClCompile Include="src\render\dxcommon\DXGIUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

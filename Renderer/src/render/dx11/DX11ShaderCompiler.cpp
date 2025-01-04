@@ -3,41 +3,9 @@
 #include "core/WinUtils.h"
 #include "core/Logging.h"
 #include "SharedD3D11.h"
+#include "render/dxcommon/DXShaderCompiler.h"
 namespace rnd
 {
-ComPtr<ID3DBlob> DXCompileFile(wchar_t const* filePath, char const* entryPoint, char const* shaderTarget, D3D_SHADER_MACRO const* macros, UINT flags)
-{
-
-	ComPtr<ID3DBlob> outBlob;
-	ComPtr<ID3DBlob> errBlob;
-	RLOG(LogGlobal, Info, "Compiling shader in file %S", filePath);
-	HRESULT hr = D3DCompileFromFile(filePath, macros, D3D_COMPILE_STANDARD_FILE_INCLUDE,
-			entryPoint, shaderTarget, flags, 0, &outBlob, &errBlob);
-	if (SUCCEEDED(hr))
-	{
-		if (errBlob != nullptr && errBlob->GetBufferPointer() != nullptr)
-		{
-			RLOG(LogGlobal, Info, "Compile warning: %s\n", (const char*) errBlob->GetBufferPointer());
-		}
-		return outBlob;
-	}
-	else
-	{
-		LPTSTR errorText = NULL;
-		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM
-					| FORMAT_MESSAGE_ALLOCATE_BUFFER
-					| FORMAT_MESSAGE_IGNORE_INSERTS,
-					NULL, hr, 0, (LPTSTR) &errorText, 0, NULL);
-		RLOG(LogGlobal, Info, "Compile error: %S", errorText);
-		if (errBlob != nullptr && errBlob->GetBufferPointer() != nullptr)
-		{
-			RLOG(LogGlobal, Info, "Output: %s\n", (const char*) errBlob->GetBufferPointer());
-		}
-		DebugBreak();
-		return nullptr;
-	}
-}
-
 namespace dx11
 {
 
@@ -97,7 +65,7 @@ OwningPtr<IDeviceShader> DX11ShaderCompiler::CompileShader(ShaderInstanceId cons
 	fs::path cso = mOutDir / csoName;
 	if (forceRecompile || !fs::exists(cso) || fs::last_write_time(cso) < lastWrite)
 	{
-		if (outBlob = DXCompileFile(src.wstring().c_str(), desc.EntryPoint.c_str(), GetShaderTypeString(shaderType), Addr(macros), flags))
+		if (outBlob = dx::DXCompileFile(src.wstring().c_str(), desc.EntryPoint.c_str(), GetShaderTypeString(shaderType), Addr(macros), flags))
 		{
 			RLOG(LogGlobal, Verbose, "Saving to file %s\n", cso.string().c_str());
 			HR_ERR_CHECK(D3DWriteBlobToFile(outBlob.Get(), cso.c_str(), true));

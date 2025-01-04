@@ -77,4 +77,19 @@ void DX12CBPool::ReleaseResources()
 	mDynamicCBHeap.ReleaseResources();
 }
 
+D3D12_GPU_VIRTUAL_ADDRESS DX12DynamicCB::Commit()
+{
+	auto& rhi = GetRHI();
+	u64 thisFrame = rhi.GetCurrentFrame();
+	if (mDirty || mCurrentFrame != thisFrame)
+	{
+		mDirty = false;
+		mLastAddress = rhi.GetCBPool().AcquireConstantBuffer(ECBLifetime::Dynamic, mData.GetView())
+							.UserData.As<D3D12_GPU_VIRTUAL_ADDRESS>();
+		mCurrentFrame = thisFrame;
+	}
+
+	return mLastAddress;
+}
+
 }

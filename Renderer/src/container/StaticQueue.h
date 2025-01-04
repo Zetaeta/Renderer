@@ -41,7 +41,7 @@ public:
 
 	T& Push(T const& val)
 	{
-		return Emplace(std::move(val));
+		return Emplace(val);
 	}
 
 	T& Front()

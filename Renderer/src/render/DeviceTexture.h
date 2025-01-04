@@ -24,6 +24,7 @@ struct DeviceChildDesc
 struct DepthStencilDesc : DeviceChildDesc
 {
 	ETextureDimension Dimension;
+	ETextureFormat Format = ETextureFormat::D24_Unorm_S8_Uint;
 	u32 Width = 0;
 	u32 Height = 0;
 };
@@ -31,6 +32,7 @@ struct DepthStencilDesc : DeviceChildDesc
 struct RenderTargetDesc : DeviceChildDesc
 {
 	ETextureDimension Dimension;
+	ETextureFormat Format = ETextureFormat::RGBA8_Unorm_SRGB;
 	u32 Width = 0;
 	u32 Height = 0;
 };
@@ -57,11 +59,11 @@ class IRenderTarget
 public:
 	IRenderTarget(RenderTargetDesc const& desc)
 		: Desc(desc) {}
+	virtual ~IRenderTarget() {}
+
 	RenderTargetDesc const& GetDesc() { return Desc; }
-	virtual bool HasColour() const = 0;
-	virtual bool HasDepth() const = 0;
-	virtual void*	 GetRTData() = 0;
-	virtual void*	 GetDSData() = 0;
+	virtual OpaqueData<8> GetRTData() = 0;
+//	virtual void*	 GetDSData() = 0;
 	DEFINE_DEVICE_RESOURCE_GETTER(GetData);
 
 	using Ref = std::shared_ptr<IRenderTarget>;
@@ -136,9 +138,9 @@ public:
 	virtual ~IDeviceTexture() {}
 	using Ref = std::shared_ptr<IDeviceTexture>;
 
-	virtual void* GetTextureHandle() const = 0;
+	virtual OpaqueData<8> GetTextureHandle() const = 0;
 	template<typename T>
-	T* GetTextureHandle() { return static_cast<T*>(GetTextureHandle()); }
+	T GetTextureHandle() { return GetTextureHandle().As<T>(); }
 
 	bool IsDepthStencil() const { return Desc.Flags & TF_DEPTH; }
 
@@ -174,17 +176,6 @@ using IDeviceTextureCube = IDeviceTexture;
 using DeviceTextureRef = std::shared_ptr<IDeviceTexture>;
 //constexpr DeviceTextureRef INVALID_DEV_TEX = nullptr;
 #define INVALID_DEV_TEX nullptr
-
-enum class ETextureFormatContext : u8
-{
-	Resource,
-	SRV,
-	UAV,
-	RenderTarget,
-	DepthStencil = RenderTarget,
-	StencilSRV
-};
-
 
 
 
