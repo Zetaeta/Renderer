@@ -7,6 +7,8 @@
 #include <memory>
 #include "common/CommonEnums.h"
 
+class Texture;
+
 namespace rnd
 {
 
@@ -113,7 +115,7 @@ struct DeviceTextureDesc : public DeviceResourceDesc
 	u32 GetRowPitch() const;
 };
 
-enum ECubemapDataFormat
+enum class ECubemapDataFormat : u8
 {
 	FoldUp = 0
 };
@@ -121,7 +123,8 @@ enum ECubemapDataFormat
 struct CubemapData
 {
 	ECubemapDataFormat Format;
-	void* Data;
+	void* Data = nullptr;
+	std::shared_ptr<Texture> Tex;
 };
 
 using TextureData = void const*;

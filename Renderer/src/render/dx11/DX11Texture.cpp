@@ -378,10 +378,5 @@ void DX11Texture::Unmap(u32 subResource)
 	}
 }
 
-void DX11ShadowMap::Init(DX11Ctx& ctx, u32 size)
-{
-	//m_Texture = DX11Texture::Create(&ctx, size, size, nullptr, TF_DEPTH);
-} 
-
 }
 }

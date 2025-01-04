@@ -154,14 +154,5 @@ void DX11Cubemap::Unmap(u32 subResource)
 	ZE_ASSERT(false);
 }
 
-void DX11ShadowCube::Init(DX11Ctx& ctx, u32 size)
-{
-	DeviceTextureDesc desc;
-	desc.Flags = TF_DEPTH;
-	desc.Width = size;
-	desc.Height = size;
-	m_Cube = std::make_unique<DX11Cubemap>(ctx, desc);
-}
-
 }
 }

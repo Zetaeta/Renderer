@@ -46,8 +46,6 @@ public:
 		return mDeviceBuffer.GetAddressOf();
 	}
 
-	ConstantBufferData& GetCBData() { return mData; }
-
 	DX11ConstantBuffer(DX11Ctx* ctx, u32 size, DataLayout::Ref layout = nullptr);
 
 	ID3D11Buffer* GetDeviceBuffer() { return mDeviceBuffer.Get(); }

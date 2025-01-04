@@ -82,7 +82,7 @@ void SceneRenderPass::BeginRender()
 		mMatOverride->Bind(*mRCtx, mLayer);
 	}
 
-	auto& vsCB = static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerFrameVSCB();
+	auto& vsCB = *DeviceCtx()->GetConstantBuffer(ECBFrequency::VS_PerFrame);
 	vsCB.GetCBData()["cameraPos"] |= mViewCam->GetPosition();
 	if (auto w2l = vsCB.GetCBData()["world2Light"])
 	{

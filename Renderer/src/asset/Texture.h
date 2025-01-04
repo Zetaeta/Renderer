@@ -130,12 +130,17 @@ public:
 		return &*m_Tex;
 	}
 
+	operator std::shared_ptr<Texture>() const
+	{
+		return m_Tex;
+	}
+
 	void Clear()
 	{
 		m_Tex = Texture::EMPTY;
 	}
 
-	bool IsValid()
+	bool IsValid() const
 	{
 		return m_Tex != nullptr && m_Tex->IsValid();
 	}

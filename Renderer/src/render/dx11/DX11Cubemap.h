@@ -63,29 +63,5 @@ public:
  private:
 	DX11Cubemap(DX11Ctx& ctx);
 };
-
-class DX11ShadowCube
-{
-public:
-//	DX11ShadowMap(DX11Ctx const& ctx);
-
-	void Init(DX11Ctx& ctx, u32 size);
-
-	auto GetDSV(u32 i)
-	{
-		return m_Cube->GetDSV(i);
-	}
-
-	auto GetSRV()
-	{
-		return m_Cube->GetSRV();
-	}
-	
-	OwningPtr<DX11Cubemap> m_Cube;
-
-	operator bool() {return m_Cube != nullptr;}
-
-	mat4 m_World2Light;
-};
 }
 }

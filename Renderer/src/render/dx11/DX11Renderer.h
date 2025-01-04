@@ -52,12 +52,10 @@ public:
 	void Setup();
 
 	void Render(const Scene& scene) override;
-	void Render(const Scene& scene, EShadingLayer layer, int index=-1, bool translucent = false);
 
 	void LoadShaders(bool reload = false);
 
 	void PrepareBG();
-	void DrawBG();
 	void DrawCubemap(ID3D11ShaderResourceView* srv, bool depth = false);
 	void DrawCubemap(IDeviceTextureCube* cubemap);
 
@@ -163,7 +161,6 @@ public:
 
 	std::vector<DX11MaterialType> m_MatTypes;
 	std::vector<std::unique_ptr<DX11Material>> m_Materials;
-	std::unique_ptr<DX11Cubemap> m_BG;
 
 	EnumArray<u32, EShaderType> mMaxShaderResources = {};
 	EnumArray<u32, EShaderType> mMaxUAVs = {};
@@ -173,10 +170,6 @@ public:
 	{
 		return mViewport.get();
 	}
-
-
-
-
 
 	void DrawMesh(Primitive const& primitive) override;
 	void SetVertexLayout(VertAttDescHandle attDescHandle) override;
@@ -251,9 +244,6 @@ protected:
 
 	ComPtr<ID3D11SamplerState> m_ShadowSampler;
 
-	Vector<DX11ShadowMap> m_SpotLightShadows;
-	Vector<DX11ShadowMap> m_DirLightShadows;
-	Vector<DX11ShadowCube> m_PointLightShadows;
 
 	std::shared_ptr<DX11RenderTarget> m_MainRenderTarget;
 	std::shared_ptr<DX11DepthStencil> m_MainDepthStencil;
@@ -263,7 +253,6 @@ protected:
 
 	OwningPtr<Viewport> mViewport;
 
-	DX11Texture::Ref m_Background;
 	ComPtr<ID3D11Buffer> m_BGVBuff;
 
 	ComPtr<ID3D11Buffer> m_2DVBuff;

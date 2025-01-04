@@ -13,7 +13,7 @@ void HighlightSelectedPass::Execute(RenderContext& renderCtx)
 {
 	auto* selectedPrimComp = Cast<PrimitiveComponent>(Editor::Get()->GetSelectedComponent());
 
-	auto& PSPF = static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerFramePSCB();
+	auto& PSPF = *DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerFrame);
 
 	{
 		PerFramePSData perFrameData;

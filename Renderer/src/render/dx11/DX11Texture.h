@@ -103,29 +103,5 @@ inline ID3D11ShaderResourceView* GetSRV(DX11Texture::Ref const& ref)
 	return ref == nullptr ? nullptr : ref->GetSRV();
 }
 
-class DX11ShadowMap
-{
-public:
-//	DX11ShadowMap(DX11Ctx const& ctx);
-
-	void Init(DX11Ctx& ctx, u32 size);
-
-	auto GetDSV()
-	{
-		return m_Texture->GetDSV();
-	}
-
-	auto GetSRV()
-	{
-		return m_Texture->GetSRV();
-	}
-	
-	DX11Texture::Ref m_Texture;
-
-	operator bool() {return m_Texture != nullptr;}
-
-	mat4 m_World2LightProj;
-};
-
 }
 }

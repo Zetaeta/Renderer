@@ -238,6 +238,7 @@ private:
 	IDeviceTexture::Ref mPrimaryTarget;
 	IDeviceTexture::Ref mTarget;
 	IDeviceTexture::Ref mPPTarget;
+	IDeviceTexture::Ref mBGCube;
 	IRenderTarget::Ref mMainRT;
 	IDepthStencil::Ref mMainDS;
 	IDeviceTexture::Ref mDSTex;

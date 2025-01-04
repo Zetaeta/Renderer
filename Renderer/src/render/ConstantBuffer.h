@@ -176,6 +176,9 @@ public:
 	virtual void		Update() = 0;
 	virtual void		SetLayout(DataLayout::Ref layout) = 0;
 
+	ConstantBufferData& GetCBData() { return mData; }
+
+
 	template<typename T>
 	void WriteData(const T& val)
 	{

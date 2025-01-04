@@ -219,13 +219,8 @@ DX11Renderer::~DX11Renderer()
 {
 	mTextures.clear();
 	m_Materials.clear();
-	m_PointLightShadows.clear();
-	m_DirLightShadows.clear();
-	m_SpotLightShadows.clear();
 	m_Ctx.psTextures = {};
-	m_BG = nullptr;
 	mRCtx = {};
-	m_Background = nullptr;
 	m_EmptyTexture = nullptr;
  }
 
@@ -468,9 +463,6 @@ void DX11Renderer::PrepareBG()
 
 		HR_ERR_CHECK(pDevice->CreateBuffer(&bd, &sd, &m_BGVBuff));
 	}
-	TextureRef tex = Texture::LoadFrom("content/canyon2.jpg");
-	m_Background = DX11Texture::CreateFrom(tex, &m_Ctx);
-	m_BG = std::make_unique<DX11Cubemap>(DX11Cubemap::FoldUp(m_Ctx, tex));
 }
 
 void DX11Renderer::Render(const Scene& scene)
@@ -506,118 +498,7 @@ void DX11Renderer::Render(const Scene& scene)
 	};
 	pContext->RSSetViewports(1u, &vp);
 
-	if (mUsePasses)
-	{
-		m_Ctx.mRCtx->RenderFrame(scene);
-	}
-	else
-	{
-
-		//mat4
-		mat4 worldToCamera = m_Camera->WorldToCamera();
-		float const FAR_PLANE = 1000;
-		float const NEAR_PLANE = .1f;
-		m_Projection =
-		{ 
-			{ 2 * m_Scale / float(m_Width), 0, 0, 0 },
-			{0,			2 * m_Scale / float(m_Height),0,0},
-			{ 0, 0, (FAR_PLANE) / (FAR_PLANE - NEAR_PLANE), -FAR_PLANE * NEAR_PLANE  / (FAR_PLANE - NEAR_PLANE)},
-			{0,			0,		1,0},
-		};
-		m_Projection = glm::transpose(m_Projection);
-		mat4 projWorld = m_Projection * worldToCamera;
-
-		PerFrameVertexData PFVD;
-		PFVD.cameraPos = m_Camera->GetPosition();
-		PFVD.screen2World = inverse(projWorld);
-		m_VSPerFrameBuff.WriteData(PFVD);
-
-		//m_PIVS.resize(scene.m_MeshInstances.size());
-		ForEachMesh([&](MeshPart const& mesh, Transform const& trans) {
-			auto& mat = m_Scene->GetMaterial(mesh.material);
-
-			PerInstanceVSData& PIVS = m_PIVS[&mesh];
-			PIVS.model2ShadeSpace = mat4(trans);
-			PIVS.model2ShadeDual = transpose(inverse(PIVS.model2ShadeSpace));
-			PIVS.fullTransform = projWorld * PIVS.model2ShadeSpace;
-
-			m_VSPerInstanceBuff.WriteData(PIVS);
-		});
-		for (u32 i=0; i< scene.m_MeshInstances.size(); ++i)
-		{
-
-			//ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
-			//pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
-			//DrawMesh(mi.mesh);
-		}
-		pContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
-		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::BASE)])
-		{
-			Render(scene, EShadingLayer::BASE, -1, false);
-		}
-		pContext->OMSetBlendState(m_BlendState.Get(), nullptr, 0xffffffff);
-		//pContext->OMSetDepthStencilState(m_LightsDSState.Get(), 1);
-		SetDepthStencilMode(EDepthMode::Equal | EDepthMode::NoWrite);
-
-		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::DIRLIGHT)])
-		{
-			for (int i = 0; i < scene.m_DirLights.size(); ++i)
-			{
-				Render(scene, EShadingLayer::DIRLIGHT, i, false);
-			}
-		}
-		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::SPOTLIGHT)])
-		{
-			for (int i = 0; i < scene.m_SpotLights.size(); ++i)
-			{
-				Render(scene, EShadingLayer::SPOTLIGHT, i,false);
-			}
-		}
-		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::POINTLIGHT)])
-		{
-			for (int i = 0; i < scene.m_PointLights.size(); ++i)
-			{
-				Render(scene, EShadingLayer::POINTLIGHT, i,false);
-			}
-		}
-
-		pContext->OMSetBlendState(m_AlphaBlendState.Get(), nullptr, 0xffffffff);
-	//	pContext->OMSetDepthStencilState(m_AlphaDSState.Get(), 1);
-		SetDepthStencilMode(EDepthMode::LessEqual | EDepthMode::NoWrite);
-		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::BASE)])
-		{
-			Render(scene, EShadingLayer::BASE, -1, true);
-		}
-
-		pContext->OMSetBlendState(m_AlphaLitBlendState.Get(), nullptr, 0xffffffff);
-		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::DIRLIGHT)])
-		{
-			for (int i = 0; i < scene.m_DirLights.size(); ++i)
-			{
-				Render(scene, EShadingLayer::DIRLIGHT, i, true);
-			}
-		}
-		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::SPOTLIGHT)])
-		{
-			for (int i = 0; i < scene.m_SpotLights.size(); ++i)
-			{
-				Render(scene, EShadingLayer::SPOTLIGHT, i, true);
-			}
-		}
-		if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::POINTLIGHT)])
-		{
-			for (int i = 0; i < scene.m_PointLights.size(); ++i)
-			{
-				Render(scene, EShadingLayer::POINTLIGHT, i, true);
-			}
-		}
-		pContext->OMSetBlendState(nullptr, nullptr, 0xffffffff);
-	//	pContext->OMSetDepthStencilState(nullptr, 1);
-		SetDepthStencilMode(EDepthMode::Less);
-		DrawBG();
-	}
-
-
+	m_Ctx.mRCtx->RenderFrame(scene);
 
 	SetDepthStencilMode(EDepthMode::Disabled);
 	if (m_ViewerTex != nullptr)
@@ -633,82 +514,6 @@ void DX11Renderer::Render(const Scene& scene)
 	EndFrameTimer();
 }
 
-
-void DX11Renderer::Render(const Scene& scene, EShadingLayer layer, int index, bool translucent)
-{
-	switch (layer)
-	{
-	case EShadingLayer::BASE:
-	{
-		PerFramePSData perFrameData;
-		Zero(perFrameData);
-		perFrameData.ambient = vec3(scene.m_AmbientLight);
-		m_PSPerFrameBuff.WriteData(perFrameData);
-		break;
-	}
-	case EShadingLayer::DIRLIGHT:
-	{
-		auto const& light = scene.m_PointLights[index];
-		PFPSDirLight perFrameData;
-		Zero(perFrameData);
-		perFrameData.directionalCol = vec3(scene.m_DirLights[index].colour);
-		perFrameData.directionalDir = scene.m_DirLights[index].dir;
-		perFrameData.world2Light = m_DirLightShadows[index].m_World2LightProj;
-		m_PSPerFrameBuff.WriteData(perFrameData);
-		m_Ctx.psTextures.SetTexture(E_TS_SHADOWMAP, m_DirLightShadows[index].GetSRV());
-		break;
-	}
-	case EShadingLayer::SPOTLIGHT:
-	{
-		auto const& light = scene.m_SpotLights[index];
-		PFPSSpotLight perFrameData;
-		Zero(perFrameData);
-		perFrameData.spotLightCol = light.colour;
-		perFrameData.spotLightDir = light.dir;
-		perFrameData.spotLightPos = light.pos;
-		perFrameData.spotLightTan = light.tangle;
-		perFrameData.spotLightFalloff = light.falloff;
-		perFrameData.world2Light = m_SpotLightShadows[index].m_World2LightProj;
-
-		m_PSPerFrameBuff.WriteData(perFrameData);
-
-		m_Ctx.psTextures.SetTexture(E_TS_SHADOWMAP, m_SpotLightShadows[index].GetSRV());
-		break;
-	}
-	case EShadingLayer::POINTLIGHT:
-	{
-		auto const& light = scene.m_PointLights[index];
-		PFPSPointLight perFrameData;
-		Zero(perFrameData);
-		perFrameData.pointLightPos = light.pos;
-		perFrameData.pointLightCol = light.colour;
-		perFrameData.pointLightRad = light.radius;
-		perFrameData.pointLightFalloff = light.falloff;
-		perFrameData.world2Light = m_PointLightShadows[index].m_World2Light;
-		m_PSPerFrameBuff.WriteData(perFrameData);
-
-		m_Ctx.psTextures.SetTexture(E_TS_SHADOWMAP, m_PointLightShadows[index].GetSRV());
-		break;
-	}
-	default:
-		break;
-	}
-	ForEachMesh([&] (MeshPart const& mesh, Transform const& trans)
-	{
-		if (translucent != m_Scene->GetMaterial(mesh.material).translucent)
-		{
-			return;
-		}
-		m_VSPerInstanceBuff.WriteData(m_PIVS[&mesh]);
-
-		DrawMesh(mesh, layer);
-	});
-}
-
-void DX11Renderer::DrawBG()
-{
-	DrawCubemap(m_BG->GetSRV());
-}
 
 void DX11Renderer::DrawCubemap(ID3D11ShaderResourceView* srv, bool depth)
 {
@@ -730,10 +535,6 @@ void DX11Renderer::DrawCubemap(ID3D11ShaderResourceView* srv, bool depth)
 	//WriteCBuffer(m_VSPerFrameBuff)
 
 	pContext->PSSetShaderResources(0, 1, &srv);
-	if (false && m_PointLightShadows.size() > 0 && m_PointLightShadows[0])
-	{
-		pContext->PSSetShaderResources(0, 1, &srv);
-	}
 
 	pContext->Draw(3,0);
 }
@@ -1156,6 +957,10 @@ DX11Material* DX11Renderer::GetDefaultMaterial(int matType)
 
 IDeviceTexture::Ref DX11Renderer::CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData)
 {
+	if (initialData.Tex && initialData.Format == ECubemapDataFormat::FoldUp)
+	{
+		return std::make_shared<DX11Cubemap>(DX11Cubemap::FoldUp(m_Ctx, initialData.Tex));
+	}
 	return std::make_shared<DX11Cubemap>(m_Ctx, desc);
 }
 

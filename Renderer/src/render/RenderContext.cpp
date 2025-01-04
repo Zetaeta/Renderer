@@ -25,6 +25,13 @@ RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, ID
 	mTarget = target;
 	mDeviceCtx = DeviceCtx;
 	mDevice = mDeviceCtx->Device;
+
+	TextureRef bgTex = Texture::LoadFrom("content/canyon2.jpg");
+	CubemapData cubeData;
+	cubeData.Format = ECubemapDataFormat::FoldUp;
+	cubeData.Tex = bgTex;
+	mBGCube = mDevice->CreateTextureCube({}, cubeData);
+
 	SetupRenderTarget();
 	SetupPasses();
 }
@@ -91,7 +98,7 @@ void RenderContext::SetupRenderTarget()
 	mPPPasses.clear();
 	mPasses.emplace_back(std::make_unique<ShadowmapsPass>(this));
 	mPasses.emplace_back(std::make_unique<ForwardRenderPass>(this, "ForwardRender", mCamera, mMainRT, mMainDS));
-	mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::BACK, "Background", static_cast<dx11::DX11Renderer*>(mDeviceCtx)->m_BG.get()));
+	mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::BACK, "Background", mBGCube.get()));
 
 	DeviceTextureDesc gbAlbedoDesc = mTarget->Desc;
 	gbAlbedoDesc.DebugName = "GBuffer";
@@ -450,7 +457,7 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 			u32 index = 0;
 			if (usesPerFrame)
 			{
-				cbs[index++] = &static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerFramePSCB();
+				cbs[index++] = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerFrame);
 			}
 			if (usesPerInstance)
 			{
@@ -482,7 +489,7 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 	PIVS.model2ShadeDual = transpose(inverse(PIVS.model2ShadeSpace));
 	PIVS.fullTransform = viewMatrix * PIVS.model2ShadeSpace;
 
-	static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerInstanceVSCB().WriteData(PIVS);
+	DeviceCtx()->GetConstantBuffer(ECBFrequency::VS_PerInstance)->WriteData(PIVS);
 	if (matArch)
 	{
 		auto const& perInstInfo = matArch->GetCBData(ECBFrequency::VS_PerInstance);
@@ -492,11 +499,11 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 		u32 index = 0;
 		if (usesPerInstance)
 		{
-			cbs[index++] = &static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerInstanceVSCB();
+			cbs[index++] = DeviceCtx()->GetConstantBuffer(ECBFrequency::VS_PerInstance);
 		}
 		if (usesPerFrame)
 		{
-			cbs[index++] = &static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerFrameVSCB();
+			cbs[index++] = DeviceCtx()->GetConstantBuffer(ECBFrequency::VS_PerFrame);
 		}
 		DeviceCtx()->SetConstantBuffers(EShaderType::Vertex, cbs);
 	}

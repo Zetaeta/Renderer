@@ -11,7 +11,7 @@ void SetupShadingLayer(RenderContext const* renderContext, EShadingLayer layer, 
 {
 	IRenderDeviceCtx* deviceCtx = renderContext->DeviceCtx();
 	Scene const& scene = renderContext->GetScene();
-	auto& PSPF = *deviceCtx->GetConstantBuffer(ECBFrequency::PS_PerFrame); //static_cast<dx11::DX11Renderer*>(DeviceCtx())->GetPerFramePSCB();
+	auto& PSPF = *deviceCtx->GetConstantBuffer(ECBFrequency::PS_PerFrame);
 
 	if (layer == EShadingLayer::BASE)
 	{
