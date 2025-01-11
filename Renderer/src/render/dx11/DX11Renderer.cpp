@@ -22,6 +22,8 @@
 #include "render/ForwardRenderPass.h"
 #include "render/ShadingCommon.h"
 #include "render/dxcommon/DXGIUtils.h"
+#include "../../scene/StaticMeshComponent.h"
+#include "render/MaterialManager.h"
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -213,6 +215,7 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 	}
 	mFrameTimer = CreateTimer(L"Frame");
 	pContext->QueryInterface<ID3DUserDefinedAnnotation>(&mUserAnnotation);
+//	mCurrVertexLayoutHdl = GetVertAttHdl<Vertex>();
 }
 
 DX11Renderer::~DX11Renderer()
@@ -649,6 +652,7 @@ void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useM
 void DX11Renderer::DrawMesh(IDeviceMesh* mesh)
 {
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	UpdateInputLayout();
 
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 	pContext->PSSetSamplers(0, 2, samplers );
@@ -1123,7 +1127,7 @@ void DX11Renderer::SetVertexShader(VertexShader const* shader)
 	pContext->VSSetShader(dx11Shader ? dx11Shader->GetShader() : nullptr, nullptr, 0);
 	if (mCurrVertexLayoutHdl >= 0)
 	{
-		UpdateInputLayout();
+//		UpdateInputLayout();
 	}
 }
 
@@ -1157,7 +1161,7 @@ void DX11Renderer::SetVertexLayout(VertAttDescHandle attDescHandle)
 	mCurrVertexLayout = &VertexAttributeDesc::GetRegistry().Get(attDescHandle);
 	if (mCurrVertexShader)
 	{
-		UpdateInputLayout();
+//		UpdateInputLayout();
 	}
 }
 
@@ -1603,9 +1607,9 @@ void GetCBInfo(ID3DBlob* shaderCode, DX11MaterialType& matType, ECBFrequency per
 }
 
 
-DEFINE_MATERIAL_SHADER(TexturedMat, "TexVertexShader", "main", "TexPixelShader", "main");
-DEFINE_MATERIAL_SHADER(PlainMat, "PlainVertexShader", "main", "PlainPixelShader", "main");
-DEFINE_MATERIAL_SHADER(PointShadow, "PointShadow_VS", "main", "PointShadow_PS", "main");
+DEFINE_MATERIAL_SHADER(TexturedMat, "TexPixelShader", "main", "TexVertexShader", "main", VA_Position | VA_Normal | VA_Tangent | VA_TexCoord);
+DEFINE_MATERIAL_SHADER(PlainMat, "PlainPixelShader", "main", "PlainVertexShader", "main", VA_Position | VA_Normal | VA_Tangent | VA_TexCoord);
+DEFINE_MATERIAL_SHADER(PointShadow, "PointShadow_PS", "main", "PointShadow_VS", "main", VA_Position | VA_Normal | VA_Tangent | VA_TexCoord);
 
 void DX11Renderer::LoadShaders(bool reload)
 {

@@ -14,8 +14,18 @@ void DX11MaterialType::Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatT
 
 void DX11MaterialType::Bind(DX11Ctx& ctx, EShadingLayer layer, EMatType matType)
 {
-	ctx.pContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
-	ctx.pContext->IASetInputLayout(m_InputLayout.Get());
+	if (mVertexShader == nullptr && Desc.mVSRegistryId)
+	{
+		OwningPtr<IShaderReflector> reflector;
+		mVertexShader = Desc.GetVertexShader(ctx.mRCtx->GetShaderManager(), &reflector);
+		ctx.m_Renderer->SetVertexShader(mVertexShader);
+		ctx.m_Renderer->SetVertexLayout(GetVertAttHdl<Vertex>());
+	}
+//	else
+	{
+		ctx.pContext->VSSetShader(m_VertexShader.Get(), nullptr, 0);
+		ctx.pContext->IASetInputLayout(m_InputLayout.Get());
+	}
 
 	auto& pixelShader = PixelShaders[layer >= EShadingLayer::NONE ? EShadingLayer::BASE : layer];
 	if (pixelShader == nullptr && Desc.mPSRegistryId != 0)

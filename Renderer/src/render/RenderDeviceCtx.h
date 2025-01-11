@@ -10,6 +10,7 @@
 
 
 struct MeshPart;
+class GPUSyncPoint;
 namespace rnd { class IConstantBuffer; }
 namespace rnd { class IRenderDevice; }
 
@@ -139,6 +140,7 @@ public:
 	virtual void SetUAVs(EShaderType shader, Span<UnorderedAccessView const> uavs, u32 startIdx = 0) = 0;
 	virtual void UnbindUAVs(EShaderType shader, u32 clearNum, u32 startIdx = 0) = 0;
 	virtual void SetSamplers(EShaderType shader, Span<SamplerHandle const> samplers, u32 startSlot = 0) = 0;
+	virtual void Wait(OwningPtr<GPUSyncPoint>&& syncPoint) = 0;
 
 #if PROFILING
 	virtual GPUTimer* CreateTimer(const wchar_t* Name) = 0;

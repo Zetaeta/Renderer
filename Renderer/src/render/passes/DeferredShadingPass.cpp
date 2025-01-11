@@ -35,7 +35,7 @@ DeferredShadingPass::DeferredShadingPass(RenderContext* rCtx, Camera::Ref camera
 	{
 		PostProcessVS::Permutation perm;
 		perm.Set<PostProcessVS::UseUVs>(true);
-		mVertexShader = rCtx->GetShaderManager().GetCompiledShader<PostProcessVS>(perm);
+		mVertexShader = rCtx->GetShader<PostProcessVS>(perm);
 	}
 
 	for (u32 i = 0; i < Denum(EShadingLayer::SHADING_COUNT); ++i)
@@ -59,7 +59,7 @@ DeferredShadingPass::DeferredShadingPass(RenderContext* rCtx, Camera::Ref camera
 		default:
 			break;
 		}
-		mPixelShader[i] = rCtx->GetShaderManager().GetCompiledShader<DeferredShadingPS>(perm);
+		mPixelShader[i] = rCtx->GetShader<DeferredShadingPS>(perm);
 	}
 }
 

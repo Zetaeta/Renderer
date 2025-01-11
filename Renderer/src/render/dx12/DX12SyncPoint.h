@@ -22,6 +22,14 @@ public:
 	DX12SyncPoint(DX12SyncData const& data, u32 handle)
 	:DX12SyncData(data), mHandle(handle) { }
 
+	RCOPY_PROTECT(DX12SyncPoint);
+	RMOVE_DEFAULT(DX12SyncPoint);
+
+	~DX12SyncPoint()
+	{
+		Release();
+	}
+
 	void GPUSignal(ID3D12CommandQueue* queue)
 	{
 		queue->Signal(Fence.Get(), Value);
@@ -49,9 +57,9 @@ public:
 		return evt;
 	}
 
-	void Release() const;
+	void Release();
 
-	bool Wait(u32 forMS = INFINITE, bool thenRelease = true) const
+	bool Wait(u32 forMS = INFINITE, bool thenRelease = true)
 	{
 		if (IsPassed())
 		{

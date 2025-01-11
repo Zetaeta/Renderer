@@ -31,7 +31,7 @@ public:
 	DeviceVertAttsRef VertexAttributes;
 
 	IDeviceMesh(DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
-		: VertexAttributes(vertAttrs) {}
+		: VertexAttributes(vertAttrs), VertexCount(vertCount), Topology(topology) {}
 
 
 	DeviceVertAttsArg GetVertexAttributes()

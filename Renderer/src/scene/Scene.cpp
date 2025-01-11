@@ -68,6 +68,11 @@ void Scene::ForAllChildren(std::function<void(BaseSerialized*)> callback, bool r
 	}
 }
 
+Scene::Scene(AssetManager* assMan) : m_AssetManager(assMan), mDataInterface(std::make_unique<SceneDataInterface>())
+{
+
+}
+
 Name Scene::MakeName(String base)
 {
 	if (!IsObjNameTaken(base))

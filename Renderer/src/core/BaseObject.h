@@ -20,3 +20,29 @@ public:
 
 };
 
+//template<typename To, typename From>
+//To* Cast(From* from)
+//{
+//	if (from->IsA<To>())
+//	{
+//		return static_cast<To>(from);
+//	}
+//	else
+//	{
+//		return nullptr;
+//	}
+//}
+//
+//template<typename To, typename From>
+//To const* Cast(From const* from)
+//{
+//	if (from->IsA<To>())
+//	{
+//		return static_cast<To>(from);
+//	}
+//	else
+//	{
+//		return nullptr;
+//	}
+//}
+

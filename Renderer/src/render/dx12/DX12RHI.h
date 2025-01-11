@@ -42,6 +42,15 @@ struct DX12DirectMesh : public IDeviceMesh
 	D3D12_VERTEX_BUFFER_VIEW view;
 };
 
+struct DX12IndexedMesh : public IDeviceIndexedMesh
+{
+	void OnFullyReleased() override;
+	ComPtr<ID3D12Resource> VertBuff;
+	D3D12_VERTEX_BUFFER_VIEW VertBuffView;
+	ComPtr<ID3D12Resource> IndBuff;
+	D3D12_INDEX_BUFFER_VIEW IndBuffView;
+};
+
 class DX12RHI : public wnd::Window, public IRenderDevice
 {
 public:
@@ -110,7 +119,8 @@ public:
 
 	virtual IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData = CubemapData{}) override { return nullptr;}
 	virtual IDeviceTexture::Ref CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData = nullptr) override;
-	virtual DeviceMeshRef		CreateDirectMesh(VertexAttributeDesc::Handle vertAtts, u32 numVerts, u32 vertSize, void const* data) override;
+	virtual DeviceMeshRef		CreateDirectMesh(EPrimitiveTopology topology, VertexBufferData data, BatchedUploadHandle uploadHandle) override;
+	RefPtr<IDeviceIndexedMesh> CreateIndexedMesh(EPrimitiveTopology topology, VertexBufferData vertexBuffer, Span<u16> indexBuffer, BatchedUploadHandle uploadHandle) override;
 
 	virtual SamplerHandle GetSampler(SamplerDesc const& desc) { return {0}; }
 
@@ -152,6 +162,7 @@ public:
 	ID3D12PipelineState* GetPSO(GraphicsPSODesc const& PSODesc);
 
 	void FreeDirectMesh(DX12DirectMesh* mesh);
+	void FreeIndexedMesh(DX12IndexedMesh* mesh);
 
 private:
 	void WaitFence(u64 value);
@@ -167,7 +178,10 @@ private:
 	void ResizeSwapChain();
 	void GetSwapChainBuffers();
 
+	ComPtr<ID3D12Resource> CreateVertexBuffer(VertexBufferData data, ID3D12GraphicsCommandList_* uploadCmdList);
+
 	GrowingImmobilePool<DX12DirectMesh, 1024, true> mMeshes;
+	GrowingImmobilePool<DX12IndexedMesh, 2048, true> mIndexedMeshes;
 	ShaderManager mShaderMgr;
 	DX12Uploader mUploader;
 	DX12CommandQueues mQueues;

@@ -15,6 +15,7 @@
 #include "passes/DeferredShadingPass.h"
 #include "passes/SSAOPass.h"
 #include "passes/SsrPass.h"
+#include "scene/StaticMeshComponent.h"
 
 namespace rnd
 {

@@ -20,8 +20,8 @@ public:
 	~ShaderManager();
 
 	template <typename ShaderType>
-	ShaderType const* GetCompiledShader(ShaderTypeId id = ShaderType::sRegistryId,
-		ShaderType::Permutation const& permutation = {}, OwningPtr<IShaderReflector>* outReflector= nullptr)
+	ShaderType const* GetCompiledShader(ShaderTypeId id,
+		ShaderType::Permutation const& permutation, VertexAttributeMask inputSig, OwningPtr<IShaderReflector>* outReflector = nullptr)
 	{
 		ShaderInstanceId instanceId{ id, permutation.GetUniqueId() };
 		if (auto it = mCompiledShaders.find(instanceId); it != mCompiledShaders.end())
@@ -36,7 +36,6 @@ public:
 		ShaderType* shader = new ShaderType;
 		if constexpr (ShaderType::Type == EShaderType::Vertex)
 		{
-			auto inputSig = ShaderType::GetInputSignature(permutation);
 			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, inputSig, outReflector);
 			shader->InputSigInst = inputSig;
 		}
@@ -47,11 +46,26 @@ public:
 		shader->DeviceShader = std::move(deviceShader);
 		mCompiledShaders[instanceId] = shader;
 		auto& compileInfo = (mCompileInfo[instanceId] = {std::move(env), ShaderType::Type, {}});
+		return shader;
+	}
+
+	template <typename ShaderType>
+	ShaderType const* GetCompiledShader(ShaderTypeId id = ShaderType::sRegistryId,
+		ShaderType::Permutation const& permutation = {}, OwningPtr<IShaderReflector>* outReflector= nullptr)
+	{
+		VertexAttributeMask inputSig{};
 		if constexpr (ShaderType::Type == EShaderType::Vertex)
 		{
-			compileInfo.InputSignature = ShaderType::GetInputSignature(permutation);
+			inputSig = ShaderType::GetInputSignature(permutation);
 		}
-		return shader;
+		return GetCompiledShader<ShaderType>(id, permutation, inputSig, outReflector);
+	}
+
+	template <typename ShaderType>
+	ShaderType const* GetCompiledVertexShader(ShaderTypeId id,
+		ShaderType::Permutation const& permutation, VertexAttributeMask inputSig, OwningPtr<IShaderReflector>* outReflector= nullptr)
+	{
+		return GetCompiledShader<ShaderType>(id, permutation, inputSig, outReflector);
 	}
 
 	template<typename ShaderType>

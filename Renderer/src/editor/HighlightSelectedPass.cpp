@@ -5,6 +5,7 @@
 #include <render/RenderContext.h>
 #include <render/dx11/DX11Renderer.h>
 #include "render/ShadingCommon.h"
+#include "scene/StaticMeshComponent.h"
 
 namespace rnd
 {

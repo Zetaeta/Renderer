@@ -9,7 +9,7 @@ namespace rnd
  PostProcessPass::PostProcessPass(RenderContext* rCtx, PixelShader const* shader, RGRenderTargetRef dest, RGShaderResources&& resources, String&& name)
 	: RenderPass(rCtx, std::move(name)), mShader(shader), mResources(std::move(resources)), mRenderTarget(dest)
 {
-	 mVertexShader = rCtx->GetShaderManager().GetCompiledShader<PostProcessVS>();
+	 mVertexShader = rCtx->GetShader<PostProcessVS>();
  }
 
 void PostProcessPass::Execute(RenderContext& renderCtx)

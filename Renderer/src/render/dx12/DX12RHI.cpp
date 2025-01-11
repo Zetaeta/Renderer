@@ -330,27 +330,66 @@ void DX12RHI::GetSwapChainBuffers()
 	}
 }
 
-DeviceMeshRef DX12RHI::CreateDirectMesh(VertexAttributeDesc::Handle vertAtts, u32 numVerts, u32 vertSize, void const* data)
+ComPtr<ID3D12Resource> DX12RHI::CreateVertexBuffer(VertexBufferData data, ID3D12GraphicsCommandList_* uploadCmdList)
 {
+
 	constexpr u32 VertexBufferAlignment = 4;
-	u32 size = vertSize * numVerts;
+	u32 size = NumCast<u32>(data.VertSize * data.NumVerts);
 	auto desc = CD3DX12_RESOURCE_DESC::Buffer(size, D3D12_RESOURCE_FLAG_NONE, VertexBufferAlignment);
-	auto finalLocation = GetAllocator(EResourceType::VertexBuffer, vertSize * numVerts)->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+	auto finalLocation = GetAllocator(EResourceType::VertexBuffer, data.VertSize * data.NumVerts)->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
 	auto uploadLoc = mUploadBuffer->Reserve(size, VertexBufferAlignment);
-	memcpy(uploadLoc.WriteAddress, data, size);
+	memcpy(uploadLoc.WriteAddress, data.Data, size);
+	uploadCmdList->CopyBufferRegion(finalLocation.Get(), 0, mUploadBuffer->GetCurrentBuffer(), uploadLoc.Offset, size);
+	return finalLocation;
+}
+
+DeviceMeshRef DX12RHI::CreateDirectMesh(EPrimitiveTopology topology, VertexBufferData data, BatchedUploadHandle uploadHandle)
+{
+	u32 size = NumCast<u32>(data.VertSize * data.NumVerts);
 	auto uploadCtx = mUploader.StartUpload();
-	uploadCtx.CmdList->CopyBufferRegion(finalLocation.Get(), 0, mUploadBuffer->GetCurrentBuffer(), uploadLoc.Offset, size);
-	uploadCtx.FinishUploadSynchronous();
 	auto* result = mMeshes.Acquire();
-	result->mResource = finalLocation;
-	result->view.BufferLocation = finalLocation->GetGPUVirtualAddress();
+	result->mResource = CreateVertexBuffer(data, uploadCtx.CmdList.Get());
+	result->VertexAttributes = data.VertAtts;
+	result->Topology = topology;
+	result->VertexCount = data.NumVerts;
+	result->view.BufferLocation = result->mResource->GetGPUVirtualAddress();
+	
 	result->view.SizeInBytes = size;
-	result->view.StrideInBytes = vertSize;
+	result->view.StrideInBytes = data.VertSize;
+	uploadCtx.FinishUploadSynchronous();
 //	mDevice->create
 //	mUploader.
 //	UpdateSubresources()
 	return result;
 }
+
+RefPtr<IDeviceIndexedMesh> DX12RHI::CreateIndexedMesh(EPrimitiveTopology topology, VertexBufferData vertexBuffer, Span<u16> indexBuffer, BatchedUploadHandle uploadHandle)
+{
+	u32 vbSize = NumCast<u32>(vertexBuffer.VertSize * vertexBuffer.VertAtts);
+	auto uploadCtx = mUploader.StartUpload();
+	auto* result = mIndexedMeshes.Acquire();
+	result->VertBuff = CreateVertexBuffer(vertexBuffer, uploadCtx.CmdList.Get());
+	result->VertBuffView.BufferLocation = result->VertBuff->GetGPUVirtualAddress();
+	
+	result->VertBuffView.SizeInBytes = vbSize;
+	result->VertBuffView.StrideInBytes = vertexBuffer.VertSize;
+
+	constexpr u32 IndexBufferAlignment = 4;
+	u32 ibSize = NumCast<u32>(indexBuffer.size() * sizeof(u16));
+	auto desc = CD3DX12_RESOURCE_DESC::Buffer(ibSize, D3D12_RESOURCE_FLAG_NONE, IndexBufferAlignment);
+	auto ibResource = GetAllocator(EResourceType::VertexBuffer, ibSize)->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+	auto uploadLoc = mUploadBuffer->Reserve(ibSize, IndexBufferAlignment);
+	memcpy(uploadLoc.WriteAddress, indexBuffer.data(), indexBuffer.size());;
+	uploadCtx.CmdList->CopyBufferRegion(ibResource.Get(), 0, mUploadBuffer->GetCurrentBuffer(), uploadLoc.Offset, ibSize);
+	result->IndBuff = ibResource;
+	result->IndBuffView.BufferLocation = ibResource->GetGPUVirtualAddress();
+	result->IndBuffView.Format = DXGI_FORMAT_R16_UINT;
+	result->IndBuffView.SizeInBytes = ibSize;
+
+	uploadCtx.FinishUploadSynchronous();
+	return result;
+}
+
 
 bool DX12RHI::ShouldDirectUpload(EResourceType resourceType, u64 size)
 {
@@ -601,6 +640,13 @@ void DX12RHI::FreeDirectMesh(DX12DirectMesh* mesh)
 	mMeshes.Release(std::move(*mesh));
 }
 
+void DX12RHI::FreeIndexedMesh(DX12IndexedMesh* mesh)
+{
+	DeferredRelease(std::move(mesh->VertBuff));
+	DeferredRelease(std::move(mesh->IndBuff));
+	mIndexedMeshes.Release(std::move(*mesh));
+}
+
 ID3D12Device_* GetD3D12Device()
 {
 	return sRHI->Device();
@@ -614,6 +660,11 @@ DX12RHI& GetRHI()
 void DX12DirectMesh::OnFullyReleased()
 {
 	GetRHI().FreeDirectMesh(this);
+}
+
+void DX12IndexedMesh::OnFullyReleased()
+{
+
 }
 
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "scene/SceneComponent.h"
 #include "scene/Scene.h"
+#include "StaticMeshComponent.h"
 
 template<typename TLight>
 class LightComponent : public SceneComponent

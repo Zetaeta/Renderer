@@ -23,6 +23,7 @@ struct DX11MaterialType : public MaterialArchetype
 
 	ComPtr<ID3D11PixelShader>  m_PixelShader[Denum(EShadingLayer::Count)];
 	ComPtr<ID3D11VertexShader> m_VertexShader;
+	RefPtr<VertexShader const> mVertexShader;
 	ComPtr<ID3D11InputLayout> m_InputLayout;
 	std::unique_ptr<class RenderMaterial> m_Default;
 	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType) override;

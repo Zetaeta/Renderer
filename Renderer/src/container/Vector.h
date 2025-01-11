@@ -6,6 +6,8 @@
 template<typename T>
 using Vector = std::vector<T>;
 
+using BitVector = std::vector<bool>;
+
 template<template<typename T> typename Alloc = std::allocator>
 struct StdAllocator
 {

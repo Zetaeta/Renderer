@@ -97,6 +97,8 @@ public:
 	~AssetManager();
 	using Meshes = std::vector<Mesh>;
 	
+	static AssetManager* Get();
+
 	friend Scene;
 	Asset::Ref LoadAssetUntyped(AssetPath path);
 

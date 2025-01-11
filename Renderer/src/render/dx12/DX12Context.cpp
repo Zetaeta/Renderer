@@ -171,4 +171,14 @@ void DX12Context::SetViewport(float width, float height, float TopLeftX, float T
 	mCmdList->RSSetScissorRects(1, &scissor);
 }
 
+void DX12Context::Wait(OwningPtr<GPUSyncPoint>&& syncPoint)
+{
+	if (syncPoint == nullptr)
+	{
+		return;
+	}
+
+//	static_cast<DX12SyncPoint*>(&syncPoint)->GPUWait(m)
+}
+
 }

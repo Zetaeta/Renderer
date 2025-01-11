@@ -2,6 +2,7 @@
 #include "dx11/DX11Ctx.h"
 #include "dx11/DX11Renderer.h"
 #include <core/Matrix.h>
+#include "scene/StaticMeshComponent.h"
 
 namespace rnd
 {

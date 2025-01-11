@@ -466,6 +466,10 @@
     <ClInclude Include="src\render\shaders\ShaderReflection.h" />
     <ClInclude Include="src\render\RenderTextureManager.h" />
     <ClInclude Include="src\render\RenderMaterial.h" />
+    <ClInclude Include="src\common\SceneDataInterface.h" />
+    <ClInclude Include="src\scene\StaticMeshComponent.h" />
+    <ClInclude Include="src\render\RenderScene.h" />
+    <ClInclude Include="src\render\GPUSyncPoint.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -722,6 +726,9 @@
     <ClCompile Include="src\render\dxcommon\DXGIUtils.cpp" />
     <ClCompile Include="src\render\RenderTextureManager.cpp" />
     <ClCompile Include="src\render\RenderMaterial.cpp" />
+    <ClCompile Include="src\common\SceneDataInterface.cpp" />
+    <ClCompile Include="src\scene\StaticMeshComponent.cpp" />
+    <ClCompile Include="src\render\RenderScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

@@ -22,4 +22,9 @@ public:
 	using Permutation = PermutationDomain<Opaque, Masked, Translucent, FwdPointLight, FwdDirLight, FwdSpotLight, FwdBaseLayer, GBuffer>;
 };
 
+class MaterialVertexShader : public VertexShader
+{
+
+};
+
 }

@@ -32,6 +32,7 @@ public:
 			mRegistry.emplace_back(std::move(vertAtts));
 			return mRegistry.size() - 1;
 		}
+		SmallMap<Name, VertexAttributeMask> SemanticMap;
 
 		VertexAttributeDesc const& Get(Handle handle)
 		{
@@ -41,9 +42,7 @@ public:
 		std::vector<VertexAttributeDesc> mRegistry;
 	};
 
-	static SmallMap<Name, VertexAttributeMask> SemanticMap;
-	static void InitSemanticMap();
-
+	static SmallMap<Name, VertexAttributeMask> const& GetSemanticMap() { return GetRegistry().SemanticMap; }
 
 	static Registry& GetRegistry()
 	{
@@ -67,9 +66,21 @@ struct TVertexAttributes
 {
 	static VertexAttributeDesc::Handle Handle;// = VertexAttributeDesc::GetRegistry().Register(CreateVertexAttributes(T{}));
 };
+#define DECLARE_VERTEX_ATTRIBUTE_DESC(Type)\
+	template<>\
+	struct ::rnd::TVertexAttributes<Type>\
+	{\
+		static ::rnd::VertexAttributeDesc::Handle Handle;\
+	};
+
+template <typename T>
+VertexAttributeDesc::Handle GetVertAttHdl(const T& val = {})
+{
+	return TVertexAttributes<T>::Handle;
+}
 
 #define CREATE_VERTEX_ATTRIBUTE_DESC(Type, Body)\
-	VertexAttributeDesc::Handle TVertexAttributes<Type>::Handle = VertexAttributeDesc::GetRegistry().Register(([] Body)());
+	rnd::VertexAttributeDesc::Handle rnd::TVertexAttributes<Type>::Handle = rnd::VertexAttributeDesc::GetRegistry().Register(([] Body)());
 
 //class IDeviceVertAtts
 //{

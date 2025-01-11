@@ -293,6 +293,10 @@ Scenelet::Ref AssetManager::AddScenelet(aiScene const* aiscene, AssetPath const&
 			job.m_Normal = GetAndUpdateTexture(aimat, aiTextureType_NORMALS, isImport);
 			job.m_Emissive = GetAndUpdateTexture(aimat, aiTextureType_EMISSIVE, isImport);
 			job.m_Roughness = GetAndUpdateTexture(aimat, aiTextureType_DIFFUSE_ROUGHNESS, isImport);
+			if (!job.m_Albedo.empty())
+			{
+				material->IsTextured = true;
+			}
 			if (!job.m_Albedo.empty() && material->DebugName.size() < 4)
 			{
 				material->DebugName = std::filesystem::path(job.m_Albedo).filename().string();
@@ -414,8 +418,12 @@ CompoundMesh::Ref AssetManager::AddMesh(CompoundMesh&& mesh)
 	//return CompoundMesh::Ref{ static_cast<s32>(m_CompoundMeshes.size() - 1) };
 }
 
+static AssetManager* sAssetManager = nullptr;
+
  AssetManager::AssetManager()
 {
+	ZE_ASSERT(sAssetManager == nullptr);
+	sAssetManager = this;
 	RefreshMeshList();
 }
 
@@ -425,6 +433,12 @@ AssetManager::~AssetManager()
 	{
 		Finish();
 	}
+	sAssetManager = nullptr;
+}
+
+AssetManager* AssetManager::Get()
+{
+	return sAssetManager;
 }
 
 //Asset::Ref AssetManager::LoadAssetUntyped(AssetPath path)

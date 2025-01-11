@@ -40,9 +40,13 @@ void DX12SyncPointPool::Destroy()
 	sSyncPtPool = {};
 }
 
-void DX12SyncPoint::Release() const
+void DX12SyncPoint::Release()
 {
-	DX12SyncPointPool::Get()->Release(*this);
+	if (Fence)
+	{
+		DX12SyncPointPool::Get()->Release(*this);
+		Fence = nullptr;
+	}
 }
 
 }

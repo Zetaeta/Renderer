@@ -21,6 +21,9 @@ public:
 
 struct DX11IndexedMesh : public IDeviceIndexedMesh
 {
+	DX11IndexedMesh(DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, u32 idxCount = 0,
+		EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
+	:IDeviceIndexedMesh(vertAttrs, vertCount, idxCount, topology) { }
 	ComPtr<ID3D11Buffer> vBuff;
 	ComPtr<ID3D11Buffer> iBuff;
 };
@@ -36,7 +39,8 @@ public:
 
 	void ProcessTextureCreations();
 
-	DeviceMeshRef CreateDirectMesh(VertexAttributeDesc::Handle vertAtts, u32 numVerts, u32 vertSize, void const* data) override;
+	DeviceMeshRef CreateDirectMesh(EPrimitiveTopology topology, VertexBufferData data, BatchedUploadHandle uploadHandle) override;
+	RefPtr<IDeviceIndexedMesh> CreateIndexedMesh(EPrimitiveTopology topology, VertexBufferData vertexBuffer, Span<u16> indexBuffer, BatchedUploadHandle uploadHandle);
 	ID3D11InputLayout* GetOrCreateInputLayout(VertexAttributeDesc::Handle vertAtts, VertexAttributeMask requiredAtts);
 
 	void CreateRenderTexture(Texture* texture) override;
@@ -72,6 +76,8 @@ protected:
 	SmallMap<VertAttDrawInfo, ComPtr<ID3D11InputLayout>> mInputLayouts;
 
 	DXGI_FORMAT GetFormatForType(TypeInfo const* type);
+
+	ComPtr<ID3D11Buffer> CreateVertexBuffer(VertexBufferData data);
 
 //	std::vector<ComPtr<ID3D11InputLayout>> mInputLayouts;
 

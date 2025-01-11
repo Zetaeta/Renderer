@@ -55,24 +55,51 @@ void DX11Device::ProcessTextureCreations()
 	mDestroyCommands.clear();
 }
 
-DeviceMeshRef DX11Device::CreateDirectMesh(VertexAttributeDesc::Handle vertAtts, u32 numVerts, u32 vertSize, void const* data)
+ComPtr<ID3D11Buffer> DX11Device::CreateVertexBuffer(VertexBufferData data)
 {
 	ComPtr<ID3D11Buffer> buffer;
 	D3D11_BUFFER_DESC bd = {};
 	Zero(bd);
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.ByteWidth = vertSize * numVerts;
-	bd.StructureByteStride = vertSize;
+	bd.ByteWidth = data.VertSize * data.NumVerts;
+	bd.StructureByteStride = data.VertSize;
 	D3D11_SUBRESOURCE_DATA sd;
 	Zero(sd);
-	sd.pSysMem = data;
+	sd.pSysMem = data.Data;
 
 	HR_ERR_CHECK(mDevice->CreateBuffer(&bd, &sd, &buffer));
+	return buffer;
+}
+
+DeviceMeshRef DX11Device::CreateDirectMesh(EPrimitiveTopology topology, VertexBufferData data, BatchedUploadHandle uploadHandle)
+{
+	
 	auto* mesh = new DX11DirectMesh; //TODO
-	mesh->vBuff = std::move(buffer);
-	mesh->VertexCount = numVerts;
-	mesh->VertexAttributes = vertAtts;
+	mesh->vBuff = CreateVertexBuffer(data);
+	mesh->VertexCount = data.NumVerts;
+	mesh->VertexAttributes = data.VertAtts;
+	return mesh;
+}
+
+RefPtr<IDeviceIndexedMesh> DX11Device::CreateIndexedMesh(EPrimitiveTopology topology, VertexBufferData vertexBuffer, Span<u16> indexBuffer, BatchedUploadHandle uploadHandle)
+{
+	auto* mesh = new DX11IndexedMesh(vertexBuffer.VertAtts, vertexBuffer.NumVerts, NumCast<u32>(indexBuffer.size()), topology);
+	mesh->vBuff = CreateVertexBuffer(vertexBuffer);
+
+	{
+		D3D11_BUFFER_DESC bd = {};
+		Zero(bd);
+		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bd.Usage = D3D11_USAGE_DEFAULT;
+		bd.ByteWidth = Sizeof(indexBuffer);
+		bd.StructureByteStride = sizeof(u16);
+		D3D11_SUBRESOURCE_DATA sd;
+		Zero(sd);
+		sd.pSysMem = indexBuffer.data();
+
+		HR_ERR_CHECK(mDevice->CreateBuffer(&bd, &sd, &mesh->iBuff));
+	}
 	return mesh;
 }
 
@@ -97,7 +124,7 @@ ID3D11InputLayout* DX11Device::GetOrCreateInputLayout(VertexAttributeDesc::Handl
 			DataLayoutEntry const& entry = vertAtts.Layout.Entries[i];
 			if ((mSemanticsToMask[entry.mName] & requiredAtts) == 0)
 			{
-				continue;
+//				continue;
 			}
 			++usedAtts;
 			D3D11_INPUT_ELEMENT_DESC& desc = inputElements.emplace_back();

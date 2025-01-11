@@ -14,8 +14,10 @@ namespace rnd
 {
 class RenderContext;
 class IRenderDeviceCtx;
+class IRenderDevice;
 class ShaderManager;
 class IShaderReflector;
+enum VertexAttributeMask : u64;
 }
 
 enum EMatType
@@ -56,6 +58,7 @@ enum class EShadingLayer : u8
 	Count
 };
 
+
 struct ShaderCBData
 {
 	rnd::DataLayout::Ref Layout{};
@@ -67,15 +70,17 @@ struct MaterialArchetypeDesc
 //	rnd::ShaderDesc mShaderDesc;
 	rnd::ShaderTypeId mVSRegistryId = 0;
 	rnd::ShaderTypeId mPSRegistryId = 0;
+	rnd::VertexAttributeMask mVertexMask {};
 	rnd::MaterialPixelShader const* GetShader(rnd::ShaderManager& shaderMgr, EShadingLayer layer, EMatType opacity, OwningPtr<rnd::IShaderReflector>* outReflector = nullptr) const;
+	rnd::MaterialVertexShader const* GetVertexShader(rnd::ShaderManager& shaderMgr, OwningPtr<rnd::IShaderReflector>* outReflector = nullptr) const;
 };
 
 MaterialArchetypeDesc CreateAndRegisterMatDesc(const char* name, const char* psFilename, const char* psEntryPoint,
-	const char* vsFilename, const char* vsEntryPoint);
+	const char* vsFilename, const char* vsEntryPoint, u64 vertexMask);
 
 #define DECLARE_MATERIAL_SHADER(name) extern MaterialArchetypeDesc name;
-#define DEFINE_MATERIAL_SHADER(Name, VSShaderFile, VSEntryPoint, PSShaderFile, PSEntryPoint)\
-	MaterialArchetypeDesc Name = CreateAndRegisterMatDesc(#Name, PSShaderFile, PSEntryPoint, VSShaderFile, VSEntryPoint);
+#define DEFINE_MATERIAL_SHADER(Name, ...)\
+	MaterialArchetypeDesc Name = CreateAndRegisterMatDesc(#Name, __VA_ARGS__);
 
 class MaterialArchetype : public RefCountedObject
 {
@@ -102,7 +107,7 @@ public:
 
 enum class EShadingLayer : u8;
 
-class IDeviceMaterial
+class IDeviceMaterial : public RefCountedObject
 {
 public:
 	IDeviceMaterial(RefPtr<MaterialArchetype> matType)
@@ -113,6 +118,8 @@ public:
 	const RefPtr<MaterialArchetype> Archetype;
 	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) = 0;
 };
+
+using MaterialID = int;
 
 struct Material
 {
@@ -130,6 +137,8 @@ struct Material
 	}
 
 	using Ref = std::shared_ptr<Material>;
+
+	constexpr static MaterialID DefaultMaterial = 0;
 
 	bool NeedsUpdate() const;
 	void MarkUpdated();
@@ -149,10 +158,11 @@ struct Material
 	int specularExp = -1;
 	float specularity = 1;
 	float diffuseness = 1;
-	bool translucent = false;
 	float mask = 1.f;
 	float roughness = 0.5;
 	float metalness = 0;
+	bool translucent = false;
+	bool IsTextured = false;
 
 	EMatType GetMatType() const
 	{
@@ -165,21 +175,5 @@ struct Material
 private:
 	std::atomic<bool> m_Updated = false;
 	std::mutex m_UpdateMutex;
-};
-
-using MaterialID = int;
-
-class MaterialManager
-{
-public:
-	MaterialManager(rnd::IRenderDeviceCtx* deviceCtx)
-		: mRenderer(deviceCtx)
-	{
-	}
-	IDeviceMaterial* GetDefaultMaterial(int matType);
-
-	//std::vector<OwningPtr<MaterialArchetype>> mMatTypes;
-	//std::vector<OwningPtr<IDeviceMaterial>> mMaterials;
-	rnd::IRenderDeviceCtx* mRenderer;
 };
 

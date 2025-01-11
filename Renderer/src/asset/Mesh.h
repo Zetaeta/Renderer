@@ -7,6 +7,7 @@
 #include "core/Transform.h"
 #include "core/Types.h"
 #include "Asset.h"
+#include "render/VertexAttributes.h"
 
 struct TVertex
 {
@@ -18,6 +19,7 @@ struct TVertex
 	vec2 uvs;
 };
 using Vertex = TVertex;
+DECLARE_VERTEX_ATTRIBUTE_DESC(Vertex);
 
 using IndexedTri = std::array<u16, 3>;
 

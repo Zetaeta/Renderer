@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SceneRenderPass.h"
+#include "MaterialManager.h"
 
 namespace rnd
 {

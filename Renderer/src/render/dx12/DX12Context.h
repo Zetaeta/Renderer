@@ -354,6 +354,8 @@ public:
 		}
 	}
 
+	void Wait(OwningPtr<GPUSyncPoint>&& syncPoint);
+
 	void SetGraphicsShader(EShaderType shaderType, Shader const* shader);
 
 	void DirtyPSO()

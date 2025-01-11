@@ -111,3 +111,18 @@ CompoundMesh::CompoundMesh(AssetPath const& path, MeshPart&& mesh)
 {
 	components.emplace_back(std::move(mesh));
 }
+
+namespace rnd
+{
+CREATE_VERTEX_ATTRIBUTE_DESC(Vertex, {
+	return VertexAttributeDesc(
+	{
+		DataLayoutEntry{ &GetTypeInfo<vec3>(), "Position", offsetof(Vertex, pos)},
+		DataLayoutEntry{ &GetTypeInfo<vec3>(), "Normal", offsetof(Vertex, normal)},
+		DataLayoutEntry{ &GetTypeInfo<vec3>(), "Tangent", offsetof(Vertex, tangent)},
+		DataLayoutEntry{ &GetTypeInfo<vec2>(), "TexCoord", offsetof(Vertex, uvs)}
+	});
+});
+
+
+}

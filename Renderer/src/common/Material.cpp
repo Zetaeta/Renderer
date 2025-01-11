@@ -29,11 +29,6 @@ void Material::OnPropertyUpdate()
 	translucent = colour.a < 1;
 }
 
-IDeviceMaterial* MaterialManager::GetDefaultMaterial(int matType)
-{
-	return static_cast<rnd::dx11::DX11Renderer*>(mRenderer)->GetDefaultMaterial(matType);
-}
-
 rnd::MaterialPixelShader const* MaterialArchetypeDesc::GetShader(rnd::ShaderManager& shaderMgr, EShadingLayer layer,
 	EMatType opacity, OwningPtr<rnd::IShaderReflector>* outReflector) const
 {
@@ -81,11 +76,17 @@ rnd::MaterialPixelShader const* MaterialArchetypeDesc::GetShader(rnd::ShaderMana
 	return shaderMgr.GetCompiledShader<rnd::MaterialPixelShader>(mPSRegistryId, perm, outReflector);
 }
 
+rnd::MaterialVertexShader const* MaterialArchetypeDesc::GetVertexShader(rnd::ShaderManager& shaderMgr, OwningPtr<rnd::IShaderReflector>* outReflector /*= nullptr*/) const
+{
+	rnd::MaterialVertexShader::Permutation perm;
+	return shaderMgr.GetCompiledVertexShader<rnd::MaterialVertexShader>(mVSRegistryId, perm, mVertexMask, outReflector);
+}
+
 MaterialArchetypeDesc CreateAndRegisterMatDesc(const char* name, const char* psFilename, const char* psEntryPoint,
-												const char* vsFilename, const char* vsEntryPoint)
+												const char* vsFilename, const char* vsEntryPoint, u64 vertexMask)
 {
 	using namespace rnd;
 	ShaderTypeId psType = ShaderRegistry::Get().RegisterShaderType<MaterialPixelShader>(name, psFilename, psEntryPoint);
-	ShaderTypeId vsType = ShaderRegistry::Get().RegisterShaderType<MaterialPixelShader>(name, vsFilename, vsEntryPoint);
-	return MaterialArchetypeDesc {vsType, psType};
+	ShaderTypeId vsType = ShaderRegistry::Get().RegisterShaderType<MaterialVertexShader>(name, vsFilename, vsEntryPoint);
+	return MaterialArchetypeDesc {vsType, psType, (VertexAttributeMask) vertexMask};
 }

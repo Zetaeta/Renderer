@@ -109,6 +109,8 @@ public:
 	void SetComputeShader(ComputeShader const* shader) override;
 	void Copy(DeviceResourceRef dst, DeviceResourceRef src) override;
 
+	void Wait(OwningPtr<GPUSyncPoint>&& syncPoint) override {}
+
 	#if PROFILING
 	GPUTimer* CreateTimer(const wchar_t* Name);
 	void StartTimer(GPUTimer* timer);

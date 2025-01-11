@@ -273,6 +273,12 @@ constexpr u32 Sizeof(T const& t)
 }
 
 template<typename T>
+constexpr u32 Sizeof(std::span<T> s)
+{
+	return static_cast<u32>(s.size() * sizeof(T));
+}
+
+template<typename T>
 constexpr u32 Sizeof(std::vector<T> const& v)
 {
 	return static_cast<u32>(v.size() * sizeof(T));

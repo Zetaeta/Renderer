@@ -13,6 +13,7 @@
 #include "Lights.h"
 #include "scene/SceneObject.h"
 #include "scene/SceneComponent.h"
+#include "common/SceneDataInterface.h"
 
 class StaticMeshComponent;
 
@@ -72,9 +73,7 @@ class DirLightComponent : SceneComponent
 class Scene : public BaseSerialized
 {
 	DECLARE_RTTI(Scene, BaseSerialized);
-	Scene(AssetManager* assMan)
-		: m_AssetManager(assMan)
-	{}
+	Scene(AssetManager* assMan);
 
 	Name MakeName(String base);
 
@@ -83,8 +82,8 @@ class Scene : public BaseSerialized
 	MeshInstanceRef AddMesh(MeshRef mesh, Transform trans = Transform{});
 
 	RCOPY_PROTECT(Scene);
+	RMOVE_DEFAULT(Scene);
 
-	Scene& operator=(Scene&& other) = default;
 
 	void InsertCompoundMesh(CompoundMesh::Ref cmesh);
 	void AddScenelet(Scenelet const& scenelet);
@@ -149,8 +148,12 @@ class Scene : public BaseSerialized
 	std::vector<Material::Ref>&	   Materials() const { return m_AssetManager->m_Materials; }
 	auto& CompoundMeshes() const { return m_AssetManager->m_CompoundMeshes; }
 	std::vector<MeshInstance>  m_MeshInstances;
+	OwningPtr<SceneDataInterface> mDataInterface;
 
-
+	SceneDataInterface& DataInterface()
+	{
+		return *mDataInterface;
+	}
 
 	MeshInstance* GetMeshInstance(MeshInstanceRef ref)
 	{

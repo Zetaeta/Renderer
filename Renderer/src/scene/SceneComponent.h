@@ -127,6 +127,13 @@ public:
 	void Initialize();
 	virtual void OnInitialize() {}
 
+	void Deinitialize()
+	{
+		OnDeinitialize();
+		m_Initialized = false;
+	}
+	virtual void OnDeinitialize() {}
+
 	ScreenObjectId GetScreenId() const { return mScreenId; }
 
 
@@ -195,59 +202,6 @@ DECLARE_CLASS_TYPEINFO(SceneComponent)
 //};
 //
 //DECLARE_CLASS_TYPEINFO(PrimitiveComponent);
-
-class StaticMeshComponent : public SceneComponent
-{
-	DECLARE_RTTI(StaticMeshComponent, SceneComponent);
-public:
-	StaticMeshComponent() {}
-
-	StaticMeshComponent(AssetPath const& path);
-	
-	template<typename TParent>
-	StaticMeshComponent(TParent* parent)
-		:SceneComponent(parent)//, m_MeshInst(-1)
-	{}
-	//StaticMeshComponent(SceneObject* parent, MeshInstanceRef minst, String const& name = "", Transform const& trans = Transform{})
-	//	: SceneComponent(parent, name, trans), m_MeshInst(minst)
-	//{}
-
-	//StaticMeshComponent(SceneComponent* parent, MeshInstanceRef minst, String const& name = "", Transform const& trans = Transform{})
-	//	: SceneComponent(parent, name, trans), m_MeshInst(minst)
-	//{}
-
-	enum class EType : u8
-	{
-		VISIBLE = 0,
-		GADGET = 1
-	};
-
-	void OnInitialize() override;
-
-	void SetMesh(CompoundMesh::Ref mesh);
-	void SetMesh(AssetPath const& path);
-
-	virtual void	OnUpdate(Scene& scene) override;
-
-	CompoundMesh* GetMesh() const { return m_MeshRef.get(); }
-
-	bool ImGuiControls() override;
-
-	void SetType(EType type)
-	{
-		m_Type = type;
-		MarkDirty();
-	}
-
-protected:
-	EType m_Type = EType::VISIBLE;
-//	MeshInstanceRef m_MeshInst = -1;
-	CompoundMesh::Ref m_MeshRef = CompoundMesh::INVALID_REF;
-	AssetPath m_Mesh;
-};
-DECLARE_CLASS_TYPEINFO(StaticMeshComponent)
-
-using PrimitiveComponent = StaticMeshComponent;
 
 //template<typename T>
 //struct TypeInfoAccessor

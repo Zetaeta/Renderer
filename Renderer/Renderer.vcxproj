@@ -145,6 +145,7 @@
   <ItemGroup>
     <ClInclude Include="src\3rd\stb_image.h" />
     <ClInclude Include="src\common\CommonEnums.h" />
+    <ClInclude Include="src\common\SceneDataInterface.h" />
     <ClInclude Include="src\container\EnumArray.h" />
     <ClInclude Include="src\container\MovableObjectPool.h" />
     <ClInclude Include="src\container\SmallMap.h" />
@@ -239,7 +240,9 @@
     <ClInclude Include="src\render\dxcommon\DXShaderCompiler.h" />
     <ClInclude Include="src\render\dxcommon\SharedD3D.h" />
     <ClInclude Include="src\render\ForwardRenderPass.h" />
+    <ClInclude Include="src\render\GPUSyncPoint.h" />
     <ClInclude Include="src\render\GPUTimer.h" />
+    <ClInclude Include="src\render\MaterialManager.h" />
     <ClInclude Include="src\render\OpaqueHandle.h" />
     <ClInclude Include="src\render\ImageRenderer.h" />
     <ClInclude Include="src\render\Memory.h" />
@@ -256,6 +259,7 @@
     <ClInclude Include="src\render\RenderMaterial.h" />
     <ClInclude Include="src\render\RenderPass.h" />
     <ClInclude Include="src\render\RenderResourceManager.h" />
+    <ClInclude Include="src\render\RendererScene.h" />
     <ClInclude Include="src\render\RenderScreenIds.h" />
     <ClInclude Include="src\render\RenderTextureManager.h" />
     <ClInclude Include="src\render\RndFwd.h" />
@@ -288,6 +292,7 @@
     <ClInclude Include="src\scene\AABB.h" />
     <ClInclude Include="src\scene\Camera.h" />
     <ClInclude Include="src\scene\ScreenObject.h" />
+    <ClInclude Include="src\scene\StaticMeshComponent.h" />
     <ClInclude Include="src\scene\UserCamera.h" />
     <ClInclude Include="src\scene\LightObject.h" />
     <ClInclude Include="src\scene\Lights.h" />
@@ -304,6 +309,7 @@
     </ClCompile>
     <ClCompile Include="src\asset\Asset.cpp" />
     <ClCompile Include="src\common\InputImgui.cpp" />
+    <ClCompile Include="src\common\SceneDataInterface.cpp" />
     <ClCompile Include="src\core\BaseSerialized.cpp" />
     <ClCompile Include="src\core\Logging.cpp" />
     <ClCompile Include="src\core\MovableContiguousBumpAllocator.cpp" />
@@ -422,6 +428,7 @@
     <ClCompile Include="src\render\dxcommon\DXGIUtils.cpp" />
     <ClCompile Include="src\render\dxcommon\DXShaderCompiler.cpp" />
     <ClCompile Include="src\render\ForwardRenderPass.cpp" />
+    <ClCompile Include="src\render\MaterialManager.cpp" />
     <ClCompile Include="src\render\passes\DeferredShadingPass.cpp" />
     <ClCompile Include="src\render\passes\GBufferPass.cpp" />
     <ClCompile Include="src\render\passes\PostProcessPass.cpp" />
@@ -433,6 +440,7 @@
     <ClCompile Include="src\render\RenderMaterial.cpp" />
     <ClCompile Include="src\render\RenderPass.cpp" />
     <ClCompile Include="src\render\RenderResourceManager.cpp" />
+    <ClCompile Include="src\render\RendererScene.cpp" />
     <ClCompile Include="src\render\RenderTextureManager.cpp" />
     <ClCompile Include="src\render\SceneRenderPass.cpp" />
     <ClCompile Include="src\render\RTRenderer.cpp">
@@ -500,6 +508,7 @@
     <ClCompile Include="src\render\WavyEffectPPPass.cpp" />
     <ClCompile Include="src\scene\Camera.cpp" />
     <ClCompile Include="src\scene\ScreenObject.cpp" />
+    <ClCompile Include="src\scene\StaticMeshComponent.cpp" />
     <ClCompile Include="src\scene\UserCamera.cpp">
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
