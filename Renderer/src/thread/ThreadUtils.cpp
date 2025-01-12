@@ -4,7 +4,7 @@
 #include "container/EnumArray.h"
 #include "core/Utils.h"
 
-EnumArray<std::thread::id, ENamedThread> gNamedThreadIds;
+EnumArray<ENamedThread, std::thread::id> gNamedThreadIds;
 
 bool IsInMainThread()
 {

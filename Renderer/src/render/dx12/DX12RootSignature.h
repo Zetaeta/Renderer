@@ -16,7 +16,7 @@ protected:
 };
 
 template<typename T>
-using GraphicsStageArray = EnumArray<T, EShaderType, EShaderType::GraphicsCount>;
+using GraphicsStageArray = EnumArray<EShaderType, T, EShaderType::GraphicsCount>;
 
 class DX12GraphicsRootSignature : public DX12RootSignature
 {

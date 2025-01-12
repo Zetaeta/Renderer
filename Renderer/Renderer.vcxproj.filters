@@ -468,8 +468,9 @@
     <ClInclude Include="src\render\RenderMaterial.h" />
     <ClInclude Include="src\common\SceneDataInterface.h" />
     <ClInclude Include="src\scene\StaticMeshComponent.h" />
-    <ClInclude Include="src\render\RenderScene.h" />
     <ClInclude Include="src\render\GPUSyncPoint.h" />
+    <ClInclude Include="src\render\MaterialManager.h" />
+    <ClInclude Include="src\render\RendererScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -728,7 +729,8 @@
     <ClCompile Include="src\render\RenderMaterial.cpp" />
     <ClCompile Include="src\common\SceneDataInterface.cpp" />
     <ClCompile Include="src\scene\StaticMeshComponent.cpp" />
-    <ClCompile Include="src\render\RenderScene.cpp" />
+    <ClCompile Include="src\render\MaterialManager.cpp" />
+    <ClCompile Include="src\render\RendererScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">
@@ -782,6 +784,8 @@
     <FxCompile Include="src\shaders\dx12\Test.hlsl">
       <Filter>shaders\dx12</Filter>
     </FxCompile>
+    <FxCompile Include="src\shaders\ScreenId_VS.hlsl" />
+    <FxCompile Include="src\shaders\DepthCube_PS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\VertexShader.hlsli">

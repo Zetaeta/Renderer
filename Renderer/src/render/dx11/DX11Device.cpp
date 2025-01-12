@@ -122,10 +122,10 @@ ID3D11InputLayout* DX11Device::GetOrCreateInputLayout(VertexAttributeDesc::Handl
 		for (u32 i=0; i<totalAtts; ++i)
 		{
 			DataLayoutEntry const& entry = vertAtts.Layout.Entries[i];
-			if ((mSemanticsToMask[entry.mName] & requiredAtts) == 0)
-			{
-//				continue;
-			}
+			//if ((mSemanticsToMask[entry.mName] & requiredAtts) == 0)
+			//{
+			//	continue;
+			//}
 			++usedAtts;
 			D3D11_INPUT_ELEMENT_DESC& desc = inputElements.emplace_back();
 			Zero(desc);
@@ -141,8 +141,8 @@ ID3D11InputLayout* DX11Device::GetOrCreateInputLayout(VertexAttributeDesc::Handl
 			return nullptr;
 		}
 
-		mDevice->CreateInputLayout(&inputElements[0], usedAtts, testShader->GetBufferPointer(),
-									testShader->GetBufferSize(), &inputLayout);
+		DXCALL(mDevice->CreateInputLayout(&inputElements[0], usedAtts, testShader->GetBufferPointer(),
+									testShader->GetBufferSize(), &inputLayout));
 
 		//mInputLayouts;
 	}

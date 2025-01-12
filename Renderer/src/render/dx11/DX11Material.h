@@ -9,31 +9,22 @@
 #include <common/Material.h>
 namespace rnd
 {
-namespace dx11
-{
 
-struct DX11MaterialType : public MaterialArchetype
-{
-	DX11MaterialType() = default;
-	~DX11MaterialType() {}
+using RenderMaterialType = MaterialArchetype;
 
-	DX11MaterialType(DX11MaterialType&&) noexcept = default;
-	DX11MaterialType(DX11MaterialType const&) = delete;
-	DX11MaterialType& operator=(DX11MaterialType&&) noexcept = default;
+//struct RenderMaterialType : public MaterialArchetype
+//{
+//	RenderMaterialType() = default;
+//	RenderMaterialType(MaterialArchetypeDesc const& desc);
+//	~RenderMaterialType() {}
+//
+//	RenderMaterialType(RenderMaterialType&&) noexcept = default;
+//	RenderMaterialType(RenderMaterialType const&) = delete;
+//	RenderMaterialType& operator=(RenderMaterialType&&) noexcept = default;
+//
+//	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType) override;
+//	
+//	using Ref = RefPtr<RenderMaterialType>;
+//};
 
-	ComPtr<ID3D11PixelShader>  m_PixelShader[Denum(EShadingLayer::Count)];
-	ComPtr<ID3D11VertexShader> m_VertexShader;
-	RefPtr<VertexShader const> mVertexShader;
-	ComPtr<ID3D11InputLayout> m_InputLayout;
-	std::unique_ptr<class RenderMaterial> m_Default;
-	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType) override;
-	
-	using Ref = RefPtr<DX11MaterialType>;
-	virtual void Bind(DX11Ctx& ctx, EShadingLayer layer, EMatType matType);
-	bool mGotVSCBData = false;
-	bool mGotPSCBData = false;
-
-};
-
-}
 }

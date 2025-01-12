@@ -1,4 +1,5 @@
 #include "common/Material.h"
+#include "render/RenderMaterial.h"
 #include <render/dx11/DX11Renderer.h>
 
 
@@ -88,5 +89,6 @@ MaterialArchetypeDesc CreateAndRegisterMatDesc(const char* name, const char* psF
 	using namespace rnd;
 	ShaderTypeId psType = ShaderRegistry::Get().RegisterShaderType<MaterialPixelShader>(name, psFilename, psEntryPoint);
 	ShaderTypeId vsType = ShaderRegistry::Get().RegisterShaderType<MaterialVertexShader>(name, vsFilename, vsEntryPoint);
-	return MaterialArchetypeDesc {vsType, psType, (VertexAttributeMask) vertexMask};
+	return MaterialArchetypeDesc {name, vsType, psType, (VertexAttributeMask) vertexMask};
 }
+

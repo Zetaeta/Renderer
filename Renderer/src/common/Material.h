@@ -10,6 +10,10 @@
 #include "container/EnumArray.h"
 #include "render/shaders/MaterialShader.h"
 
+namespace rnd { class RenderMaterial; }
+
+namespace rnd { class VertexShader; }
+
 namespace rnd
 {
 class RenderContext;
@@ -18,6 +22,7 @@ class IRenderDevice;
 class ShaderManager;
 class IShaderReflector;
 enum VertexAttributeMask : u64;
+class IDeviceMaterial;
 }
 
 enum EMatType
@@ -68,6 +73,7 @@ struct ShaderCBData
 struct MaterialArchetypeDesc
 {
 //	rnd::ShaderDesc mShaderDesc;
+	String DebugName;
 	rnd::ShaderTypeId mVSRegistryId = 0;
 	rnd::ShaderTypeId mPSRegistryId = 0;
 	rnd::VertexAttributeMask mVertexMask {};
@@ -81,43 +87,6 @@ MaterialArchetypeDesc CreateAndRegisterMatDesc(const char* name, const char* psF
 #define DECLARE_MATERIAL_SHADER(name) extern MaterialArchetypeDesc name;
 #define DEFINE_MATERIAL_SHADER(Name, ...)\
 	MaterialArchetypeDesc Name = CreateAndRegisterMatDesc(#Name, __VA_ARGS__);
-
-class MaterialArchetype : public RefCountedObject
-{
-public:
-
-	MaterialArchetypeDesc Desc;
-//	virtual ~MaterialArchetype() {}
-	EnumArray<ShaderCBData, rnd::ECBFrequency> CBData;
-	ShaderCBData const& GetCBData(rnd::ECBFrequency freq) const
-	{
-		return CBData[Denum(freq)];
-	}
-
-	ShaderCBData& GetCBData(rnd::ECBFrequency freq)
-	{
-		return CBData[Denum(freq)];
-	}
-
-	EnumArray<RefPtr<rnd::MaterialPixelShader const>, EShadingLayer> PixelShaders;
-	
-	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType) = 0;
-	String DebugName;
-};
-
-enum class EShadingLayer : u8;
-
-class IDeviceMaterial : public RefCountedObject
-{
-public:
-	IDeviceMaterial(RefPtr<MaterialArchetype> matType)
-		: Archetype(matType){}
-
-	virtual ~IDeviceMaterial() {}
-
-	const RefPtr<MaterialArchetype> Archetype;
-	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer) = 0;
-};
 
 using MaterialID = int;
 
@@ -171,7 +140,7 @@ struct Material
 		return E_MT_OPAQUE;
 	}
 
-	IDeviceMaterial* DeviceMat = nullptr;
+	rnd::IDeviceMaterial* DeviceMat = nullptr;
 private:
 	std::atomic<bool> m_Updated = false;
 	std::mutex m_UpdateMutex;

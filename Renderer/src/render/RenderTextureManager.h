@@ -56,7 +56,7 @@ public:
 protected:
 
 	u64 m_Flags = 0;
-	EnumArray<ResourceView, ETextureSlot, E_TS_COUNT> m_Textures; 
+	EnumArray<ETextureSlot, ResourceView, E_TS_COUNT> m_Textures; 
 
 	Vector<ResourceView> m_Active;
 	//Vector<ID3D11ShaderResourceView*> m_Null;

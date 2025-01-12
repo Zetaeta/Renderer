@@ -4,7 +4,7 @@
 #include "core/Utils.h"
 
 // Array indexed by enums
-template<typename T, typename Enum, Enum Size = Enum::Count>
+template<typename Enum, typename T, Enum Size = Enum::Count>
 class EnumArray : public std::array<T, Denum(Size)>
 {
 public:

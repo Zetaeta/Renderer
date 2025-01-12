@@ -3,7 +3,7 @@
 namespace rnd
 {
 DataLayout::DataLayout(size_t alignment, Vector<DataLayoutEntry>&& entries)
-	: mAlignment(alignment), Entries(std::move(entries))
+	: mAlignment(alignment), Entries(std::move(entries)), mSize(0)
 {
 	for (auto& entry : Entries)
 	{

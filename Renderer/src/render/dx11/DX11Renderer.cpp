@@ -175,21 +175,6 @@ void DX11Renderer::ForEachMesh(TFunc&& func)
 			
 }
 
-
-__declspec(align(16))
-struct PerInstancePSData
-{
-	DECLARE_STI_NOBASE(PerInstancePSData);
-	vec4 colour;
-	vec3 ambdiffspec;
-	float roughness = 1.f;
-	vec3 emissiveColour = vec3{0};
-	float alphaMask = 1.f;
-	float metalness = 1.f;
-	DX11Bool useNormalMap;
-	DX11Bool useEmissiveMap;
-	DX11Bool useRoughnessMap;
-};
 DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 
  DX11Renderer::DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context, IDXGISwapChain* swapChain)
@@ -525,12 +510,13 @@ void DX11Renderer::DrawCubemap(ID3D11ShaderResourceView* srv, bool depth)
 
 	if (depth)
 	{
-		m_MatTypes[MAT_CUBE_DEPTH].Bind(m_Ctx, EShadingLayer::BASE, E_MT_OPAQUE);
+		m_MatTypes[MAT_CUBE_DEPTH].Bind(*mRCtx, EShadingLayer::BASE, E_MT_OPAQUE);
 	}
 	else
 	{
-		m_MatTypes[MAT_BG].Bind(m_Ctx, EShadingLayer::BASE, E_MT_OPAQUE);
+		m_MatTypes[MAT_BG].Bind(*mRCtx, EShadingLayer::BASE, E_MT_OPAQUE);
 	}
+	SetVertexLayout(GetVertAttHdl<FlatVert>());
 	pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
 	//WriteCBuffer(m_VSPerFrameBuff)
 
@@ -583,12 +569,12 @@ void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	if (pbuff.renderMode <= 1)
 	{
-		m_MatTypes[MAT_2D].Bind(m_Ctx, EShadingLayer::BASE, E_MT_OPAQUE);
+		m_MatTypes[MAT_2D].Bind(*mRCtx, EShadingLayer::BASE, E_MT_OPAQUE);
 	}
 	else
 	{
 		m_PS2DCBuff.WriteData(ivec2(m_Width, m_Height));
-		m_MatTypes[MAT_2D_UINT].Bind(m_Ctx, EShadingLayer::BASE, E_MT_OPAQUE);
+		m_MatTypes[MAT_2D_UINT].Bind(*mRCtx, EShadingLayer::BASE, E_MT_OPAQUE);
 	}
 
 	auto* srv = tex->GetSRV();
@@ -652,7 +638,7 @@ void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useM
 void DX11Renderer::DrawMesh(IDeviceMesh* mesh)
 {
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	UpdateInputLayout();
+//	UpdateInputLayout();
 
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 	pContext->PSSetSamplers(0, 2, samplers );
@@ -1122,12 +1108,17 @@ void DX11Renderer::SetPixelShader(PixelShader const* shader)
 
 void DX11Renderer::SetVertexShader(VertexShader const* shader)
 {
+	pContext->IASetInputLayout(nullptr);
 	mCurrVertexShader = shader;
 	DX11VertexShader* dx11Shader = shader ? static_cast<DX11VertexShader*>(shader->GetDeviceShader()) : nullptr;
 	pContext->VSSetShader(dx11Shader ? dx11Shader->GetShader() : nullptr, nullptr, 0);
-	if (mCurrVertexLayoutHdl >= 0)
+	if (shader && mCurrVertexLayoutHdl >= 0)
 	{
-//		UpdateInputLayout();
+		UpdateInputLayout();
+	}
+	else
+	{
+		pContext->IASetInputLayout(nullptr);
 	}
 }
 
@@ -1157,11 +1148,27 @@ void DX11Renderer::DrawMesh(Primitive const& primitive)
 
 void DX11Renderer::SetVertexLayout(VertAttDescHandle attDescHandle)
 {
-	mCurrVertexLayoutHdl = attDescHandle;
-	mCurrVertexLayout = &VertexAttributeDesc::GetRegistry().Get(attDescHandle);
-	if (mCurrVertexShader)
+	if (attDescHandle == mCurrVertexLayoutHdl)
 	{
-//		UpdateInputLayout();
+		return;
+	}
+	mCurrVertexLayoutHdl = attDescHandle;
+	if (mCurrVertexLayoutHdl >= 0)
+	{
+		mCurrVertexLayout = &VertexAttributeDesc::GetRegistry().Get(attDescHandle);
+		if (mCurrVertexShader)
+		{
+			UpdateInputLayout();
+		}
+		else
+		{
+
+			pContext->IASetInputLayout(nullptr);
+		}
+	}
+	else
+	{
+		pContext->IASetInputLayout(nullptr);
 	}
 }
 
@@ -1577,7 +1584,7 @@ int GetCompiledShaderVariants(const String& shaderName, char const* name, Shader
 }
 
 
-void GetCBInfo(ID3DBlob* shaderCode, DX11MaterialType& matType, ECBFrequency perFrame, ECBFrequency perInst)
+void GetCBInfo(ID3DBlob* shaderCode, RenderMaterialType& matType, ECBFrequency perFrame, ECBFrequency perInst)
 {
 	ComPtr<ID3D11ShaderReflection> reflection;
 	HR_ERR_CHECK(D3DReflect(shaderCode->GetBufferPointer(), shaderCode->GetBufferSize(), IID_ID3D11ShaderReflection, &reflection))
@@ -1610,171 +1617,34 @@ void GetCBInfo(ID3DBlob* shaderCode, DX11MaterialType& matType, ECBFrequency per
 DEFINE_MATERIAL_SHADER(TexturedMat, "TexPixelShader", "main", "TexVertexShader", "main", VA_Position | VA_Normal | VA_Tangent | VA_TexCoord);
 DEFINE_MATERIAL_SHADER(PlainMat, "PlainPixelShader", "main", "PlainVertexShader", "main", VA_Position | VA_Normal | VA_Tangent | VA_TexCoord);
 DEFINE_MATERIAL_SHADER(PointShadow, "PointShadow_PS", "main", "PointShadow_VS", "main", VA_Position | VA_Normal | VA_Tangent | VA_TexCoord);
+DEFINE_MATERIAL_SHADER(ScreenId, "ScreenId_PS", "main", "ScreenId_VS", "main", VA_Position | VA_TexCoord);
+DEFINE_MATERIAL_SHADER(Mat2D, "2D_PS", "main", "2D_VS", "main", VA_Position | VA_TexCoord);
+DEFINE_MATERIAL_SHADER(Mat2DUint, "2D_PS_Uint", "main", "2D_VS", "main", VA_Position | VA_TexCoord);
+DEFINE_MATERIAL_SHADER(MatCube, "BGPixelShader", "main", "BGVertexShader", "main", VA_Position | VA_TexCoord);
+DEFINE_MATERIAL_SHADER(MatCubeDepth, "DepthCube_PS", "main", "BGVertexShader", "main", VA_Position | VA_TexCoord);
 
 void DX11Renderer::LoadShaders(bool reload)
 {
-	{
-		const D3D11_INPUT_ELEMENT_DESC ied[] =
-		{
-			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "Normal", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, normal), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "Tangent", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex, tangent), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(Vertex, uvs), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		};
+	CreateMatType2("Plain", MAT_PLAIN, PlainMat);
+	CreateMatType2("Textured", MAT_TEX, TexturedMat);
+	CreateMatType2("PointShadow", MAT_POINT_SHADOW_DEPTH, PointShadow);
+	CreateMatType2("ScreenId", MAT_SCREEN_ID, ScreenId);
+	static DataLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
+	m_MatTypes[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;
 
-		CreateMatType2("Plain", MAT_PLAIN, "PlainVertexShader", PlainMat, ied, Size(ied), reload);
-		CreateMatType2("Textured", MAT_TEX, "TexVertexShader", TexturedMat, ied, Size(ied), reload);
-//		CreateMatTypeUnshaded("PointShadow", MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", "PointShadow_PS", ied, Size(ied), reload);
-		CreateMatType2("PointShadow", MAT_POINT_SHADOW_DEPTH, "PointShadow_VS", PointShadow, ied, Size(ied), reload);
-		CreateMatTypeUnshaded("ScreenId", MAT_SCREEN_ID, "PlainVertexShader", "ScreenId_PS", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "SHADED", "0" } });
-		static DataLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
-		m_MatTypes[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;
-	}
-
-	{
-		const D3D11_INPUT_ELEMENT_DESC ied[] =
-		{
-			{ "Position", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-			{ "TexCoord", 0, DXGI_FORMAT_R32G32_FLOAT, 0, offsetof(FlatVert, uv), D3D11_INPUT_PER_VERTEX_DATA, 0 },
-		};
-		CreateMatTypeUnshaded("2D", MAT_2D, "2D_VS", "2D_PS", ied, Size(ied), reload);
-		CreateMatTypeUnshaded("2D_Uint", MAT_2D_UINT, "2D_VS", "2D_PS_Uint", ied, Size(ied), reload);
-		CreateMatTypeUnshaded("Cubemap", MAT_BG, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload);
-		CreateMatTypeUnshaded("Cubedepth", MAT_CUBE_DEPTH, "BGVertexShader", "BGPixelShader", ied, Size(ied), reload, { D3D_SHADER_MACRO{ "DEPTH_SAMPLE", "1" } });
-	
-	}
+	CreateMatType2("2D", MAT_2D, Mat2D);
+	CreateMatType2("2D_Uint", MAT_2D_UINT, Mat2DUint);
+	CreateMatType2("Cubemap", MAT_BG, MatCube);
+	CreateMatType2("Cubedepth", MAT_CUBE_DEPTH, MatCubeDepth);
 }
 
-void DX11Renderer::CreateMatType2(String const& name, u32 index, char const* vsName, const MaterialArchetypeDesc& typeDesc, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload)
+void DX11Renderer::CreateMatType2(String const& name, u32 index, const MaterialArchetypeDesc& typeDesc)
 {
-
-	DX11MaterialType& matType = m_MatTypes[index];
+	RenderMaterialType& matType = m_MatTypes[index];
 	matType.CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = GetLayout<PerInstancePSData>();
 	matType.DebugName = name;
-	ShaderVariant variant = {"vertex", {}};
-	if (GetCompiledShaderVariants(name + "_VS", vsName, &variant, 1, "vs_5_0", reload) > 0)
-	{
-		auto const& vertBlob = variant.m_Blob;
-		GetCBInfo(vertBlob.Get(), matType, ECBFrequency::VS_PerFrame, ECBFrequency::VS_PerInstance);
-		HR_ERR_CHECK(pDevice->CreateVertexShader(vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), nullptr, &matType.m_VertexShader));
-		HR_ERR_CHECK(pDevice->CreateInputLayout(ied, iedsize, vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), &m_MatTypes[index].m_InputLayout));
-		SetResourceName(m_MatTypes[index].m_VertexShader, vsName);
-	}
-	else
-	{
-		assert(false);
-	}
 	matType.Desc = typeDesc;
-	//ComPtr<ID3DBlob> pixBlob;
-	//HR_ERR_CHECK(D3DReadFileToBlob(psName, &pixBlob));
 }
-
-void DX11Renderer::CreateMatType(const String& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload)
-{
-	ShaderVariant variants[] = {
-		{ "base", {
-			D3D_SHADER_MACRO{ "BASE_LAYER", "1" },
-		}},
-		{ "dirlight", {
-			D3D_SHADER_MACRO{ "DIR_LIGHT", "1" },
-			D3D_SHADER_MACRO{ "BASE_LAYER", "0" },
-		}},
-		{ "pointlight", {
-			D3D_SHADER_MACRO{ "POINT_LIGHT", "1" },
-			D3D_SHADER_MACRO{ "BASE_LAYER", "0" },
-		}},
-		{ "spotlight", {
-			D3D_SHADER_MACRO{ "SPOTLIGHT", "1" },
-			D3D_SHADER_MACRO{ "BASE_LAYER", "0" },
-		}},
-	};
-
-	DX11MaterialType& matType = m_MatTypes[index];
-	matType.CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = GetLayout<PerInstancePSData>();
-	matType.DebugName = psName;
-	if (GetCompiledShaderVariants(name + "_VS", vsName, variants, Size(variants), "vs_5_0", reload) > 0)
-	{
-		auto const& vertBlob = variants[0].m_Blob;
-		GetCBInfo(vertBlob.Get(), matType, ECBFrequency::VS_PerFrame, ECBFrequency::VS_PerInstance);
-		HR_ERR_CHECK(pDevice->CreateVertexShader(vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), nullptr, &matType.m_VertexShader));
-		HR_ERR_CHECK(pDevice->CreateInputLayout(ied, iedsize, vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), &m_MatTypes[index].m_InputLayout));
-		SetResourceName(m_MatTypes[index].m_VertexShader, vsName);
-	}
-	else
-	{
-		assert(false);
-	}
-	//ComPtr<ID3DBlob> pixBlob;
-	//HR_ERR_CHECK(D3DReadFileToBlob(psName, &pixBlob));
-	int count = GetCompiledShaderVariants(name + "_PS", psName, variants, Size(variants), "ps_5_0", reload);
-	for (int i=0; i<count; ++i )
-	{
-		auto const& pixBlob = variants[i].m_Blob;
-		HR_ERR_CHECK(pDevice->CreatePixelShader(pixBlob->GetBufferPointer(), pixBlob->GetBufferSize(), nullptr, &m_MatTypes[index].m_PixelShader[i]));
-		SetResourceName(m_MatTypes[index].m_PixelShader[i], String(psName));
-		if (i == 0)
-		{
-			GetCBInfo(pixBlob.Get(), matType, ECBFrequency::PS_PerFrame, ECBFrequency::PS_PerInstance);
-		}
-	}
-
-}
-//template<>
-//struct std::hash<D3D_SHADER_MACRO>
-//{
-//	size_t operator()(const D3D)
-//};
-
-void DX11Renderer::CreateMatTypeUnshaded(const String& name, u32 index, char const* vsName, char const* psName,
-										 const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload,
-										 Vector<D3D_SHADER_MACRO>&& defines /* = {}  */)
-{
-	ShaderVariant variants[] = {
-		{ "base", std::move(defines) },
-	};
-
-	DX11MaterialType& matType = m_MatTypes[index];
-	if (GetCompiledShaderVariants(name + "_VS", vsName, variants, Size(variants), "vs_5_0", reload) > 0)
-	{
-		auto const& vertBlob = variants[0].m_Blob;
-		GetCBInfo(vertBlob.Get(), matType, ECBFrequency::VS_PerFrame, ECBFrequency::VS_PerInstance);
-		HR_ERR_CHECK(pDevice->CreateVertexShader(vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), nullptr, &m_MatTypes[index].m_VertexShader));
-		HR_ERR_CHECK(pDevice->CreateInputLayout(ied, iedsize, vertBlob->GetBufferPointer(), vertBlob->GetBufferSize(), &m_MatTypes[index].m_InputLayout));
-		SetResourceName(m_MatTypes[index].m_VertexShader, vsName);
-	}
-	else
-	{
-		assert(false);
-	}
-	//ComPtr<ID3DBlob> pixBlob;
-	//HR_ERR_CHECK(D3DReadFileToBlob(psName, &pixBlob));
-	int count = GetCompiledShaderVariants(name + "_PS", psName, variants, Size(variants), "ps_5_0", reload);
-	for (int i=0; i<count; ++i )
-	{
-		auto const& pixBlob = variants[i].m_Blob;
-		HR_ERR_CHECK(pDevice->CreatePixelShader(pixBlob->GetBufferPointer(), pixBlob->GetBufferSize(), nullptr, &m_MatTypes[index].m_PixelShader[i]));
-		SetResourceName(m_MatTypes[index].m_PixelShader[i], String(psName));
-		if (i == 0)
-		{
-			GetCBInfo(pixBlob.Get(), matType, ECBFrequency::PS_PerFrame, ECBFrequency::PS_PerInstance);
-		}
-	}
-
-}
-
-DEFINE_CLASS_TYPEINFO(PerInstancePSData)
-BEGIN_REFL_PROPS()
-REFL_PROP(colour)
-REFL_PROP(ambdiffspec)
-REFL_PROP(roughness)
-REFL_PROP(emissiveColour)
-REFL_PROP(alphaMask)
-REFL_PROP(metalness)
-REFL_PROP(useNormalMap)
-REFL_PROP(useEmissiveMap)
-REFL_PROP(useRoughnessMap)
-END_REFL_PROPS()
-END_CLASS_TYPEINFO()
 
 }
 }

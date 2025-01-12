@@ -4,6 +4,7 @@
 #include <iostream>
 #include <comdef.h>
 #include <wrl.h>
+#include "Logging.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -14,7 +15,7 @@ using Microsoft::WRL::ComPtr;
 		{                     \
 			_com_error err(hr);\
 			LPCTSTR errMsg = err.ErrorMessage();\
-			std::wcerr << L"Error: " << errMsg << std::endl;\
+			RLOG(LogGlobal, Error,"Error: %S", errMsg);\
 			assert(false);\
 		}\
 	}

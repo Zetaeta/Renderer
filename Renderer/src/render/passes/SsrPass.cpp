@@ -39,7 +39,6 @@ DEFINE_SHADER(SSR_PS, "ScreenSpaceReflections", "SSR_PS");
 SsrPass::SsrPass(RenderContext* rCtx, RGShaderResources&& srvs, RGRenderTargetRef renderTarget)
 :RenderPass(rCtx, "ScreenSpaceReflections"), mSrvs(std::move(srvs)), mRT(renderTarget)
 {
-//	mShader = rCtx->GetShader<SSR_CS>();
 }
 
 void SsrPass::Execute(RenderContext& renderCtx)
@@ -65,14 +64,17 @@ void SsrPass::Execute(RenderContext& renderCtx)
 	context->SetConstantBuffers(EShaderType::Pixel, Single<CBHandle const>(cbv));
 	context->SetShaderResources(EShaderType::Pixel, mSrvs.ResolvedViews);
 //	context->SetUAVs(EShaderType::Compute, Single(mSceneColourUav));
+	context->SetVertexLayout(-1);
 	context->SetVertexShader(renderCtx.GetShader<PostProcessVS>());
+	auto tri = Device()->BasicMeshes.GetFullScreenTri();
+	context->SetVertexLayout(tri->GetVertexAttributes());
 	SSR_PS::Permutation perm;
 	perm.Set<PixelDebuggingSwitch>(mDebugPixel && renderCtx.Settings.EnablePixelDebug);
 	context->SetPixelShader(renderCtx.GetShader<SSR_PS>(perm));
 
 	context->SetRTAndDS(mRT.ResolvedRT, nullptr);
 	context->SetUAVs(EShaderType::Pixel, Single<UnorderedAccessView const>(renderCtx.GetPixelDebugUav()), 1);
-	context->DrawMesh(Device()->BasicMeshes.GetFullScreenTri());
+	context->DrawMesh(tri);
 	context->ClearResourceBindings();
 
 }

@@ -71,10 +71,14 @@ void DeferredShadingPass::Execute(RenderContext& renderCtx)
 //	context->ClearRenderTarget(mRenderTarget, )
 	context->SetBlendMode(EBlendState::COL_OVERWRITE);
 	context->SetViewport(mRenderTarget->Desc.Width, mRenderTarget->Desc.Height);
+	auto tri = Device()->BasicMeshes.GetFullScreenTri();
+	ZE_REQUIRE(tri);
+	context->SetVertexShader(nullptr);
+	context->SetVertexLayout(-1);
+	context->SetVertexLayout(tri->GetVertexAttributes());
 	context->SetVertexShader(mVertexShader);
 	Vector<ResourceView> srvs = mSRVs.ResolvedViews;
 	srvs.emplace_back(nullptr);
-	auto tri = Device()->BasicMeshes.GetFullScreenTri();
 
 	DeferredShadingPS::CBPerInst cbuf;
 	cbuf.screen2World = mCamera->GetInverseProjWorld();
@@ -83,8 +87,6 @@ void DeferredShadingPass::Execute(RenderContext& renderCtx)
 	renderCtx.DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, sizeof(DeferredShadingPS::CBPerInst))->WriteData(cbuf);
 	context->SetDepthMode(EDepthMode::Disabled);
 	context->SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
-	ZE_REQUIRE(tri);
-	context->SetVertexLayout(tri->GetVertexAttributes());
 
 	{
 		SetupShadingLayer(mRCtx, EShadingLayer::BASE, 0);

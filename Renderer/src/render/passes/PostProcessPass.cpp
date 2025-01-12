@@ -19,12 +19,14 @@ void PostProcessPass::Execute(RenderContext& renderCtx)
 //	context->ClearRenderTarget(mRenderTarget, )
 	context->SetBlendMode(EBlendState::COL_OVERWRITE);
 	context->SetViewport(mRenderTarget.ResolvedRT->Desc.Width, mRenderTarget.ResolvedRT->Desc.Height);
-	context->SetVertexShader(mVertexShader);
 	context->SetPixelShader(mShader);
 	context->SetShaderResources(EShaderType::Pixel, mResources.ResolvedViews);
 	auto tri = Device()->BasicMeshes.GetFullScreenTri();
 	ZE_REQUIRE(tri);
+	context->SetVertexLayout(-1);
+	context->SetVertexShader(nullptr);
 	context->SetVertexLayout(tri->GetVertexAttributes());
+	context->SetVertexShader(mVertexShader);
 	context->DrawMesh(tri);
 	context->ClearResourceBindings();
 }

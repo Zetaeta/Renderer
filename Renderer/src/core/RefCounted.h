@@ -13,6 +13,27 @@ public:
 		: mRefCount(0)
 	{
 	}
+
+	RefCountedObject(RefCountedObject const& other)
+	:mRefCount(0)
+	{
+	}
+
+	RefCountedObject(RefCountedObject&& other)
+	:mRefCount(0)
+	{
+	}
+
+	RefCountedObject& operator=(RefCountedObject&& other)
+	{
+		return *this;
+	}
+
+	RefCountedObject& operator=(RefCountedObject const& other)
+	{
+		return *this;
+	}
+
 	u32 AddRef() const
 	{
 		return ++mRefCount;

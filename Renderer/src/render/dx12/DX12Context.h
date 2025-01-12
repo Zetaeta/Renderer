@@ -24,7 +24,7 @@ struct ShaderBindingState
 struct GraphicsPSODesc
 {
 	DX12GraphicsRootSignature RootSig;
-	EnumArray<RefPtr<Shader const>, EShaderType, EShaderType::GraphicsCount> Shaders;
+	EnumArray<EShaderType, RefPtr<Shader const>, EShaderType::GraphicsCount> Shaders;
 	VertexAttributeDesc::Handle VertexLayoutHdl;
 	u32 NumRTs = 0;
 	std::array<DXGI_FORMAT, 8> RTVFormats;
@@ -56,7 +56,7 @@ void HashAppend(Hasher& hasher, GraphicsPSODesc const& psoDesc)
 struct GraphicsPipelineStateCache
 {
 public:
-	EnumArray<ShaderBindingState, EShaderType, EShaderType::GraphicsCount> ShaderStates;
+	EnumArray<EShaderType, ShaderBindingState, EShaderType::GraphicsCount> ShaderStates;
 	u32 ShaderMask = 0;
 
 	struct ActiveStageIterator

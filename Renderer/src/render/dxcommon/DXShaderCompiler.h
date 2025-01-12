@@ -30,7 +30,7 @@ private:
 class DXShaderCompiler
 {
 protected:
-	EnumArray<char const*, EShaderType> mTypeStrings; 
+	EnumArray<EShaderType, char const*> mTypeStrings; 
 	fs::path mOutDir;
 	fs::path mSrcDir;
 //	fs::path mOverrideSrcDir;

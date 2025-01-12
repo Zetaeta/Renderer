@@ -51,7 +51,7 @@ public:
 	}
 
 	VertexAttributeDesc(Vector<DataLayoutEntry>&& Entries)
-		: Layout(1, std::move(Entries)) {}
+		: Layout(4, std::move(Entries)) {}
 
 	u32 GetSize() const
 	{

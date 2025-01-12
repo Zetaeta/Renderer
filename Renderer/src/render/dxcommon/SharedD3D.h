@@ -1,6 +1,8 @@
 #pragma once
 #include "core/Types.h"
 
+#define DXCALL(expr) HR_ERR_CHECK(expr)
+
 namespace rnd::dx
 {
 

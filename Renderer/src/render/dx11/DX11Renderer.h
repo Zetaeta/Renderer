@@ -161,11 +161,11 @@ public:
 	//constexpr static u32 const MAT_POINT_SHADOW_DEPTH = 4;
 	//constexpr static u32 const MAT_COUNT = 5;
 
-	std::vector<DX11MaterialType> m_MatTypes;
+	std::vector<RenderMaterialType> m_MatTypes;
 	std::vector<std::unique_ptr<RenderMaterial>> m_Materials;
 
-	EnumArray<u32, EShaderType> mMaxShaderResources = {};
-	EnumArray<u32, EShaderType> mMaxUAVs = {};
+	EnumArray<EShaderType, u32> mMaxShaderResources = {};
+	EnumArray<EShaderType, u32> mMaxUAVs = {};
 	DX11Ctx m_Ctx;
 
 	Viewport* GetViewport()
@@ -199,9 +199,7 @@ protected:
 
 	ivec2 mViewerSize = {500, 500};
 
-	void CreateMatType2(String const& name, u32 index, char const* vsName, const MaterialArchetypeDesc& typeDesc, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload);
-	void CreateMatType(String const& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload);
-	void CreateMatTypeUnshaded(String const& name, u32 index, char const* vsName, char const* psName, const D3D11_INPUT_ELEMENT_DESC* ied, u32 iedsize, bool reload, Vector<D3D_SHADER_MACRO>&& defines = {});
+	void CreateMatType2(String const& name, u32 index, const MaterialArchetypeDesc& typeDesc);
 
 	void CreateDepthStencilState(ComPtr<ID3D11DepthStencilState>& state, EDepthMode depth, StencilState stencil);
 
@@ -242,7 +240,7 @@ protected:
 	ComPtr<ID3D11BlendState> m_BlendState;
 	ComPtr<ID3D11BlendState> m_AlphaBlendState;
 	ComPtr<ID3D11BlendState> m_AlphaLitBlendState;
-	EnumArray<EnumArray<ComPtr<ID3D11DepthStencilState>, EStencilMode>, EDepthMode> m_DSStates;
+	EnumArray<EDepthMode, EnumArray<EStencilMode, ComPtr<ID3D11DepthStencilState>>> m_DSStates;
 
 	ComPtr<ID3D11SamplerState> m_ShadowSampler;
 
