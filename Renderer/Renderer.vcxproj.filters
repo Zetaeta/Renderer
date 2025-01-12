@@ -163,9 +163,6 @@
     <ClInclude Include="src\render\dx11\DX11Cubemap.h">
       <Filter>render\dx11</Filter>
     </ClInclude>
-    <ClInclude Include="src\render\dx11\DX11Material.h">
-      <Filter>render\dx11</Filter>
-    </ClInclude>
     <ClInclude Include="src\render\dx11\DX11Renderer.h">
       <Filter>render\dx11</Filter>
     </ClInclude>
@@ -539,9 +536,6 @@
       <Filter>render\dx11</Filter>
     </ClCompile>
     <ClCompile Include="src\render\dx11\DX11Cubemap.cpp">
-      <Filter>render\dx11</Filter>
-    </ClCompile>
-    <ClCompile Include="src\render\dx11\DX11Material.cpp">
       <Filter>render\dx11</Filter>
     </ClCompile>
     <ClCompile Include="src\render\dx11\DX11Renderer.cpp">

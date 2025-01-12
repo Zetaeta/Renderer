@@ -35,7 +35,6 @@ public:
 	~DX11Device();
 	ID3D11Device* mDevice;
 	DX11ShaderCompiler mCompiler;
-	ShaderManager mShaderMgr;
 
 	void ProcessTextureCreations();
 

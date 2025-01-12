@@ -5,7 +5,6 @@
 #include <render/DeviceTexture.h>
 #include <render/ConstantBuffer.h>
 #include <common/Material.h>
-#include "render/dx11/DX11Material.h"
 #include "RenderContext.h"
 #include "RenderDeviceCtx.h"
 #include "RenderPass.h"

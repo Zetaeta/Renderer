@@ -7,7 +7,6 @@
 #include <d3d11_1.h>
 #include "core/WinUtils.h"
 #include "render/dx11/DX11Texture.h"
-#include "render/dx11/DX11Material.h"
 #include "render/dx11/DX11Cubemap.h"
 #include "render/dx11/DX11Ctx.h"
 #include "DX11ConstantBuffer.h"
@@ -21,6 +20,7 @@
 #include "DX11CBPool.h"
 #include "core/memory/GrowingImmobileObjectPool.h"
 #include "DX11Timer.h"
+#include "render/RenderMaterial.h"
 
 class Viewport;
 namespace rnd
@@ -161,7 +161,6 @@ public:
 	//constexpr static u32 const MAT_POINT_SHADOW_DEPTH = 4;
 	//constexpr static u32 const MAT_COUNT = 5;
 
-	std::vector<RenderMaterialType> m_MatTypes;
 	std::vector<std::unique_ptr<RenderMaterial>> m_Materials;
 
 	EnumArray<EShaderType, u32> mMaxShaderResources = {};

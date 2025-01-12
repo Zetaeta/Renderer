@@ -29,7 +29,7 @@ public:
 	RMOVE_DEFAULT(MaterialArchetype)
 	RCOPY_PROTECT(MaterialArchetype)
 	~MaterialArchetype();
-	MaterialArchetypeDesc Desc;
+
 //	virtual ~MaterialArchetype() {}
 	ShaderCBData const& GetCBData(rnd::ECBFrequency freq) const
 	{
@@ -40,19 +40,21 @@ public:
 	{
 		return CBData[Denum(freq)];
 	}
-
 	
 	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType);
 
 	EnumArray<rnd::ECBFrequency, ShaderCBData> CBData;
 	EnumArray<EShadingLayer, RefPtr<rnd::MaterialPixelShader const>> PixelShaders;
+	MaterialArchetypeDesc Desc;
 	String DebugName;
-	RefPtr<rnd::VertexShader const> mVertexShader;
+	mutable RefPtr<rnd::VertexShader const> mVertexShader;
 	std::unique_ptr<rnd::RenderMaterial> m_Default;
 	bool mGotVSCBData = false;
 	bool mGotPSCBData = false;
 
 };
+
+using RenderMaterialType = MaterialArchetype;
 
 class IDeviceMaterial : public RefCountedObject
 {

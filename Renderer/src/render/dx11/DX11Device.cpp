@@ -8,7 +8,7 @@ namespace dx11
 {
 
 DX11Device::DX11Device(ID3D11Device* pDevice)
-	: IRenderDevice(&mShaderMgr), mDevice(pDevice), mCompiler(pDevice), mShaderMgr(&mCompiler)
+	: IRenderDevice(&mCompiler), mDevice(pDevice), mCompiler(pDevice)
 {
 	mSemanticsToMask["Position"] = VA_Position;
 	mSemanticsToMask["Normal"] = VA_Normal;
@@ -19,6 +19,7 @@ DX11Device::DX11Device(ID3D11Device* pDevice)
 
 DX11Device::~DX11Device()
 {
+	MatMgr.Release();
 	OnDevicesShutdown();
 }
 

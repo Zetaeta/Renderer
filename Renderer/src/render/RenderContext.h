@@ -120,7 +120,7 @@ public:
 	template<typename T>
 	T const* GetShader(T::Permutation const& permutation = {})
 	{
-		return DeviceCtx()->Device->ShaderMgr->GetCompiledShader<T>(T::sRegistryId, permutation);
+		return GetShaderManager().GetCompiledShader<T>(T::sRegistryId, permutation);
 	}
 
 	LightRenderData CreateLightRenderData(ELightType lightType, u32 lightIdx);
@@ -212,7 +212,7 @@ public:
 
 	ShaderManager& GetShaderManager()
 	{
-		return *mDevice->ShaderMgr;
+		return mDevice->ShaderMgr;
 	}
 
 	void DebugPixel(uint2 pixCoord)

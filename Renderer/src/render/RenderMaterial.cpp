@@ -120,4 +120,19 @@ void MaterialArchetype::Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMat
 
 }
 
+DEFINE_CLASS_TYPEINFO(PerInstancePSData)
+BEGIN_REFL_PROPS()
+REFL_PROP(colour)
+REFL_PROP(ambdiffspec)
+REFL_PROP(roughness)
+REFL_PROP(emissiveColour)
+REFL_PROP(alphaMask)
+REFL_PROP(metalness)
+REFL_PROP(useNormalMap)
+REFL_PROP(useEmissiveMap)
+REFL_PROP(useRoughnessMap)
+END_REFL_PROPS()
+END_CLASS_TYPEINFO()
+
+
 }

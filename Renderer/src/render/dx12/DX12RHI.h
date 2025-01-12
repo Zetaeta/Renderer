@@ -182,7 +182,6 @@ private:
 
 	GrowingImmobilePool<DX12DirectMesh, 1024, true> mMeshes;
 	GrowingImmobilePool<DX12IndexedMesh, 2048, true> mIndexedMeshes;
-	ShaderManager mShaderMgr;
 	DX12Uploader mUploader;
 	DX12CommandQueues mQueues;
 	ComPtr<ID3D12Device_> mDevice; 

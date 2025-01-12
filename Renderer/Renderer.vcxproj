@@ -272,7 +272,6 @@
     <ClInclude Include="src\render\dx11\DX11Backend.h" />
     <ClInclude Include="src\render\dx11\DX11Ctx.h" />
     <ClInclude Include="src\render\dx11\DX11Cubemap.h" />
-    <ClInclude Include="src\render\dx11\DX11Material.h" />
     <ClInclude Include="src\render\dx11\DX11Renderer.h" />
     <ClInclude Include="src\render\dx11\DX11Texture.h" />
     <ClInclude Include="src\render\dx11\DX11TextureBase.h" />
@@ -474,11 +473,6 @@
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <ClCompile Include="src\render\dx11\DX11Cubemap.cpp">
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
-    </ClCompile>
-    <ClCompile Include="src\render\dx11\DX11Material.cpp">
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>

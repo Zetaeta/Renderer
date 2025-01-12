@@ -9,6 +9,8 @@
 #include "RenderResourceManager.h"
 #include "SamplerState.h"
 #include "GPUSyncPoint.h"
+#include "MaterialManager.h"
+#include "ShaderManager.h"
 
 struct CompoundMesh;
 
@@ -82,7 +84,7 @@ using BatchedUploadHandle = u32;
 class IRenderDevice
 {
 protected:
-	IRenderDevice(ShaderManager* shaderMgr) :ShaderMgr(shaderMgr), BasicMeshes(this) {}
+	IRenderDevice(IShaderCompiler* compiler) :ShaderMgr(compiler), BasicMeshes(this), MatMgr(this) {}
 public:
 	virtual IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData = CubemapData{}) = 0;
 	virtual IDeviceTexture::Ref CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData = nullptr) = 0;
@@ -107,9 +109,10 @@ public:
 		return CreateDirectMesh(EPrimitiveTopology::TRIANGLES, {TVertexAttributes<Vert>::template Handle, NumCast<u32>(std::size(vertices)), sizeof(Vert), &vertices[0]}, {});
 	}
 
-	ShaderManager* const ShaderMgr;
+	ShaderManager ShaderMgr;
 
 	BasicMeshFactory BasicMeshes;
+	MaterialManager MatMgr;
 };
 
 }

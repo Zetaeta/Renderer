@@ -25,7 +25,7 @@ namespace dx12
 static DX12RHI* sRHI = nullptr;
 
 DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers)
-:Window(width, height, name), IRenderDevice(&mShaderMgr), mShaderMgr(new DX12LegacyShaderCompiler), mNumBuffers(numBuffers)
+:Window(width, height, name), IRenderDevice(new DX12LegacyShaderCompiler), mNumBuffers(numBuffers)
 {
 	//WNDCLASSEX wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"DX12 window", nullptr };
 	//ZE_ASSERT(RegisterClassEx(&wc) != 0);

@@ -2,7 +2,6 @@
 
 #include "SceneRenderPass.h"
 #include <array>
-#include "dx11/DX11Material.h"
 #include <core/Utils.h>
 
 namespace rnd
