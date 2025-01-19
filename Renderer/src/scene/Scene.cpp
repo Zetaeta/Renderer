@@ -1,6 +1,7 @@
 #include "scene/Scene.h"
 #include <format>
 #include "scene/SceneComponent.h"
+#include "render/RendererScene.h"
 
 /* Mesh Mesh::MakeCube(vec3 origin, mat3 rotation, MaterialID mat)
 {
@@ -72,6 +73,16 @@ Scene::Scene(AssetManager* assMan) : m_AssetManager(assMan), mDataInterface(std:
 {
 
 }
+
+//Scene::Scene(Scene&& other)
+//{
+//	
+//}
+//
+//Scene& Scene::operator=(Scene&& other)
+//{
+//
+//}
 
 Name Scene::MakeName(String base)
 {
@@ -156,6 +167,10 @@ void Scene::Initialize()
 	 }
 }
 
+void Scene::Teardown()
+{
+	rnd::RendererScene::DestroyScene(*this);
+}
 
 SceneObject* Scene::CreateObject(ClassTypeInfo const& type)
 {
@@ -199,3 +214,4 @@ BEGIN_REFL_PROPS()
 REFL_PROP(m_Objects)
 END_REFL_PROPS()
 END_CLASS_TYPEINFO()
+

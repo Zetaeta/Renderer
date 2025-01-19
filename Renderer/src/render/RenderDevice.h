@@ -13,6 +13,7 @@
 #include "ShaderManager.h"
 
 struct CompoundMesh;
+class Viewport;
 
 namespace rnd { class ShaderManager; }
 
@@ -84,8 +85,9 @@ using BatchedUploadHandle = u32;
 class IRenderDevice
 {
 protected:
-	IRenderDevice(IShaderCompiler* compiler) :ShaderMgr(compiler), BasicMeshes(this), MatMgr(this) {}
+	IRenderDevice(IShaderCompiler* compiler) :ShaderMgr(compiler), BasicMeshes(this), MatMgr(this), ResourceMgr(this) {}
 public:
+
 	virtual IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData = CubemapData{}) = 0;
 	virtual IDeviceTexture::Ref CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData = nullptr) = 0;
 	virtual DeviceMeshRef		CreateDirectMesh(EPrimitiveTopology topology, VertexBufferData data, BatchedUploadHandle uploadHandle) = 0;
@@ -98,7 +100,17 @@ public:
 
 	virtual SamplerHandle GetSampler(SamplerDesc const& desc) = 0;
 
-	virtual ~IRenderDevice() {}
+	void Teardown()
+	{
+		MatMgr.Release();
+		BasicTextures.Teardown();
+		ResourceMgr.Teardown();
+	}
+
+	virtual ~IRenderDevice()
+	{
+		MatMgr.Release();
+	}
 
 //	bool CreateInputLayout(VertexAttributeDesc::Handle vaHandle, I)
 
@@ -109,10 +121,29 @@ public:
 		return CreateDirectMesh(EPrimitiveTopology::TRIANGLES, {TVertexAttributes<Vert>::template Handle, NumCast<u32>(std::size(vertices)), sizeof(Vert), &vertices[0]}, {});
 	}
 
+
 	ShaderManager ShaderMgr;
 
 	BasicMeshFactory BasicMeshes;
+	BasicTextureMgr BasicTextures;
 	MaterialManager MatMgr;
+	RenderResourceMgr ResourceMgr;
+
+	void AddViewport(Viewport* viewport)
+	{
+		mViewports.push_back(viewport);
+	}
+	void RemoveViewport(Viewport* vp)
+	{
+		Remove(mViewports, vp);
+	}
+
+	virtual void BeginFrame();
+	virtual void EndFrame() {}
+
+	void RenderFrame();
+protected:
+	Vector<Viewport*> mViewports;
 };
 
 }

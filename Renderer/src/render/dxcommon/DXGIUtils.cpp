@@ -57,6 +57,8 @@ DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, ETextureFormatContext co
 			ZE_ASSERT(false);
 		}
 	}
+	case ETextureFormat::R16_Float:
+		return DXGI_FORMAT_R16_FLOAT;
 	default:
 		fprintf(stderr, "Invalid format\n");
 	}

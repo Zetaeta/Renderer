@@ -36,9 +36,9 @@ public:
 		return mat.specularity;
 	}*/
 #define GetColour(mat) \
-	scene.GetMaterial(mat).colour
+	scene.GetMaterial(mat).Props.colour
 #define GetSpecularity(mat) \
-	scene.GetMaterial(mat).specularity
+	scene.GetMaterial(mat).Props.specularity
 
 private:
 

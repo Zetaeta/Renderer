@@ -20,13 +20,19 @@ DECLARE_MATERIAL_SHADER(MatCubeDepth)
 class MaterialManager
 {
 public:
+	MaterialManager() {}
 	MaterialManager(rnd::IRenderDevice* device);
+	~MaterialManager();
+	RCOPY_PROTECT(MaterialManager)
+	RMOVE_DEFAULT(MaterialManager)
+
 	void Release();
-	IDeviceMaterial* GetDefaultMaterial(int matType);
+	RenderMaterial* GetDefaultMaterial(int matType);
 
 	RenderMaterial* GetOrCreateRenderMaterial(MaterialID mid);
 
-	std::unordered_map<MaterialID, RenderMaterial*> mMaterials;
+	void UpdateMaterial(MaterialID matId);
+	void UpdateMaterial(MaterialID matId, TexturedRenderMaterial* mat);
 
 	const RenderMaterialType& MatType(u32 index)
 	{
@@ -37,12 +43,15 @@ public:
 	{
 		return mMatTypes;
 	}
-private:
+protected:
+
+
 	std::array<RenderMaterialType, MAT_COUNT> mMatTypes;
+	rnd::IRenderDevice* mDevice = nullptr;
+	std::unordered_map<MaterialID, RenderMaterial*> mMaterials;
 
 	//std::vector<OwningPtr<MaterialArchetype>> mMatTypes;
 	//std::vector<OwningPtr<IDeviceMaterial>> mMaterials;
-	rnd::IRenderDevice* mDevice;
 };
 
 }

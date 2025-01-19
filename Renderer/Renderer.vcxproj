@@ -210,6 +210,7 @@
     <ClInclude Include="src\render\DeviceMesh.h" />
     <ClInclude Include="src\render\DeviceResource.h" />
     <ClInclude Include="src\render\DeviceShader.h" />
+    <ClInclude Include="src\render\DeviceSurface.h" />
     <ClInclude Include="src\render\DeviceTexture.h" />
     <ClInclude Include="src\render\dx11\DX11CBPool.h" />
     <ClInclude Include="src\render\dx11\DX11ConstantBuffer.h" />
@@ -252,6 +253,7 @@
     <ClInclude Include="src\render\passes\SSAOPass.h" />
     <ClInclude Include="src\render\passes\SsrPass.h" />
     <ClInclude Include="src\render\RenderContext.h" />
+    <ClInclude Include="src\render\RenderController.h" />
     <ClInclude Include="src\render\RenderCubemap.h" />
     <ClInclude Include="src\render\RenderDevice.h" />
     <ClInclude Include="src\render\RenderDeviceCtx.h" />
@@ -298,6 +300,8 @@
     <ClInclude Include="src\scene\Scene.h" />
     <ClInclude Include="src\scene\SceneComponent.h" />
     <ClInclude Include="src\scene\SceneObject.h" />
+    <ClInclude Include="src\thread\MPSCMessageQueue.h" />
+    <ClInclude Include="src\thread\RWLock.h" />
     <ClInclude Include="src\thread\ThreadUtils.h" />
   </ItemGroup>
   <ItemGroup>
@@ -423,6 +427,7 @@
     <ClCompile Include="src\render\dx12\DX12Upload.cpp" />
     <ClCompile Include="src\render\dx12\DX12UploadBuffer.cpp" />
     <ClCompile Include="src\render\dx12\DX12RHI.cpp" />
+    <ClCompile Include="src\render\dx12\DX12Window.cpp" />
     <ClCompile Include="src\render\dx12\FrameIndexedRingBuffer.cpp" />
     <ClCompile Include="src\render\dxcommon\DXGIUtils.cpp" />
     <ClCompile Include="src\render\dxcommon\DXShaderCompiler.cpp" />
@@ -434,7 +439,9 @@
     <ClCompile Include="src\render\passes\SSAOPass.cpp" />
     <ClCompile Include="src\render\passes\SsrPass.cpp" />
     <ClCompile Include="src\render\RenderContext.cpp" />
+    <ClCompile Include="src\render\RenderController.cpp" />
     <ClCompile Include="src\render\RenderCubemap.cpp" />
+    <ClCompile Include="src\render\RenderDevice.cpp" />
     <ClCompile Include="src\render\RenderGraph.cpp" />
     <ClCompile Include="src\render\RenderMaterial.cpp" />
     <ClCompile Include="src\render\RenderPass.cpp" />
@@ -574,6 +581,9 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Dist|x64'">Pixel</ShaderType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Dist|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="src\shaders\Downsample.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>

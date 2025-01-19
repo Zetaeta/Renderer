@@ -24,14 +24,17 @@ void ShadowmapsPass::OnCollectFinished()
 void ShadowmapsPass::RenderShadowmap(ELightType lightType, u32 lightIndex)
 {
 	auto const& lrd = mRCtx->GetLightData(lightType, lightIndex);
-	mDepthStencil = lrd.mShadowMap->GetDS();
-	DeviceCtx()->ClearDepthStencil(mDepthStencil, EDSClearMode::DEPTH, 1.f);
-	mViewCam = lrd.GetCamera();
-	if (lightType == ELightType::POINT_LIGHT)
+	if (lrd.mShadowMap)
 	{
-		mMatOverride = mRCtx->GetMaterialManager()->GetDefaultMaterial(MAT_POINT_SHADOW_DEPTH);
+		mDepthStencil = lrd.mShadowMap->GetDS();
+		DeviceCtx()->ClearDepthStencil(mDepthStencil, EDSClearMode::DEPTH, 1.f);
+		mViewCam = lrd.GetCamera();
+		if (lightType == ELightType::POINT_LIGHT)
+		{
+			mMatOverride = mRCtx->GetMaterialManager()->GetDefaultMaterial(MAT_POINT_SHADOW_DEPTH);
+		}
+		RenderBuffer();
 	}
-	RenderBuffer();
 	mMatOverride = nullptr;
 }
 

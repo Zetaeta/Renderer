@@ -1,14 +1,18 @@
 #include "Viewport.h"
 #include <render/RenderContext.h>
+#include "render/RendererScene.h"
 
-
-Viewport::Viewport(Scene* scene, rnd::IRenderDeviceCtx* rdc, ivec2 size)
-{
-}
 
 Viewport::Viewport(rnd::IRenderDeviceCtx* rdc, Scene* scene, Camera::Ref camera)
-	: mScene(scene), mCamera(camera), mDeviceCtx(rdc)
+	: mScene(scene), mRScene(rnd::RendererScene::Get(*scene, rdc)), mCamera(camera), mDeviceCtx(rdc)
 {
+	rdc->Device->AddViewport(this);
+}
+
+Viewport::~Viewport()
+{
+
+	mDeviceCtx->Device->RemoveViewport(this);
 }
 
 ScreenObject* Viewport::GetObjectAt(ivec2 pos)
@@ -23,7 +27,7 @@ void Viewport::Resize(u32 width, u32 height, rnd::IDeviceTexture::Ref backbuffer
 	{
 		settings = mRCtx->Settings;
 	}
-	mRCtx = MakeOwning<rnd::RenderContext>(mDeviceCtx, mCamera, backbuffer, settings);
+	mRCtx = MakeOwning<rnd::RenderContext>(mDeviceCtx, mRScene, mCamera, backbuffer, settings);
 	mWidth = width;
 	mHeight = height;
 }
@@ -34,9 +38,14 @@ void Viewport::Reset()
 	mRCtx = nullptr;
 }
 
+void Viewport::SetScene(Scene* scene)
+{
+	mRScene = rnd::RendererScene::Get(*scene, mDeviceCtx);
+}
+
 void Viewport::Draw()
 {
-	mRCtx->RenderFrame(*mScene);
+	mRCtx->RenderFrame();
 }
 
 void Viewport::DebugPixel(uint2 pixCoord)

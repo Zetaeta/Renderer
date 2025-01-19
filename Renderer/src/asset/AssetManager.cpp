@@ -247,16 +247,16 @@ Scenelet::Ref AssetManager::AddScenelet(aiScene const* aiscene, AssetPath const&
 		
 		aiColor3D diff;
 		aimat->Get(AI_MATKEY_COLOR_DIFFUSE, diff);
-		auto& material = m_Materials.emplace_back(std::make_shared<Material>(aimat->GetName().C_Str(), Convert<decltype(Material::colour)>(diff)));
+		auto& material = m_Materials.emplace_back(std::make_shared<Material>(aimat->GetName().C_Str(), Convert<decltype(Material::Props.colour)>(diff)));
 		float opacity;
 		if (aimat->Get(AI_MATKEY_OPACITY, opacity) == aiReturn_SUCCESS)
 		{
 			printf("Opacity %f\n", opacity);
-			material->colour.a = opacity;
+			material->Props.colour.a = opacity;
 		}
 		else
 		{
-			material->colour.a = 1;
+			material->Props.colour.a = 1;
 		}
 
 		int blend;
@@ -270,12 +270,12 @@ Scenelet::Ref AssetManager::AddScenelet(aiScene const* aiscene, AssetPath const&
 			printf("Alpha Mode %s\n", gltfAlphaMode.C_Str());
 			if (strcmp(gltfAlphaMode.C_Str(), "BLEND") == 0)
 			{
-				material->translucent = true;
+				material->Props.translucent = true;
 			}
 			else if (strcmp(gltfAlphaMode.C_Str(), "MASK") == 0)
 			{
-				aimat->Get(AI_MATKEY_GLTF_ALPHACUTOFF, material->mask);
-				printf("Material mask: %f\n", material->mask);
+				aimat->Get(AI_MATKEY_GLTF_ALPHACUTOFF, material->Props.mask);
+				printf("Material mask: %f\n", material->Props.mask);
 			}
 			else if (strcmp(gltfAlphaMode.C_Str(), "OPAQUE") != 0)
 			{
@@ -301,6 +301,7 @@ Scenelet::Ref AssetManager::AddScenelet(aiScene const* aiscene, AssetPath const&
 			{
 				material->DebugName = std::filesystem::path(job.m_Albedo).filename().string();
 			}
+			material->Id = NumCast<MaterialID>(m_Materials.size() - 1);
 
 			if (async || true
 			)

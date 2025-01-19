@@ -90,19 +90,44 @@ MaterialArchetypeDesc CreateAndRegisterMatDesc(const char* name, const char* psF
 
 using MaterialID = int;
 
+struct StandardMatProperties
+{
+	col4 colour {};
+	col3 emissiveColour = col3(0);
+	int specularExp = -1;
+	float specularity = 1;
+	float diffuseness = 1;
+	float mask = 1.f;
+	float roughness = 0.5;
+	float metalness = 0;
+	bool translucent = false;
+
+	EMatType GetMatType() const
+	{
+		if (translucent) return E_MT_TRANSL;
+		if (mask < 1.f) return E_MT_MASKED;
+		return E_MT_OPAQUE;
+	}
+
+};
+
 struct Material
 {
 	RCOPY_PROTECT(Material);
 
 	Material(Material&& other) noexcept;
 	Material(String debugName, col4 col, float specularity = 1, int spec = -1, float diffuseness = 1, TextureRef albedo = {})
-		: colour(col), specularExp(spec), albedo(albedo), DebugName(debugName) {}
+		: albedo(albedo), DebugName(debugName), IsTextured(albedo.IsValid())
+	{
+		Props.colour = col;
+		Props.specularExp = spec;
+	}
 
 	col4 Colour() {
-		return colour;
+		return Props.colour;
 	}
 	int Specularity() {
-		return specularExp;
+		return Props.specularExp;
 	}
 
 	using Ref = std::shared_ptr<Material>;
@@ -117,28 +142,19 @@ struct Material
 
 	void OnPropertyUpdate();
 
+	EMatType GetMatType() const
+	{
+		return Props.GetMatType();
+	}
+
 	String DebugName;
 	TextureRef albedo;
 	TextureRef normal;
 	TextureRef emissiveMap;
 	TextureRef roughnessMap;
-	col4 colour;
-	col3 emissiveColour = col3(0);
-	int specularExp = -1;
-	float specularity = 1;
-	float diffuseness = 1;
-	float mask = 1.f;
-	float roughness = 0.5;
-	float metalness = 0;
-	bool translucent = false;
+	StandardMatProperties Props;
 	bool IsTextured = false;
-
-	EMatType GetMatType() const
-	{
-		if (translucent) return E_MT_TRANSL;
-		if (mask < 1.f) return E_MT_MASKED;
-		return E_MT_OPAQUE;
-	}
+	MaterialID Id;
 
 	rnd::IDeviceMaterial* DeviceMat = nullptr;
 private:

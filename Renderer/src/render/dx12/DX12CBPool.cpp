@@ -47,7 +47,7 @@ PooledCBHandle DX12CBPool::AcquireConstantBuffer(ECBLifetime lifetime, u32 size,
 void DX12CBPool::ReleaseConstantBuffer(PooledCBHandle handle)
 {
 	Handle hdl;
-	hdl.Bits = handle.UserData.As<u64>();
+	hdl.Bits = handle.Id;
 	if (hdl.Dynamic.IsDynamic)
 	{
 		// Dynamic cbs don't need releasing
@@ -90,6 +90,15 @@ D3D12_GPU_VIRTUAL_ADDRESS DX12DynamicCB::Commit()
 	}
 
 	return mLastAddress;
+}
+
+void DX12DynamicCB::SetLayout(DataLayout::Ref layout)
+{
+	if (layout && layout->GetSize() < GetCBData().GetSize())
+	{
+		GetCBData().Resize(layout->GetSize());
+	}
+	GetCBData().SetLayout(layout);
 }
 
 }

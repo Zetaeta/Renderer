@@ -360,7 +360,7 @@ void RastRenderer::DrawTri(mat4 const& fullTrans, mat4 const& model2World, std::
 					vec3 pos = (b[0] * verts[0].worldPos + b[1] * verts[1].worldPos + b[2] * verts[2].worldPos);
 					Material const& mat = m_Scene->GetMaterial(matId);
 					col3 lighting = ComputeLighting(normal, glm::normalize(pos - m_Camera->GetPosition()), mat);
-					col4 colour = mat.colour;
+					col4 colour = mat.Props.colour;
 					if (mat.albedo->IsValid())
 					{
 						vec2 uvs = LinearCombo(b, array<vec2, 3>{ verts[0].uvs * inverseDepths[0], verts[1].uvs * inverseDepths[1], verts[2].uvs * inverseDepths[2] }) / idepth;
@@ -384,13 +384,13 @@ col3 RastRenderer::ComputeLighting( const vec3& normal, const vec3& rayDir, Mate
 {
 	col3 intensity = m_Scene->m_AmbientLight;
 	for (auto dirLight : m_Scene->m_DirLights) {
-		intensity +=  max(dot(-dirLight.dir, normal),0.f) * mat.diffuseness * dirLight.colour;
-		if (mat.specularExp > 0) {
+		intensity +=  max(dot(-dirLight.dir, normal),0.f) * mat.Props.diffuseness * dirLight.colour;
+		if (mat.Props.specularExp > 0) {
 			float l = glm::length(dirLight.dir);
 			//assert(l < 1.1f);
 			vec3 outRay = normalize(dirLight.dir - 2 * dot(dirLight.dir, normal) * normal);
 			//assert(dot(outRay, -rayDir) < 1.0001f);
-			col3 specLight = float(pow(max(dot(outRay, -rayDir),0.00001f), mat.specularExp)) * dirLight.colour;// * mat.specularity;
+			col3 specLight = float(pow(max(dot(outRay, -rayDir),0.00001f), mat.Props.specularExp)) * dirLight.colour;// * mat.specularity;
 			//return specLight;
 			intensity += specLight;
 		}

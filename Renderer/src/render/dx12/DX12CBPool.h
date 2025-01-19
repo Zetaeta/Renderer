@@ -59,16 +59,16 @@ class DX12DynamicCB : public IConstantBuffer
 public:
 	void Update() override
 	{
-		mDirty = false;
+		mDirty = true;
 	}
 
-	void SetLayout(DataLayout::Ref layout) {}
+	void SetLayout(DataLayout::Ref layout);
 
 	D3D12_GPU_VIRTUAL_ADDRESS Commit();
 
 	bool mDirty = true;
 	u64 mCurrentFrame = 0;
-	D3D12_GPU_VIRTUAL_ADDRESS  mLastAddress;
+	D3D12_GPU_VIRTUAL_ADDRESS  mLastAddress{};
 };
 	
 }

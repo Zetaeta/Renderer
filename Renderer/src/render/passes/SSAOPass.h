@@ -38,7 +38,6 @@ private:
 	UnorderedAccessView mAOTextureUav;
 	UnorderedAccessView mSecondaryTextureUav;
 	
-	PooledCBHandle mCB;
 	RefPtr<ComputeShader const> mShader;
 	RefPtr<ComputeShader const> mDebugShader;
 	RefPtr<ComputeShader const> mDownsampler;

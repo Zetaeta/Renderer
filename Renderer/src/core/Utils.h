@@ -23,11 +23,12 @@ void AssertionFailed(bool fatal, const char* file, u32 line, const char* fmt, ..
 #define RASSERT_IMPL(expr, stringexpr, ...)\
 	if (!(expr))\
 	{\
-		AssertionFailed(true, __FILE__, __LINE__, "Assertion failed: " #expr);\
-		assert(false);\
+		AssertionFailed(true, __FILE__, __LINE__, "Assertion failed: " stringexpr, __VA_ARGS__);\
+		__debugbreak();\
 	}
 
 #define ZE_ASSERT(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
+#define Assertf(expr, msg, ...) RASSERT_IMPL(expr, msg, __VA_ARGS__)
 // An assertion that will always evaluate the containing expression even if assertions are disabled
 #define CHECK_SUCCEEDED(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
 #define ZE_ASSERT_DEBUG(expr, ...) ZE_ASSERT(expr, __VA_ARGS__)
@@ -507,6 +508,32 @@ template<typename InContainer, typename OutContainer>
 void Append(OutContainer to, InContainer from)
 {
 	to.insert(to.end(), from.begin(), from.end());
+}
+
+
+template<typename... Args>
+struct TMaxSize
+{
+};
+template<typename T, typename... Args>
+struct TMaxSize<T, Args...>
+{
+#ifdef max
+#undef max
+#endif
+	constexpr static u32 size = std::max<u32>(sizeof(T), TMaxSize<Args...>::size);
+};
+
+template<>
+struct TMaxSize<>
+{
+	constexpr static u32 size = 0;
+};
+
+template<typename... Args>
+constexpr u32 MaxSize()
+{
+	return TMaxSize<Args...>::size;
 }
 
 //template<typename... Args>

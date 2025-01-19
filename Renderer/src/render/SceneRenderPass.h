@@ -20,8 +20,11 @@ namespace rnd
 
 struct DrawData
 {
-	MeshPart const* mesh;
-	SceneComponent const* component;
+//	MeshPart const* mesh;
+//	SceneComponent const* component;
+	PrimitiveId primitive;
+	IDeviceIndexedMesh* mesh;
+	RenderMaterial* material;
 };
 
 enum class ERenderPassMode : u8
@@ -42,9 +45,9 @@ public:
 	bool Accepts(SceneComponent const* sceneComp, MeshPart const* mesh) const;
 
 	virtual void Execute(RenderContext& renderCtx) override;
-	void RenderScene(Scene const& scene);
+	void RenderScene(RendererScene const& scene);
 
-	virtual void Accept(SceneComponent const* sceneComp, MeshPart const* mesh);
+	virtual void Accept(DrawData const& drawData);
 
 	virtual void BeginRender();
 	virtual void OnCollectFinished() {}
@@ -65,12 +68,12 @@ public:
 	bool IsDepthOnly() { return mLayer == EShadingLayer::Depth; }
 	bool IsDeferred() { return mMode == ERenderPassMode::DEFERRED; }
 
-	IDeviceMaterial* mMatOverride = nullptr;
+	RenderMaterial* mMatOverride = nullptr;
 
 protected:
 	Vector<DrawData> mBuffer;
 
-	Scene const* mScene;
+	RendererScene const* mScene;
 	ERenderPassMode mMode;
 	EMatType mAcceptedMatTypes;
 	IRenderTarget::Ref mRenderTarget;

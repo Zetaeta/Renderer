@@ -106,7 +106,7 @@ void DX12Test::Render(ID3D12GraphicsCommandList_& cmdList)
 	context.SetGraphicsRootSignature(mRootSig);
 	context.SetShaderResources(EShaderType::Pixel, Single<const ResourceView>(ResourceView(mTexture)));
 	cmdList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	cmdList.IASetVertexBuffers(0, 1, &static_cast<DX12DirectMesh*>(mMesh.Get())->view);
+	cmdList.IASetVertexBuffers(0, 1, &static_cast<DX12DirectMesh*>(mMesh.Get())->View);
 	cmdList.DrawInstanced(3, 1, 0, 0);
 
 //	commandList->RSSet

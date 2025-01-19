@@ -7,7 +7,7 @@ DEFINE_LOG_CATEGORY(LogShaderCompiler);
 namespace rnd::dx
 {
 
-constexpr bool ShaderCompileDebugging = true;
+constexpr bool ShaderCompileDebugging = false;
 ComPtr<ID3DBlob> FXCShaderCompiler::GetShaderBytecode(ShaderInstanceId const& id, const ShaderDesc& desc,
 	const ShaderCompileEnv& env, EShaderType shaderType, OwningPtr<IShaderReflector>* outReflector, bool forceRecompile)
 {

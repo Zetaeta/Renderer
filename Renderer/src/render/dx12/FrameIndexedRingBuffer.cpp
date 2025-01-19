@@ -38,7 +38,7 @@ bool FrameIndexedRingBuffer::TryReserve(u64 size, u64 alignment, u64& outStart)
 		}
 		start = 0;
 	}
-	while (!mFrames.empty() && mFrames.Front().Start < start + size)
+	while (!mFrames.empty() && !(mFrames.Front().Start >= start + size || mFrames.Front().End <= start))
 	{
 		if (completedFrame >= mFrames.Front().Frame)
 		{

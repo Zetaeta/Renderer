@@ -14,6 +14,9 @@
 #include "DX12DescriptorAllocator.h"
 #include "DX12ShaderCompiler.h"
 #include "render/dxcommon/DXGIUtils.h"
+#include "render/RenderController.h"
+#include "editor/Viewport.h"
+#include "render/RendererScene.h"
 
 #pragma comment(lib, "d3d12.lib")
 
@@ -24,16 +27,10 @@ namespace dx12
 
 static DX12RHI* sRHI = nullptr;
 
-DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers)
+DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers, Scene* scene, Camera::Ref camera)
 :Window(width, height, name), IRenderDevice(new DX12LegacyShaderCompiler), mNumBuffers(numBuffers)
 {
-	//WNDCLASSEX wc = { sizeof(wc), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"DX12 window", nullptr };
-	//ZE_ASSERT(RegisterClassEx(&wc) != 0);
-	//mHwnd = ::CreateWindowW(wc.lpszClassName, name, WS_OVERLAPPEDWINDOW, 100, 100, width, height, nullptr, nullptr, wc.hInstance, nullptr);
-	//ZE_ASSERT(mHwnd != 0);
-
-	//ShowWindow(mHwnd, SW_SHOWDEFAULT);
-	//::UpdateWindow(mHwnd);
+	GRenderController.AddRenderBackend(this);
 
 	ZE_ASSERT(sRHI == nullptr);
 	sRHI = this;
@@ -56,13 +53,27 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 	mShaderResourceDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	mSamplerDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-	mTest = MakeOwning<DX12Test>(mDevice.Get());
+	if (scene)
+	{
+		mScene = scene;
+		mContext = std::make_unique<DX12Context>(mCmdList.CmdList.Get());
+		mViewport = std::make_unique<Viewport>(mContext.get(), scene, camera);
+	}
+	{
+		mTest = MakeOwning<DX12Test>(mDevice.Get());
+	}
 
 	WaitForGPU();
+
 }
 
 DX12RHI::~DX12RHI()
 {
+	mViewport = nullptr;
+	mContext = nullptr;
+	mSwapchainBufferTextures = {};
+	GRenderController.RemoveRenderBackend(this);
+	RendererScene::OnShutdownDevice(this);
 	mTest = nullptr;
 	mUploadBuffer = nullptr;
 	mCBPool.ReleaseResources();
@@ -106,9 +117,10 @@ void DX12RHI::Tick()
 	cmd->RSSetScissorRects(1, &scissor);
 
 	{
-		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			mRenderTargets[mBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		cmd->ResourceBarrier(1, &barrier);
+		//auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		//	mRenderTargets[mBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		//cmd->ResourceBarrier(1, &barrier);
+		mSwapchainBufferTextures[mBufferIndex]->TransitionTo(cmd.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	}
 	
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(mRTVHeap->GetCPUDescriptorHandleForHeapStart(), mBufferIndex, mRTVHeap.ElementSize);
@@ -116,11 +128,26 @@ void DX12RHI::Tick()
 	float const clearColor[4] = {0.5f, 0.5f, 0.5f, 1.f};
 	cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 
-	mTest->Render(*cmd.Get());
+	if (mTest)
 	{
-		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mRenderTargets[mBufferIndex].Get(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		cmd->ResourceBarrier(1, &barrier);
+//		mTest->Render(*cmd.Get());
+	}
+	if (mViewport)
+	{
+		mContext->ClearRenderTarget(mSwapchainBufferTextures[mBufferIndex]->GetRT(), {0,0,0,0});
+		if (!mViewport->mRScene->IsInitialized())
+		{
+			mViewport->mRScene = RendererScene::Get(*mScene, mContext.get());
+		}
+		mViewport->Resize(mWidth, mHeight, mSwapchainBufferTextures[mBufferIndex]);
+		GRenderController.BeginRenderFrame();
+		GRenderController.EndRenderFrame();
+	}
+	{
+		//auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mRenderTargets[mBufferIndex].Get(),
+		//	D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		//cmd->ResourceBarrier(1, &barrier);
+		mSwapchainBufferTextures[mBufferIndex]->TransitionTo(cmd.Get(), D3D12_RESOURCE_STATE_PRESENT);
 	}
 	mRecordingCommands = false;
 	cmd->Close();
@@ -162,6 +189,7 @@ void DX12RHI::WaitAndReleaseFrameIdx(u32 frameIdx)
 void DX12RHI::StartFrame()
 {
 	WaitAndReleaseFrameIdx(mFrameIndex);
+	++mCurrentFrame;
 	//if (mFenceValue > 2)
 	//{
 
@@ -171,12 +199,11 @@ void DX12RHI::StartFrame()
 void DX12RHI::EndFrame()
 {
 	HR_ERR_CHECK(mSwapChain->Present(1, 0));
-	++mCurrentFrame;
 	mFenceValues[mFrameIndex] = mCurrentFrame;
 //	mCurrentFrame = mFenceValues[mFrameIndex];
 
 	HR_ERR_CHECK(mQueues.Direct->Signal(mFrameFence.Get(), mCurrentFrame));
-	mFrameIndex = mCurrentFrame % mNumBuffers;
+	mFrameIndex = (mCurrentFrame - 1) % mNumBuffers;
 	mBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 }
 
@@ -220,10 +247,11 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 	UINT dxgiFactoryFlags = 0;
 #if defined(_DEBUG)
 	{
-		ComPtr<ID3D12Debug> debugController;
+		ComPtr<ID3D12Debug1> debugController;
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 		{
 			debugController->EnableDebugLayer();
+//			debugController->SetEnableGPUBasedValidation(true);
 			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 		}
 	}
@@ -292,12 +320,15 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 
 	mDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mFrameFence));
 
-
 //	HR_ERR_CHECK(m)
 }
 
 void DX12RHI::ResizeSwapChain()
 {
+	if (mViewport)
+	{
+		mViewport->Reset();
+	}
 	WaitForGPU();
 	mRTVHeap = {};
 	mWidth = mResizeWidth;
@@ -306,6 +337,7 @@ void DX12RHI::ResizeSwapChain()
 	for (int i = 0; i < mNumBuffers; ++i)
 	{
 		mRenderTargets[i] = nullptr;
+		mSwapchainBufferTextures[i] = nullptr;
 	}
 
 	mSwapChain->ResizeBuffers(mNumBuffers, mWidth, mHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
@@ -317,6 +349,12 @@ void DX12RHI::GetSwapChainBuffers()
 
 	mBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 	mRTVHeap = DX12DescriptorHeap(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, mNumBuffers);
+	DeviceTextureDesc desc;
+	desc.Width = mWidth;
+	desc.Height = mHeight;
+	desc.Format = ETextureFormat::RGBA8_Unorm;
+	desc.Flags = TF_RenderTarget;
+	desc.DebugName = "Backbuffer";
 
 	// swapchain render targets
 	{
@@ -325,6 +363,8 @@ void DX12RHI::GetSwapChainBuffers()
 		{
 			HR_ERR_CHECK(mSwapChain->GetBuffer(i, IID_PPV_ARGS(&mRenderTargets[i])));
 			mDevice->CreateRenderTargetView(mRenderTargets[i].Get(), nullptr, rtvHandle);
+			desc.DebugName = std::format("Backbuffer {}", i);
+			mSwapchainBufferTextures[i] = std::make_shared<DX12Texture>(desc, mRenderTargets[i].Get(), rtvHandle);
 			rtvHandle.Offset(1, mRTVHeap.ElementSize);
 		}
 	}
@@ -336,10 +376,17 @@ ComPtr<ID3D12Resource> DX12RHI::CreateVertexBuffer(VertexBufferData data, ID3D12
 	constexpr u32 VertexBufferAlignment = 4;
 	u32 size = NumCast<u32>(data.VertSize * data.NumVerts);
 	auto desc = CD3DX12_RESOURCE_DESC::Buffer(size, D3D12_RESOURCE_FLAG_NONE, VertexBufferAlignment);
-	auto finalLocation = GetAllocator(EResourceType::VertexBuffer, data.VertSize * data.NumVerts)->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+	auto finalLocation = GetAllocator(EResourceType::VertexBuffer, data.VertSize * data.NumVerts)->Allocate(desc, D3D12_RESOURCE_STATE_COMMON, nullptr);
+	
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		finalLocation.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	uploadCmdList->ResourceBarrier(1, &barrier);
 	auto uploadLoc = mUploadBuffer->Reserve(size, VertexBufferAlignment);
 	memcpy(uploadLoc.WriteAddress, data.Data, size);
 	uploadCmdList->CopyBufferRegion(finalLocation.Get(), 0, mUploadBuffer->GetCurrentBuffer(), uploadLoc.Offset, size);
+	//barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+	//	finalLocation.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+	//uploadCmdList->ResourceBarrier(1, &barrier);
 	return finalLocation;
 }
 
@@ -352,10 +399,10 @@ DeviceMeshRef DX12RHI::CreateDirectMesh(EPrimitiveTopology topology, VertexBuffe
 	result->VertexAttributes = data.VertAtts;
 	result->Topology = topology;
 	result->VertexCount = data.NumVerts;
-	result->view.BufferLocation = result->mResource->GetGPUVirtualAddress();
+	result->View.BufferLocation = result->mResource->GetGPUVirtualAddress();
 	
-	result->view.SizeInBytes = size;
-	result->view.StrideInBytes = data.VertSize;
+	result->View.SizeInBytes = size;
+	result->View.StrideInBytes = data.VertSize;
 	uploadCtx.FinishUploadSynchronous();
 //	mDevice->create
 //	mUploader.
@@ -377,14 +424,23 @@ RefPtr<IDeviceIndexedMesh> DX12RHI::CreateIndexedMesh(EPrimitiveTopology topolog
 	constexpr u32 IndexBufferAlignment = 4;
 	u32 ibSize = NumCast<u32>(indexBuffer.size() * sizeof(u16));
 	auto desc = CD3DX12_RESOURCE_DESC::Buffer(ibSize, D3D12_RESOURCE_FLAG_NONE, IndexBufferAlignment);
-	auto ibResource = GetAllocator(EResourceType::VertexBuffer, ibSize)->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr);
+	auto ibResource = GetAllocator(EResourceType::VertexBuffer, ibSize)->Allocate(desc, D3D12_RESOURCE_STATE_COMMON, nullptr);
+	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		ibResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	uploadCtx.CmdList->ResourceBarrier(1, &barrier);
+
 	auto uploadLoc = mUploadBuffer->Reserve(ibSize, IndexBufferAlignment);
 	memcpy(uploadLoc.WriteAddress, indexBuffer.data(), indexBuffer.size());;
 	uploadCtx.CmdList->CopyBufferRegion(ibResource.Get(), 0, mUploadBuffer->GetCurrentBuffer(), uploadLoc.Offset, ibSize);
+	//barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+	//	ibResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+	//uploadCtx.CmdList->ResourceBarrier(1, &barrier);
+
 	result->IndBuff = ibResource;
 	result->IndBuffView.BufferLocation = ibResource->GetGPUVirtualAddress();
 	result->IndBuffView.Format = DXGI_FORMAT_R16_UINT;
 	result->IndBuffView.SizeInBytes = ibSize;
+	result->IndexCount = NumCast<u32>(indexBuffer.size());
 
 	uploadCtx.FinishUploadSynchronous();
 	return result;
@@ -628,6 +684,7 @@ ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc const& PSODesc)
 		}
 		desc.DSVFormat = PSODesc.DSVFormat;
 		desc.SampleDesc = PSODesc.SampleDesc;
+		desc.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT{});
 		mDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso));
 	}
 
@@ -645,6 +702,18 @@ void DX12RHI::FreeIndexedMesh(DX12IndexedMesh* mesh)
 	DeferredRelease(std::move(mesh->VertBuff));
 	DeferredRelease(std::move(mesh->IndBuff));
 	mIndexedMeshes.Release(std::move(*mesh));
+}
+
+DX12RHI* DX12RHI::InitRHI()
+{
+	ZE_ASSERT(sRHI == nullptr);
+	sRHI = new DX12RHI(0,0, L"", ESwapchainBufferCount::TripleBuffered);
+	return sRHI;
+}
+
+bool DX12RHI::IsCreated()
+{
+	return sRHI != nullptr;
 }
 
 ID3D12Device_* GetD3D12Device()

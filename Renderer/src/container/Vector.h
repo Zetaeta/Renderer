@@ -107,3 +107,13 @@ bool Remove(Vector<T>& vec, T const& value)
 	}
 	return false;
 }
+
+template<typename T, typename Range>
+T* Find(Range& range, T const& value)
+{
+	if (auto it = std::find(range.begin(), range.end(), value); it != range.end())
+	{
+		return &*it;
+	}
+	return nullptr;
+}

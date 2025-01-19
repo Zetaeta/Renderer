@@ -3,7 +3,7 @@
 Texture2D sceneTexture;
 
 #ifndef USE_MSAA
-#define USE_MSAA 1
+#define USE_MSAA 0
 #endif
 
 #if USE_MSAA

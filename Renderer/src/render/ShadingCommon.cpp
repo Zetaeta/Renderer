@@ -2,6 +2,7 @@
 #include "core/Utils.h"
 #include "RenderContext.h"
 #include "scene/Scene.h"
+#include "RendererScene.h"
 
 namespace rnd
 {
@@ -10,14 +11,14 @@ namespace rnd
 void SetupShadingLayer(RenderContext* renderContext, EShadingLayer layer, u32 index)
 {
 	IRenderDeviceCtx* deviceCtx = renderContext->DeviceCtx();
-	Scene const& scene = renderContext->GetScene();
+	RendererScene const& scene = renderContext->GetScene();
 	auto& PSPF = *deviceCtx->GetConstantBuffer(ECBFrequency::PS_PerFrame);
 
 	if (layer == EShadingLayer::BASE)
 	{
 		PerFramePSData perFrameData;
 		Zero(perFrameData);
-		perFrameData.ambient = vec3(scene.m_AmbientLight);
+		perFrameData.ambient = vec3(scene.GetAmbientLight());
 		perFrameData.debugMode = Denum(renderContext->Settings.ShadingDebugMode);
 		perFrameData.debugGrayscaleExp = renderContext->Settings.DebugGrayscaleExp;
 		perFrameData.brdf = renderContext->mBrdf;
@@ -38,11 +39,11 @@ void SetupShadingLayer(RenderContext* renderContext, EShadingLayer layer, u32 in
 	{
 	case EShadingLayer::DIRLIGHT:
 	{
-		auto const& light = scene.m_PointLights[index];
+		auto const& light = scene.GetDirLights()[index];
 		PFPSDirLight perFrameData;
 		Zero(perFrameData);
-		perFrameData.directionalCol = vec3(scene.m_DirLights[index].colour);
-		perFrameData.directionalDir = scene.m_DirLights[index].dir;
+		perFrameData.directionalCol = vec3(light.colour);
+		perFrameData.directionalDir = light.dir;
 		perFrameData.world2Light = lrd.mCamera->GetProjWorld();;
 		perFrameData.debugMode = Denum(renderContext->Settings.ShadingDebugMode);
 		perFrameData.debugGrayscaleExp = renderContext->Settings.DebugGrayscaleExp;
@@ -52,7 +53,7 @@ void SetupShadingLayer(RenderContext* renderContext, EShadingLayer layer, u32 in
 	}
 	case EShadingLayer::SPOTLIGHT:
 	{
-		auto const& light = scene.m_SpotLights[index];
+		auto const& light = scene.GetSpotLights()[index];
 		PFPSSpotLight perFrameData;
 		Zero(perFrameData);
 		perFrameData.spotLightCol = light.colour;
@@ -69,7 +70,7 @@ void SetupShadingLayer(RenderContext* renderContext, EShadingLayer layer, u32 in
 	}
 	case EShadingLayer::POINTLIGHT:
 	{
-		auto const& light = scene.m_PointLights[index];
+		auto const& light = scene.GetPointLights()[index];
 		PFPSPointLight perFrameData;
 		Zero(perFrameData);
 		perFrameData.pointLightPos = light.pos;

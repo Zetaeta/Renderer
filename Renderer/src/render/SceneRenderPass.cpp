@@ -3,6 +3,7 @@
 #include "dx11/DX11Renderer.h"
 #include <core/Matrix.h>
 #include "scene/StaticMeshComponent.h"
+#include "RendererScene.h"
 
 namespace rnd
 {
@@ -25,38 +26,42 @@ bool SceneRenderPass::Accepts(SceneComponent const* sceneComp, MeshPart const* m
 	return true;
 }
 
-void SceneRenderPass::RenderScene(Scene const& scene)
+void SceneRenderPass::RenderScene(RendererScene const& scene)
 {
 	mScene = &scene;
 	if (mMode == ERenderPassMode::IMMEDIATE)
 	{
 		BeginRender();
 	}
-	mScene->ForEach<StaticMeshComponent>([&](StaticMeshComponent const& smc) {
-		auto cmesh = smc.GetMesh();
-		auto const& trans = smc.GetWorldTransform();
-		if (!IsValid(cmesh))
-		{
-			return;
-		}
+	//scene.GetScene().ForEach<StaticMeshComponent>([&](StaticMeshComponent const& smc) {
+	//	auto cmesh = smc.GetMesh();
+	//	auto const& trans = smc.GetWorldTransform();
+	//	if (!IsValid(cmesh))
+	//	{
+	//		return;
+	//	}
 
-		for (auto const& mesh : cmesh->components)
-		{
-			Accept(&smc, &mesh);
-		}
+	//	for (auto const& mesh : cmesh->components)
+	//	{
+	//		Accept(&smc, &mesh);
+	//	}
+	//});
+
+	scene.ForEachMeshPart([&](PrimitiveId prim, IDeviceIndexedMesh* mesh, RenderMaterial* mat) {
+		Accept({prim, mesh, mat});
 	});
 	OnCollectFinished();
 }
 
-void SceneRenderPass::Accept(SceneComponent const* sceneComp, MeshPart const* mesh)
+void SceneRenderPass::Accept(DrawData const& dd)
 {
 	if (IsDeferred())
 	{
-		mBuffer.emplace_back(DrawData{ mesh, sceneComp });
+		mBuffer.emplace_back(dd);
 	}
 	else
 	{
-		Draw(DrawData{ mesh, sceneComp });
+		Draw(dd);
 	}
 }
 
@@ -175,17 +180,18 @@ void SceneRenderPass::Draw(DrawData const& data)
 
 void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, mat4 const& projWorld)
 {
-	mRCtx->SetScreenObjId(data.component->GetScreenId());
+	mRCtx->SetScreenObjId(mScene->GetScreenObjId(data.primitive));
 #if ZE_BUILD_EDITOR
-	if (data.component->Selected)
+	bool selected = mScene->IsSelected(data.primitive);
+	if (selected)
 	{
 		DeviceCtx()->SetStencilState({EStencilMode::Overwrite | EStencilMode::IgnoreDepth | EStencilMode::UseBackFace, 250});
 	}
 #endif
-	mRCtx->DrawPrimitive(data.mesh, data.component->GetWorldTransform(), projWorld,
-						mMatOverride ? mMatOverride : nullptr, mLayer);
+	mRCtx->DrawPrimitive(data.mesh, mScene->GetPrimTransform(data.primitive), projWorld,
+						mMatOverride ? mMatOverride : data.material, mLayer);
 #if ZE_BUILD_EDITOR
-	if (data.component->Selected)
+	if (selected)
 	{
 		DeviceCtx()->SetStencilState({EStencilMode::Disabled, 0});
 	}

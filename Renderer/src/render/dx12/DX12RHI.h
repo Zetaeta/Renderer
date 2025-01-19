@@ -18,6 +18,9 @@
 #include "render/RenderDeviceCtx.h"
 #include "core/Hash.h"
 #include "DX12Context.h"
+#include "scene/Camera.h"
+
+namespace rnd { namespace dx12 { class DX12Texture; } }
 
 namespace rnd { namespace dx12 { class DX12DescriptorTableAllocator; } }
 
@@ -39,7 +42,7 @@ struct DX12DirectMesh : public IDeviceMesh
 {
 	void OnFullyReleased() override;
 	ComPtr<ID3D12Resource> mResource;
-	D3D12_VERTEX_BUFFER_VIEW view;
+	D3D12_VERTEX_BUFFER_VIEW View;
 };
 
 struct DX12IndexedMesh : public IDeviceIndexedMesh
@@ -54,7 +57,10 @@ struct DX12IndexedMesh : public IDeviceIndexedMesh
 class DX12RHI : public wnd::Window, public IRenderDevice
 {
 public:
-	DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers);
+	static DX12RHI* InitRHI();
+	static bool IsCreated();
+	
+	DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers, Scene* scene = nullptr, Camera::Ref camera = nullptr);
 	~DX12RHI();
 
 	void Tick() override;
@@ -200,6 +206,7 @@ private:
 	OwningPtr<DX12DescriptorTableAllocator> mSamplerDescTables;
 //	OwningPtr<DX12SyncPointPool> mSyncPoints;
 	std::array<ComPtr<ID3D12Resource_>, MaxSwapchainBufferCount> mRenderTargets;
+	std::array<std::shared_ptr<DX12Texture>, MaxSwapchainBufferCount> mSwapchainBufferTextures;
 	std::array<Vector<ComPtr<ID3D12Pageable>>, MaxSwapchainBufferCount> mDeferredReleaseResources;
 	std::unordered_map<GraphicsPSODesc, ComPtr<ID3D12PipelineState>, GenericHash<>> mPSOs;
 	DX12DescriptorHeap mRTVHeap;
@@ -211,6 +218,9 @@ private:
 	u32 mBufferIndex = 0;
 	u32 mResizeWidth = 0;
 	u32 mResizeHeight = 0;
+	OwningPtr<Viewport> mViewport;
+	OwningPtr<DX12Context> mContext;
+	Scene* mScene = nullptr;
 
 	DX12CBPool mCBPool;
 };

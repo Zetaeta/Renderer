@@ -99,6 +99,8 @@ struct ComputeDispatch
 class IRenderDeviceCtx
 {
 public:
+	
+
 	virtual void SetRTAndDS(IRenderTarget::Ref rts, IDepthStencil::Ref ds, int RTArrayIdx = -1, int DSArrayIdx = -1) = 0;
 	virtual void SetRTAndDS(Span<IRenderTarget::Ref> rts, IDepthStencil::Ref ds) = 0;
 	virtual void SetViewport(float width, float height, float TopLeftX = 0, float TopLeftY = 0) = 0;
@@ -115,9 +117,8 @@ public:
 	virtual void ClearUAV(UnorderedAccessView uav, uint4 clearValues) = 0;
 	virtual void ClearUAV(UnorderedAccessView uav, vec4 clearValues) = 0;
 	virtual void DrawCubemap(IDeviceTextureCube* cubemap) = 0;
-	virtual void DrawMesh(MeshPart const& meshPart, EShadingLayer layer, bool useMaterial = true) = 0;
 	virtual void DrawMesh(Primitive const& primitive) = 0;
-	virtual void DrawMesh(IDeviceMesh* mesh) = 0;
+	virtual void DrawMesh(IDeviceMesh const* mesh) = 0;
 	virtual void DispatchCompute(ComputeDispatch args) = 0;
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) = 0; 
 	virtual void			 SetConstantBuffers(EShaderType shaderType, Span<IConstantBuffer* const> buffers) = 0;
@@ -161,7 +162,7 @@ public:
 
 	ICBPool* CBPool = nullptr;
 	IRenderDevice* Device;
-	class MaterialManager* MatManager;
+//	class MaterialManager* MatManager;
 };
 
 }

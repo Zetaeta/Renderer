@@ -29,10 +29,15 @@ struct GraphicsPSODesc
 	u32 NumRTs = 0;
 	std::array<DXGI_FORMAT, 8> RTVFormats;
 	DXGI_FORMAT DSVFormat;
-	DXGI_SAMPLE_DESC SampleDesc;
+	DXGI_SAMPLE_DESC SampleDesc {1, 0};
 	EBlendState BlendState;
 	EDepthMode DepthMode;
 	EStencilMode StencilMode;
+
+	GraphicsPSODesc()
+	{
+		std::fill(RTVFormats.begin(), RTVFormats.end(), DXGI_FORMAT_UNKNOWN);
+	}
 
 	bool operator==(GraphicsPSODesc const& other) const
 	{
@@ -135,8 +140,7 @@ public:
 class DX12Context : public IRenderDeviceCtx
 {
 public:
-	DX12Context(ID3D12GraphicsCommandList_* cmdList)
-	:mCmdList(cmdList) { }
+	DX12Context(ID3D12GraphicsCommandList_* cmdList);
 
 	void SetRTAndDS(IRenderTarget::Ref rts, IDepthStencil::Ref ds, int RTArrayIdx, int DSArrayIdx) override;
 
@@ -155,7 +159,6 @@ public:
 
 	void SetDepthStencilMode(EDepthMode mode, StencilState stencil ) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
 		SetDepthMode(mode);
 		SetStencilState(stencil);
 	}
@@ -174,26 +177,10 @@ public:
 	}
 
 
-	void ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMode, float depth, u8 stencil = 0) override
-	{
-		D3D12_CLEAR_FLAGS flags{};
-		if (HasAnyFlags(clearMode, EDSClearMode::DEPTH))
-		{
-			flags &= D3D12_CLEAR_FLAG_DEPTH;
-		}
-		if (HasAnyFlags(clearMode, EDSClearMode::STENCIL))
-		{
-			flags &= D3D12_CLEAR_FLAG_STENCIL;
-		}
-		mCmdList->ClearDepthStencilView(ds->GetData<D3D12_CPU_DESCRIPTOR_HANDLE>(), flags, depth, stencil, 0, nullptr);
-		throw std::logic_error("The method or operation is not implemented.");
-	}
+	void ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMode, float depth, u8 stencil = 0) override;
 
 
-	void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) override
-	{
-		mCmdList->ClearRenderTargetView(rt->GetData<D3D12_CPU_DESCRIPTOR_HANDLE>(), &clearColour[0], 0, nullptr);
-	}
+	void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) override;
 
 
 	void ClearUAV(UnorderedAccessView uav, uint4 clearValues) override
@@ -204,47 +191,41 @@ public:
 
 	void ClearUAV(UnorderedAccessView uav, vec4 clearValues) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+//		throw std::logic_error("The method or operation is not implemented.");
 	}
 
 
 	void DrawCubemap(IDeviceTextureCube* cubemap) override
 	{
 		FinalizeGraphicsState();
-		throw std::logic_error("The method or operation is not implemented.");
+//		throw std::logic_error("The method or operation is not implemented.");
 	}
 
-
-	void DrawMesh(MeshPart const& meshPart, EShadingLayer layer, bool useMaterial) override
-	{
-		FinalizeGraphicsState();
-		throw std::logic_error("The method or operation is not implemented.");
-	}
 
 
 	void DrawMesh(Primitive const& primitive) override
 	{
 		FinalizeGraphicsState();
-		throw std::logic_error("The method or operation is not implemented.");
+//		throw std::logic_error("The method or operation is not implemented.");
 	}
 
 
-	void DrawMesh(IDeviceMesh* mesh) override
-	{
-		FinalizeGraphicsState();
-		throw std::logic_error("The method or operation is not implemented.");
-	}
+	void DrawMesh(IDeviceMesh const* mesh) override;
 
 
 	void DispatchCompute(ComputeDispatch args) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+//		throw std::logic_error("The method or operation is not implemented.");
 	}
 
 
 	IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		if (size > mDynamicCBs[freq].GetCBData().GetSize())
+		{
+			mDynamicCBs[freq].GetCBData().Resize(size);
+		}
+		return &mDynamicCBs[freq];
 	}
 
 
@@ -262,7 +243,7 @@ public:
 
 	void ClearResourceBindings() override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+//		throw std::logic_error("The method or operation is not implemented.");
 	}
 
 
@@ -272,10 +253,7 @@ public:
 	}
 
 
-	void Copy(DeviceResourceRef dst, DeviceResourceRef src) override
-	{
-		throw std::logic_error("The method or operation is not implemented.");
-	}
+	void Copy(DeviceResourceRef dst, DeviceResourceRef src) override;
 
 
 	void SetShaderResources(EShaderType shader, ShaderResources srvs, u32 startIdx = 0) override;
@@ -283,19 +261,19 @@ public:
 
 	void SetUAVs(EShaderType shader, Span<UnorderedAccessView const> uavs, u32 startIdx = 0) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+//		throw std::logic_error("The method or operation is not implemented.");
 	}
 
 
 	void UnbindUAVs(EShaderType shader, u32 clearNum, u32 startIdx = 0) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+//		throw std::logic_error("The method or operation is not implemented.");
 	}
 
 
 	void SetSamplers(EShaderType shader, Span<SamplerHandle const> samplers, u32 startSlot = 0) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+//		throw std::logic_error("The method or operation is not implemented.");
 	}
 
 
@@ -331,7 +309,7 @@ public:
 
 	void SetComputeShader(ComputeShader const* shader) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+//		throw std::logic_error("The method or operation is not implemented.");
 	}
 
 
@@ -372,6 +350,7 @@ public:
 private:
 	ID3D12GraphicsCommandList_* mCmdList;
 	GraphicsPipelineStateCache mGraphicsState;
+	EnumArray<ECBFrequency, DX12DynamicCB> mDynamicCBs;
 };
 
 }

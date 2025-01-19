@@ -92,7 +92,7 @@ class Scene : public BaseSerialized
 	void ForEachComponent(std::function<void(SceneComponent&)> const& func );
 	void ForEachComponent(std::function<void(SceneComponent const&)> const& func ) const;
 
-	void Teardown() {}
+	void Teardown();
 
 	template<typename TComponent>
 	void ForEach(std::function<void(TComponent&)> const& func)
@@ -119,6 +119,8 @@ class Scene : public BaseSerialized
 	}
 
 	void Initialize();
+
+	void Destroy();
 
 	AssetManager* GetAssetManager()
 	{
@@ -150,7 +152,7 @@ class Scene : public BaseSerialized
 	std::vector<MeshInstance>  m_MeshInstances;
 	OwningPtr<SceneDataInterface> mDataInterface;
 
-	SceneDataInterface& DataInterface()
+	SceneDataInterface& DataInterface() const
 	{
 		return *mDataInterface;
 	}
@@ -265,6 +267,9 @@ class Scene : public BaseSerialized
 
 	col3				  m_AmbientLight = col3(0.2f);
 private:
+	//Scene(Scene&& other);
+	//Scene& operator=(Scene&& other);
+
 	std::vector<Mesh>& Meshes() const { return m_AssetManager->m_Meshes; }
 
 	void ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive = false) override;

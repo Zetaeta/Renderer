@@ -29,6 +29,10 @@ TextureRef gDirt;
 		make_shared<Material>("Dirt", vec4{ 0.f, 0.f, 0.f, 1.f }, 1.f, 500, 1.f, gDirt),
 		make_shared<Material>("Yellow", vec4{ 1.f, 1.f, 0.f, 1.f })
 	};
+	for (u32 i = 0; i < mScene.Materials().size(); ++i)
+	{
+		mScene.Materials()[i]->Id = i;
+	}
 	auto mesh = MeshPart::Cube(1);
 	ComputeNormals(mesh);
 	auto		   cube = m_AssMan.AddMesh({ AssetPath("/Memory/cube"), std::move(mesh) });
@@ -135,9 +139,10 @@ void RenderManager::SceneControls()
 	{
 		for (int m = 0; m < mScene.Materials().size(); ++m)
 		{
-			auto& mat = mScene.GetMaterial(m);
+			auto& material = mScene.GetMaterial(m);
+			auto& mat = material.Props;
 			ImGui::PushID(&mat);
-			ImGui::Text("Material %d (%s)", m, mat.DebugName.c_str());
+			ImGui::Text("Material %d (%s)", m, material.DebugName.c_str());
 			if (ImGui::TreeNode("Details"))
 			{
 				bool modified = false;
@@ -145,17 +150,17 @@ void RenderManager::SceneControls()
 				modified |= ImGui::DragFloat("Roughness", &mat.roughness, 0.01f, 0.f, 1.f);
 				modified |= ImGui::DragFloat("Metalness", &mat.metalness, 0.01f, 0.f, 1.f);
 				modified |= ImGui::DragFloat3("Emissive", &mat.emissiveColour[0], 0.01f, 0.f, 1.f);
-				if (mat.albedo.IsValid())
+				if (material.albedo.IsValid())
 				{
-					ImGui::Text("Albedo: %s", mat.albedo->GetName());
-					if (const DeviceTextureRef& DeviceTex = mat.albedo->GetDeviceTexture())
+					ImGui::Text("Albedo: %s", material.albedo->GetName());
+					if (const DeviceTextureRef& DeviceTex = material.albedo->GetDeviceTexture())
 					{
 						ImGui::Image(DeviceTex->GetTextureHandle<void*>(), {500, 500}, { 0, 1 }, {1,0});
 					}
 				}
 				if (modified)
 				{
-					mat.OnPropertyUpdate();
+					material.OnPropertyUpdate();
 				}
 				ImGui::DragFloat("Specularity", &mat.specularity);
 				ImGui::DragInt("SpecExp", &mat.specularExp);

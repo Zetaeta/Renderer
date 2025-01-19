@@ -11,7 +11,7 @@ public:
 	RenderScreenIds(RenderContext* ctx, Name passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil = nullptr)
 		: SceneRenderPass(ctx, passName, camera, renderTarget, depthStencil ? depthStencil : ctx->GetTempDepthStencilFor(renderTarget))
 	{
-		mMatOverride = DeviceCtx()->MatManager->GetDefaultMaterial(MAT_SCREEN_ID);
+		mMatOverride = mRCtx->GetMaterialManager()->GetDefaultMaterial(MAT_SCREEN_ID);
 	}
 
 	virtual void BeginRender() override

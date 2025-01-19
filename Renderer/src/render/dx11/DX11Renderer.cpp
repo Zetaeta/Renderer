@@ -24,6 +24,7 @@
 #include "render/dxcommon/DXGIUtils.h"
 #include "../../scene/StaticMeshComponent.h"
 #include "render/MaterialManager.h"
+#include "render/RendererScene.h"
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -60,31 +61,6 @@ struct PS2DCBuff
 	int renderMode = 0; // 1=depth, 2=uint
 };
 
-template<typename... Args>
-struct TMaxSize
-{
-};
-template<typename T, typename... Args>
-struct TMaxSize<T, Args...>
-{
-#ifdef max
-#undef max
-#endif
-	constexpr static u32 size = std::max<u32>(sizeof(T), TMaxSize<Args...>::size);
-};
-
-template<>
-struct TMaxSize<>
-{
-	constexpr static u32 size = 0;
-};
-
-template<typename... Args>
-constexpr u32 MaxSize()
-{
-	return TMaxSize<Args...>::size;
-}
-
 //template<typename T, typename... Args>
 //constexpr size_t MaxSize()
 //{
@@ -97,16 +73,6 @@ constexpr u32 MaxSize()
 //	return 0;
 //}
 
-
-__declspec(align(16))
-struct PerFrameVertexData
-{
-	DECLARE_STI_NOBASE(PerFrameVertexData);
-	mat4 screen2World;
-	mat4 world2Light;
-	vec3 cameraPos;
-};
-DECLARE_CLASS_TYPEINFO(PerFrameVertexData);
 
 //template <typename T>
 //void DX11Renderer::CreateConstantBuffer(ComPtr<ID3D11Buffer>& buffer, T const& initialData, u32 size)
@@ -189,7 +155,7 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 	m_Ctx.pContext = pContext;
 	m_Ctx.m_Renderer = this;
 	Setup();
-	MatManager = new MaterialManager(this);
+//	MatManager = new MaterialManager(this);
 	mViewport = MakeOwning<Viewport>(this, scene, camera);
 
 	D3D11_QUERY_DESC disjointDesc {};
@@ -205,6 +171,11 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 
 DX11Renderer::~DX11Renderer()
 {
+	RendererScene::OnShutdownDevice(this);
+	IRenderDevice::Teardown();
+	ResourceMgr.Teardown();
+	MatMgr.Release();
+//	MatManager->Release();
 	mTextures.clear();
 	m_Materials.clear();
 	mRCtx = {};
@@ -457,44 +428,45 @@ void DX11Renderer::Render(const Scene& scene)
 	ProcessTextureCreations();
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 
-	pContext->PSSetSamplers(0, 2, samplers );
 	m_Scene = const_cast<Scene*>(&scene);
 	m_Materials.resize(scene.Materials().size());
 
 	ImVec4 clear_color = ImVec4();
-	auto   RTV = m_MainRenderTarget->GetRTV();
-	pContext->OMSetRenderTargets(1, &RTV, NULL_OR(m_MainDepthStencil, GetDSV()));
-
-	const float clear_color_with_alpha[4] = { 0.45f, 0.55f, 0.60f, 1.00f };
-	//pContext->ClearRenderTargetView(m_MainRenderTarget->GetRTV(), clear_color_with_alpha);
-	//pContext->ClearDepthStencilView(m_MainDepthStencil->GetDSV(), D3D11_CLEAR_DEPTH, 1.f, 0);
 
 	m_Scale = float(std::min(m_Width, m_Height));
 	m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
 
-	D3D11_VIEWPORT vp = {
-		.TopLeftX = 0,
-		.TopLeftY = 0,
-		.Width = float(m_Width),
-		.Height = float(m_Height),
-		.MinDepth = 0,
-		.MaxDepth = 1,
-	};
-	pContext->RSSetViewports(1u, &vp);
+	//D3D11_VIEWPORT vp = {
+	//	.TopLeftX = 0,
+	//	.TopLeftY = 0,
+	//	.Width = float(m_Width),
+	//	.Height = float(m_Height),
+	//	.MinDepth = 0,
+	//	.MaxDepth = 1,
+	//};
+	//pContext->RSSetViewports(1u, &vp);
+	if (!mViewport->mRScene->IsInitialized())
+	{
+		mViewport->mRScene = RendererScene::Get(scene, this);
+	}
+//	mViewport->mRScene->BeginFrame();
+	mViewport->mRScene->UpdatePrimitives();
 
-	m_Ctx.mRCtx->RenderFrame(scene);
+
+	m_Ctx.mRCtx->RenderFrame();
 
 	SetDepthStencilMode(EDepthMode::Disabled);
 	if (m_ViewerTex != nullptr)
 	{
 		DrawTexture(m_ViewerTex);
 	}
-	pContext->OMSetRenderTargets(0, nullptr, nullptr);
+	//pContext->OMSetRenderTargets(0, nullptr, nullptr);
 
-	pContext->PSSetShader(nullptr, nullptr, 0);
-	pContext->VSSetShader(nullptr, nullptr, 0);
+	//pContext->PSSetShader(nullptr, nullptr, 0);
+	//pContext->VSSetShader(nullptr, nullptr, 0);
 
 	mRCtx->TextureManager.UnBind(this);
+//	mViewport->mRScene->EndFrame();
 	EndFrameTimer();
 }
 
@@ -587,59 +559,30 @@ void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 }
 
 
-void DX11Renderer::DrawMesh(MeshPart const& mesh, EShadingLayer layer, bool useMaterial /*= true*/)
-{
-//	ID3D11Buffer* vbuffs[] = { m_VSPerInstanceBuff.Get(), m_VSPerFrameBuff.Get() };
-//	pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
-	auto& meshData = m_MeshData[&mesh];
-	if (!meshData.vBuff)
-	{
-		PrepareMesh(mesh, meshData);
-	}
-	assert(meshData.iBuff);
-
-	bool needsUpdate = false;
-	auto const& sceneMats = m_Scene->Materials();
-	if (RCHECK(mesh.material < sceneMats.size() && sceneMats[mesh.material]))
-	{
-		needsUpdate = sceneMats[mesh.material]->NeedsUpdate();
-	}
-	if (!m_Materials[mesh.material] || needsUpdate)
-	{
-		PrepareMaterial(mesh.material);
-	}
-
-	if (useMaterial)
-	{
-		m_Materials[mesh.material]->Bind(*mRCtx, layer);
-	}
-
-	const UINT stride = Sizeof(mesh.vertices[0]);
-	const UINT offset = 0;
-
-
-	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	pContext->IASetVertexBuffers(0, 1, meshData.vBuff.GetAddressOf(), &stride, &offset);
-	pContext->IASetIndexBuffer(meshData.iBuff.Get(),DXGI_FORMAT_R16_UINT, 0);
-	pContext->DrawIndexed(Size(mesh.triangles) * 3,0,0);
-	m_Materials[mesh.material]->UnBind(*mRCtx);
-}
-
-void DX11Renderer::DrawMesh(IDeviceMesh* mesh)
+void DX11Renderer::DrawMesh(IDeviceMesh const* mesh)
 {
 	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 //	UpdateInputLayout();
 
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 	pContext->PSSetSamplers(0, 2, samplers );
+	ZE_REQUIRE(mCurrVertexLayout);
 	if (mesh->MeshType == EDeviceMeshType::DIRECT)
 	{
-		DX11DirectMesh* mesh11 = static_cast<DX11DirectMesh*>(mesh);
-		ZE_REQUIRE(mCurrVertexLayout);
+		DX11DirectMesh const* mesh11 = static_cast<DX11DirectMesh const*>(mesh);
 		const UINT		stride = mCurrVertexLayout->GetSize();
 		const UINT offset = 0;
 		pContext->IASetVertexBuffers(0, 1, mesh11->vBuff.GetAddressOf(), &stride, &offset);
 		pContext->Draw(mesh11->VertexCount, 0);
+	}
+	else if (mesh->MeshType == EDeviceMeshType::INDEXED)
+	{
+		DX11IndexedMesh const* mesh11 = static_cast<DX11IndexedMesh const*>(mesh);
+		const UINT		stride = mCurrVertexLayout->GetSize();
+		const UINT offset = 0;
+		pContext->IASetVertexBuffers(0, 1, mesh11->vBuff.GetAddressOf(), &stride, &offset);
+		pContext->IASetIndexBuffer(mesh11->iBuff.Get(), DXGI_FORMAT_R16_UINT, offset);
+		pContext->DrawIndexed(mesh11->IndexCount, 0, 0);
 	}
 }
 
@@ -736,7 +679,7 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 	std::unique_ptr<RenderMaterial>& result = m_Materials[mid];
 	if (mat.albedo->IsValid())
 	{
-		auto texMat = std::make_unique<TexturedRenderMaterial>(&MatMgr.MatTypes()[MAT_TEX], mat.GetMatType());
+		auto texMat = std::make_unique<TexturedRenderMaterial>(&MatMgr.MatTypes()[MAT_TEX], mat.GetMatType(), mat.Props);
 		if (mat.albedo.IsValid())
 		{
 			texMat->m_Albedo = PrepareTexture(*mat.albedo, true);
@@ -767,7 +710,7 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 	}
 	else
 	{
-		result = std::make_unique<RenderMaterial>(&MatMgr.MatTypes()[MAT_PLAIN], mat.GetMatType());
+		result = std::make_unique<RenderMaterial>(&MatMgr.MatTypes()[MAT_PLAIN], mat.GetMatType(), mat.Props);
 	}
 	mat.DeviceMat = result.get();
 }
@@ -926,7 +869,7 @@ RenderMaterial* DX11Renderer::GetDefaultMaterial(int matType)
 	auto& materialType = MatMgr.MatTypes()[matType];
 	if (!IsValid(materialType.m_Default))
 	{
-		materialType.m_Default = std::make_unique<RenderMaterial>(&materialType, E_MT_OPAQUE);
+		materialType.m_Default = std::make_unique<RenderMaterial>(&materialType, E_MT_OPAQUE, StandardMatProperties{});
 		
 	}
 	return materialType.m_Default.get();
@@ -1172,6 +1115,9 @@ void DX11Renderer::SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int 
 {
 	auto*					dx11DS = static_cast<DX11DepthStencil*>(ds.get());
 	ID3D11DepthStencilView* dsv= nullptr;
+	D3D11_VIEWPORT vp {};
+	vp.MaxDepth = 1;
+	D3D11_RECT scissor{};
 	if (dx11DS != nullptr) 
 	{
 		if (DSArrayIdx != -1)
@@ -1182,6 +1128,9 @@ void DX11Renderer::SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int 
 		{
 			dsv = dx11DS->GetDSV();
 		}
+		vp.Width = float(ds->Desc.Width);
+		vp.Height = float(ds->Desc.Height);
+		scissor = CD3D11_RECT(0, 0, ds->Desc.Width, ds->Desc.Height);
 	}
 
 	ID3D11RenderTargetView* rtv= nullptr;
@@ -1196,27 +1145,47 @@ void DX11Renderer::SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int 
 		{
 			rtv = dx11RT->GetRTV();
 		}
+		vp.Width = float(rt->Desc.Width);
+		vp.Height = float(rt->Desc.Height);
+		scissor = CD3D11_RECT(0, 0, rt->Desc.Width, rt->Desc.Height);
 	}
+//	scissor = CD3D11_RECT(0, 0, vp.Width, vp.Height);
 	
 	pContext->OMSetRenderTargets(1, &rtv, dsv);
+	pContext->RSSetViewports(1, &vp);
+	pContext->RSSetScissorRects(1, &scissor);
 }
 
 void DX11Renderer::SetRTAndDS(Span<IRenderTarget::Ref> rts, IDepthStencil::Ref ds)
 {
 	std::array<ID3D11RenderTargetView*, D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT> renderTargets;
 	ZE_ASSERT(rts.size() <= D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT);
+	D3D11_VIEWPORT vp {};
+	vp.MaxDepth = 1;
+	D3D11_RECT scissor{};
 	for (u32 i=0; i<rts.size(); ++i)
 	{
 		if (rts[i] != nullptr)
 		{
 			renderTargets[i] = static_cast<DX11RenderTarget*>(rts[i].get())->GetRTV();
+			vp.Width = float(rts[i]->Desc.Width);
+			vp.Height = float(rts[i]->Desc.Height);
+			scissor = CD3D11_RECT(0, 0, rts[i]->Desc.Width, rts[i]->Desc.Height);
 		}
 	}
 
 	auto* dx11DS = static_cast<DX11DepthStencil*>(ds.get());
 	ID3D11DepthStencilView* dsv = dx11DS ? dx11DS->GetDSV() : nullptr;
+	if (ds)
+	{
+		vp.Width = float(ds->Desc.Width);
+		vp.Height = float(ds->Desc.Height);
+		scissor = CD3D11_RECT(0, 0, ds->Desc.Width, ds->Desc.Height);
+	}
 
 	pContext->OMSetRenderTargets(NumCast<u32>(rts.size()), &renderTargets[0], dsv);
+	pContext->RSSetViewports(1, &vp);
+	pContext->RSSetScissorRects(1, &scissor);
 }
 
 void DX11Renderer::SetViewport(float width, float height, float TopLeftX /*= 0*/, float TopLeftY /*= 0*/)

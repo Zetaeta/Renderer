@@ -18,7 +18,7 @@ PrimitiveId SceneDataInterface::AddPrimitive(PrimitiveComponent* component)
 	auto& data = GetMainThreadData();
 	if (auto mesh = smc->GetMeshRef())
 	{
-		PrimitiveId newId = NumCast<PrimitiveId>(data.Meshes.size());
+		PrimitiveId newId = NumCast<PrimitiveId>(data.Transforms.size());
 //		data.Meshes.push_back(mesh);
 		data.Transforms.push_back(component->GetWorldTransform());
 		data.TransformsDirty.push_back(true);

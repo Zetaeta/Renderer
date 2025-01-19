@@ -2,11 +2,13 @@
 
 #include <memory>
 #include "core/RefCounted.h"
+using MaterialID = int;
+
 namespace rnd
 {
 class IDeviceTexture;
 
-using IDeviceTextureRef = std::shared_ptr<IDeviceTexture>;
+using DeviceTextureRef = std::shared_ptr<IDeviceTexture>;
 
 class IDeviceMesh;
 

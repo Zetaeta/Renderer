@@ -15,8 +15,9 @@ struct DX12Shader : public IDeviceShader
 
 class DX12LegacyShaderCompiler : public IShaderCompiler, public dx::FXCShaderCompiler
 {
-
 public:
+	DX12LegacyShaderCompiler();
+
 	OwningPtr<IDeviceShader> CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc, const ShaderCompileEnv& env,
 		EShaderType ShaderType, VertexAttributeMask inputMask, OwningPtr<IShaderReflector>* outReflector, bool forceRecompile) override;
 

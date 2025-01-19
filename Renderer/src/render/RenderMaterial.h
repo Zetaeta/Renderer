@@ -21,6 +21,17 @@ struct PerInstancePSData
 	GPUBool useRoughnessMap;
 };
 
+struct PerInstanceVSData
+{
+	DECLARE_STI_NOBASE(PerInstanceVSData);
+public:
+	mat4 fullTransform;
+	mat4 model2ShadeSpace;
+	mat4 model2ShadeDual;
+};
+DECLARE_CLASS_TYPEINFO(PerInstanceVSData);
+
+
 class MaterialArchetype : public RefCountedObject
 {
 public:
@@ -72,10 +83,13 @@ public:
 class RenderMaterial : public IDeviceMaterial
 {
 public:
-	RenderMaterial(RefPtr<MaterialArchetype> matType, EMatType opacity)
-		: IDeviceMaterial(matType), mMatType(opacity) {}
+	RenderMaterial(RefPtr<MaterialArchetype> matType, EMatType opacity, StandardMatProperties const& props)
+		: IDeviceMaterial(matType), mProps(props), mMatType(opacity) { }
 
-
+	StandardMatProperties const& Props() const
+	{
+		return mProps;
+	}
 
 	virtual void UnBind(rnd::RenderContext& rctx)
 	{
@@ -84,14 +98,15 @@ public:
 	void Bind(rnd::RenderContext& rctx, EShadingLayer layer) override;
 protected:
 	EMatType mMatType;
+	StandardMatProperties mProps;
 };
 
 class TexturedRenderMaterial : public RenderMaterial
 {
 public:
 
-	TexturedRenderMaterial(RefPtr<MaterialArchetype> matType, EMatType opacity, DeviceTextureRef const& albedo = nullptr)
-		: RenderMaterial(matType, opacity), m_Albedo(albedo) {}
+	TexturedRenderMaterial(RefPtr<MaterialArchetype> matType, EMatType opacity, StandardMatProperties const& props, DeviceTextureRef const& albedo = nullptr)
+		: RenderMaterial(matType, opacity, props), m_Albedo(albedo) {}
 
 	
 	void Bind(rnd::RenderContext& rctx, EShadingLayer layer) override;

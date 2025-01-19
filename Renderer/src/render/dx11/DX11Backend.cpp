@@ -143,9 +143,61 @@ bool HasArg(const String& arg, int argc, char** argv)
 	return false;
 }
 
+
+int SetupConsole()
+{
+	// Set output mode to handle virtual terminal sequences
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hOut == INVALID_HANDLE_VALUE)
+	{
+		return false;
+	}
+	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+	if (hIn == INVALID_HANDLE_VALUE)
+	{
+		return false;
+	}
+
+	DWORD dwOriginalOutMode = 0;
+	DWORD dwOriginalInMode = 0;
+	if (!GetConsoleMode(hOut, &dwOriginalOutMode))
+	{
+		return false;
+	}
+	if (!GetConsoleMode(hIn, &dwOriginalInMode))
+	{
+		return false;
+	}
+
+	DWORD dwRequestedOutModes = ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN;
+	DWORD dwRequestedInModes = ENABLE_VIRTUAL_TERMINAL_INPUT;
+
+	DWORD dwOutMode = dwOriginalOutMode | dwRequestedOutModes;
+	if (!SetConsoleMode(hOut, dwOutMode))
+	{
+		// we failed to set both modes, try to step down mode gracefully.
+		dwRequestedOutModes = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+		dwOutMode = dwOriginalOutMode | dwRequestedOutModes;
+		if (!SetConsoleMode(hOut, dwOutMode))
+		{
+			// Failed to set any VT mode, can't do anything here.
+			return -1;
+		}
+	}
+
+	DWORD dwInMode = dwOriginalInMode | dwRequestedInModes;
+	if (!SetConsoleMode(hIn, dwInMode))
+	{
+		// Failed to set VT input mode, can't do anything here.
+		return -1;
+	}
+	return 0;
+}
+
 // Main code
 int MainDX11(int argc, char** argv)
 {
+	SetupConsole();
 	LogConsumerThread logThread;
 	logThread.Start();
 	// Create application window
@@ -222,18 +274,10 @@ int MainDX11(int argc, char** argv)
 	InputImgui input;
 	{
 
-	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input, g_pSwapChain);
+	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input, g_pSwapChain, HasArg("-dx12", argc, argv));
 	Editor*			  editor = Editor::Create(&input, &renderMgr);
 	renderMgr.CreateInitialScene();
 //	std::shared_ptr<rnd::dx11::DX11Texture> bbTex = nullptr;
-
-	OwningPtr<dx12::DX12RHI> dx12Win = nullptr;
-	OwningPtr<dx12::DX12RHI::LiveObjectReporter> dx12LOR;
-	if (HasArg("-dx12", argc, argv))
-	{
-		dx12Win = MakeOwning<dx12::DX12RHI>(1500, 900, L"DX12", TripleBuffered);
-		dx12LOR = dx12Win->GetLiveObjectReporter();
-	}
 
 	// Main loop
 	bool done = false;
@@ -282,11 +326,6 @@ int MainDX11(int argc, char** argv)
 		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
-
-		if (dx12Win)
-		{
-			dx12Win->Tick();
-		}
 
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
@@ -390,8 +429,6 @@ int MainDX11(int argc, char** argv)
 									 // g_pSwapChain->Present(0, 0); // Present without vsync
 	}
 	Editor::Destroy();
-	dx12Win = nullptr;
-	dx12LOR = nullptr;
 	}
 
 	// Cleanup

@@ -44,8 +44,8 @@ public:
 	const EDeviceMeshType MeshType = EDeviceMeshType::DIRECT;
 
 protected:
-	IDeviceMesh(EDeviceMeshType MeshType, DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
-		: VertexAttributes(vertAttrs) {}
+	IDeviceMesh(EDeviceMeshType InMeshType, DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
+		: VertexAttributes(vertAttrs), VertexCount(vertCount), Topology(topology), MeshType(InMeshType) {}
 };
 
 class IDeviceIndexedMesh : public IDeviceMesh

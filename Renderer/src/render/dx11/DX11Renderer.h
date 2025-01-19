@@ -30,16 +30,6 @@ namespace dx11
 using namespace rnd;
 using namespace rnd::dx11;
 
-struct PerInstanceVSData
-{
-	DECLARE_STI_NOBASE(PerInstanceVSData);
-public:
-	mat4 fullTransform;
-	mat4 model2ShadeSpace;
-	mat4 model2ShadeDual;
-};
-DECLARE_CLASS_TYPEINFO(PerInstanceVSData);
-
 class DX11Renderer : public IRenderer, public rnd::IRenderDeviceCtx, public DX11Device
 {
 public:
@@ -67,7 +57,6 @@ public:
 
 	void PrepareShadowMaps();
 
-	void DrawMesh(MeshPart const& meshPart, EShadingLayer layer, bool useMaterial = true);
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size /* = 0 */) override;
 
 	DX11ConstantBuffer& GetPerFramePSCB() { return m_PSPerFrameBuff; }
@@ -146,13 +135,6 @@ public:
 	IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData) override;
 	IDeviceTexture::Ref CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData) override;
 
- /* inline static Colour_t GetColour(MaterialID mat)
-	{
-		return mat.colour;
-	}
-	inline static int GetSpecularity(MaterialID mat) {
-		return mat.specularity;
-	}*/
 
 	//constexpr static u32 const MAT_PLAIN = 0;
 	//constexpr static u32 const MAT_TEX = 1;
@@ -181,7 +163,7 @@ public:
 	RefPtr<VertexShader const> mCurrVertexShader = nullptr;
 
 
-	void DrawMesh(IDeviceMesh* mesh) override;
+	void DrawMesh(IDeviceMesh const* mesh) override;
 
  private:
 	template<typename TFunc>

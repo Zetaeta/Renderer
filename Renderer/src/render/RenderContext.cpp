@@ -16,12 +16,14 @@
 #include "passes/SSAOPass.h"
 #include "passes/SsrPass.h"
 #include "scene/StaticMeshComponent.h"
+#include "RendererScene.h"
+#include "asset/AssetManager.h"
 
 namespace rnd
 {
 
-RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IDeviceTexture::Ref target, RenderSettings const& settings)
-	: mCamera(camera), mRGBuilder(DeviceCtx->Device), Settings(settings)
+RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, RendererScene* scene, Camera::Ref camera, IDeviceTexture::Ref target, RenderSettings const& settings)
+	: mCamera(camera), mRGBuilder(DeviceCtx->Device), Settings(settings), mScene(scene)
 {
 	mTarget = target;
 	mDeviceCtx = DeviceCtx;
@@ -61,7 +63,7 @@ void RenderContext::SetupRenderTarget()
 		DeviceTextureDesc msaaRTDesc = mTarget->Desc;
 		msaaRTDesc.DebugName = "MSAA RT";
 		msaaRTDesc.SampleCount = msaaSampleCount;
-		msaaRTDesc.Flags = ETextureFlags::TF_RenderTarget | ETextureFlags::TF_SRGB;
+		msaaRTDesc.Flags = ETextureFlags::TF_RenderTarget | ETextureFlags::TF_SRGB | TF_SRV;
 		mMsaaTarget = mDevice->CreateTexture2D(msaaRTDesc);
 		mMainRT = mMsaaTarget->GetRT();
 
@@ -76,15 +78,15 @@ void RenderContext::SetupRenderTarget()
 
 	// Second target for postprocess effects
 	{
-		DeviceTextureDesc ppDesc = mTarget->Desc;
-		ppDesc.Flags |= TF_SRGB;
+		DeviceTextureDesc ppDesc = primaryRTDesc;
+		ppDesc.Flags |= TF_SRGB | TF_SRV;
 		ppDesc.DebugName = "PostProcess RT";
 		mPPTarget = mDevice->CreateTexture2D(ppDesc);
 	}
 
 	{
 	
-		dsDesc.Flags = ETextureFlags::TF_DEPTH | ETextureFlags::TF_StencilSRV;
+		dsDesc.Flags = ETextureFlags::TF_DEPTH | ETextureFlags::TF_StencilSRV | TF_SRV;
 		dsDesc.DebugName = "MainDepthStencil";
 		dsDesc.Format = ETextureFormat::D24_Unorm_S8_Uint;
 		mDSTex = mDeviceCtx->Device->CreateTexture2D(dsDesc);
@@ -160,9 +162,8 @@ void RenderContext::SetupPostProcess()
 }
 
 
- void RenderContext::RenderFrame(Scene const& scene)
+ void RenderContext::RenderFrame()
 {
-	mScene = &scene;
 	SetupLightData();
 	mDeviceCtx->ClearRenderTarget(mMainRT, { 0.45f, 0.55f, 0.60f, 1.00f });
 	mDeviceCtx->ClearDepthStencil(mMainDS, EDSClearMode::DEPTH_STENCIL, 1.f);
@@ -320,9 +321,9 @@ LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 l
 
 void RenderContext::SetupLightData()
 {
-	mLightData[Denum(ELightType::DIR_LIGHT)].resize(mScene->m_DirLights.size());
-	mLightData[Denum(ELightType::SPOTLIGHT)].resize(mScene->m_SpotLights.size());
-	mLightData[Denum(ELightType::POINT_LIGHT)].resize(mScene->m_PointLights.size());
+	mLightData[Denum(ELightType::DIR_LIGHT)].resize(mScene->GetDirLights().size());
+	mLightData[Denum(ELightType::SPOTLIGHT)].resize(mScene->GetSpotLights().size());
+	mLightData[Denum(ELightType::POINT_LIGHT)].resize(mScene->GetPointLights().size());
 	for (ELightType lightType = ELightType::START; lightType < ELightType::COUNT; ++lightType)
 	{
 		for (u32 i = 0; i < mLightData[Denum(lightType)].size(); ++ i)
@@ -333,7 +334,7 @@ void RenderContext::SetupLightData()
 				lrd = CreateLightRenderData(lightType, i);
 			}
 
-			QuatTransform trans = mScene->GetLightComponent(lightType, i)->GetWorldTransform();
+			QuatTransform trans = mScene->GetLightTransform(lightType, i);
 			if (lightType == ELightType::DIR_LIGHT)
 			{
 				vec3 offset = - mScene->GetLight<DirLight>(i).dir * 100.f;
@@ -421,68 +422,68 @@ void RenderContext::DrawPrimComp(const PrimitiveComponent* component, const IDev
 	{
 		for (const MeshPart& part : mesh->components)
 		{
-			DrawPrimitive(&part, component->GetWorldTransform(), mCamera->GetProjWorld(), matOverride);
+//			DrawPrimitive(&part, component->GetWorldTransform(), mCamera->GetProjWorld(), matOverride); TODO
 		}
 	}
 }
 
-void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transform, const mat4& viewMatrix, const IDeviceMaterial* matOverride /*= nullptr*/, EShadingLayer layer /*= EShadingLayer::BASE*/)
+void RenderContext::DrawPrimitive(const IDeviceIndexedMesh* mesh, const mat4& transform, const mat4& viewMatrix, RenderMaterial* matOverride /*= nullptr*/, EShadingLayer layer /*= EShadingLayer::BASE*/)
 {
 	MaterialArchetype* matArch = nullptr;
 
-	Material const& mat = mScene->GetMaterial(primitive->material);
+//	Material const& material = AssetManager::Get()->GetMaterial(primitive->material);
+	StandardMatProperties const& mat = matOverride->Props();
+	TexturedRenderMaterial const* texMat = dynamic_cast<TexturedRenderMaterial const*>(matOverride);
 	if (matOverride)
 	{
 		matArch = matOverride->Archetype;
 	}
 	else 
 	{
-		auto& deviceMat = mat.DeviceMat;
-		if (!deviceMat || mat.NeedsUpdate())
-		{
-			DeviceCtx()->PrepareMaterial(primitive->material);
-		}
-		if (deviceMat)
-		{
-			matArch = deviceMat->Archetype;
-		}
+		//auto& deviceMat = material.DeviceMat;
+		//if (!deviceMat || material.NeedsUpdate())
+		//{
+		//	DeviceCtx()->PrepareMaterial(primitive->material);
+		//}
+		//if (deviceMat)
+		//{
+		//	matArch = deviceMat->Archetype;
+		//}
 	}
 
 	if (matArch)
 	{
+		auto const& perInstInfo = matArch->GetCBData(ECBFrequency::PS_PerInstance);
+		bool usesPerInstance = perInstInfo.IsUsed;
+		bool usesPerFrame = matArch->GetCBData(ECBFrequency::PS_PerFrame).IsUsed;
+		IConstantBuffer* cbs[2] = {nullptr, nullptr};
+		u32 index = 0;
+		if (usesPerFrame)
 		{
-			auto const& perInstInfo = matArch->GetCBData(ECBFrequency::PS_PerInstance);
-			bool usesPerInstance = perInstInfo.IsUsed;
-			bool usesPerFrame = matArch->GetCBData(ECBFrequency::PS_PerFrame).IsUsed;
-			IConstantBuffer* cbs[2] = {nullptr, nullptr};
-			u32 index = 0;
-			if (usesPerFrame)
-			{
-				cbs[index++] = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerFrame);
-			}
-			if (usesPerInstance)
-			{
-				DataLayout::Ref layout = perInstInfo.Layout;
-				IConstantBuffer* psPerInst = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, layout->GetSize());
-				psPerInst->SetLayout(layout);
-				ConstantBufferData& cbData = psPerInst->Data();
-				cbData[CB::colour] |= mat.colour;
-				cbData[CB::emissiveColour] |= mat.emissiveColour;
-				cbData[CB::roughness] |= mat.roughness;
-				cbData[CB::metalness] |= mat.metalness;
-				cbData[CB::ambdiffspec] |= vec3 {1, mat.diffuseness, mat.specularity};
-				cbData[CB::useNormalMap] |= mat.normal->IsValid();
-				cbData[CB::useEmissiveMap] |= mat.emissiveMap->IsValid();
-				cbData[CB::useRoughnessMap] |= mat.roughnessMap->IsValid();
-				cbData[CB::alphaMask] |= mat.mask;
-				cbData[CB::screenObjectId] |= mCurrentId;
-				cbData.FillFromSource(mCBOverrides);
-				psPerInst->Update();
-				cbs[index++] = psPerInst;
-			}
-
-			DeviceCtx()->SetConstantBuffers(EShaderType::Pixel, cbs);
+			cbs[index++] = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerFrame);
 		}
+		if (usesPerInstance)
+		{
+			DataLayout::Ref layout = perInstInfo.Layout;
+			IConstantBuffer* psPerInst = DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, layout->GetSize());
+			psPerInst->SetLayout(layout);
+			ConstantBufferData& cbData = psPerInst->Data();
+			cbData[CB::colour] |= mat.colour;
+			cbData[CB::emissiveColour] |= mat.emissiveColour;
+			cbData[CB::roughness] |= mat.roughness;
+			cbData[CB::metalness] |= mat.metalness;
+			cbData[CB::ambdiffspec] |= vec3 {1, mat.diffuseness, mat.specularity};
+			cbData[CB::useNormalMap] |= texMat && texMat->m_Normal;
+			cbData[CB::useEmissiveMap] |= texMat && texMat->m_Emissive;
+			cbData[CB::useRoughnessMap] |= texMat && texMat->m_Roughness;
+			cbData[CB::alphaMask] |= mat.mask;
+			cbData[CB::screenObjectId] |= mCurrentId;
+			cbData.FillFromSource(mCBOverrides);
+			psPerInst->Update();
+			cbs[index++] = psPerInst;
+		}
+
+		DeviceCtx()->SetConstantBuffers(EShaderType::Pixel, cbs);
 	}
 
 	dx11::PerInstanceVSData PIVS;
@@ -508,7 +509,10 @@ void RenderContext::DrawPrimitive(const MeshPart* primitive, const mat4& transfo
 		}
 		DeviceCtx()->SetConstantBuffers(EShaderType::Vertex, cbs);
 	}
-	DeviceCtx()->DrawMesh(*primitive, layer, matOverride == nullptr);
+	matOverride->Bind(*this, layer);
+
+//	DeviceCtx()->DrawMesh(*primitive, layer, matOverride == nullptr);
+	DeviceCtx()->DrawMesh(mesh);
 }
 
 IDepthStencil::Ref RenderContext::GetTempDepthStencilFor(IRenderTarget::Ref rt)

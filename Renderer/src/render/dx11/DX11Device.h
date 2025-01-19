@@ -28,7 +28,7 @@ struct DX11IndexedMesh : public IDeviceIndexedMesh
 	ComPtr<ID3D11Buffer> iBuff;
 };
 
-class DX11Device : public IRenderDevice, public IRenderResourceManager
+class DX11Device : public IRenderDevice//, public IRenderResourceManager
 {
 public:
 	DX11Device(ID3D11Device* pDevice);
@@ -42,17 +42,10 @@ public:
 	RefPtr<IDeviceIndexedMesh> CreateIndexedMesh(EPrimitiveTopology topology, VertexBufferData vertexBuffer, Span<u16> indexBuffer, BatchedUploadHandle uploadHandle);
 	ID3D11InputLayout* GetOrCreateInputLayout(VertexAttributeDesc::Handle vertAtts, VertexAttributeMask requiredAtts);
 
-	void CreateRenderTexture(Texture* texture) override;
-	void DestroyRenderTexture(Texture* texture) override;
-	DeviceTextureRef GetDeviceTexture(const Texture* texture) override;
 	DX11TextureRef GetRenderTexture(const Texture* texture)
-#if MULTI_RENDER_BACKEND
-	;
-#else
 	{
-		return static_pointer_cast<DX11Texture>(texture->GetDeviceTexture());
+		return static_pointer_cast<DX11Texture>(ResourceMgr.GetDeviceTexture(texture));
 	}
-#endif
 
 	SamplerHandle GetSampler(SamplerDesc const& desc) override;
 
@@ -63,14 +56,6 @@ public:
 protected:
 	std::unordered_map<SamplerDesc, ComPtr<ID3D11SamplerState>, GenericHash<>> mSamplers;
 
-	struct TexDestroyCommand
-	{
-		TextureId TexId;
-		DX11TextureRef DevTex;
-	};
-	Vector<TexDestroyCommand> mDestroyCommands;
-	Vector<class Texture*> mCreateCommands;
-	std::mutex mCreateDestroyMtx;
 
 	SmallMap<VertAttDrawInfo, ComPtr<ID3D11InputLayout>> mInputLayouts;
 

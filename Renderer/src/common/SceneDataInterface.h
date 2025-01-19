@@ -50,8 +50,10 @@ public:
 
 	struct SceneData
 	{
-		Vector<CompoundMesh*> Meshes;
+//		Vector<CompoundMesh*> Meshes;
 		Vector<WorldTransform> Transforms;
+		//Vector<bool> Selected;
+		//Vector<ScreenObjectId> ScreenObjIds;
 //		Vector<MaterialID> Materials;
 //		Vector<SubPrimitiveRange> SubPrimitives;
 		BitVector TransformsDirty;
@@ -117,7 +119,7 @@ private:
 
 	void StartFrame_MainThread()
 	{
-		mFrameGuards[mMainThreadIdx].acquire();
+//		mFrameGuards[mMainThreadIdx].acquire();
 	}
 	void ReleaseFrame_MainThread()
 	{
@@ -132,6 +134,6 @@ private:
 	std::array<std::binary_semaphore, NumSceneDataBuffers> mFrameGuards;
 
 	u32 mMainThreadIdx = 0;
-	u32 mRenderThreadIdx = 1;
+	u32 mRenderThreadIdx = 0;
 //	BitVector 
 };

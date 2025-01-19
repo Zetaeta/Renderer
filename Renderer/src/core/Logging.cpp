@@ -3,71 +3,8 @@
 #include "chrono"
 #include "iostream"
 #include <semaphore>
-
-template<typename Message>
-class MPSCMessageQueue
-{
-	RCOPY_MOVE_PROTECT(MPSCMessageQueue);
-public:
-	MPSCMessageQueue() = default;
-	template<typename TMessage>
-	void Add(TMessage&& msg)
-	{
-		Node* node = new Node { mHead.load(std::memory_order_acquire), std::forward<TMessage>(msg) };
-		while (!mHead.compare_exchange_weak(node->Next, node)) { }
-		mHead.notify_one();
-	}
-
-	void Wake()
-	{
-		mHead.notify_one();
-	}
-
-	template<typename Func>
-	void ConsumeAll(Func&& func, bool ordered = true)
-	{
-		Node* head = mHead.exchange(nullptr, std::memory_order_acquire);
-		if (head == nullptr)
-		{
-			return;
-		}
-		// Reverse chain
-		Node* prev = head;
-		Node* current = prev->Next;
-		Node* next = nullptr;
-		prev->Next = nullptr;
-		while (current)
-		{
-			next = current->Next;
-			current->Next = prev;
-			prev = current;
-			current = next;
-		}
-		for (Node* n = prev; n; n = n->Next)
-		{
-			func(n->Msg);
-		}
-	}
-
-	bool IsEmpty()
-	{
-		return mHead.load(std::memory_order_acquire) == nullptr;
-	}
-
-	void Wait()
-	{
-		mHead.wait(nullptr);
-	}
-
-private:
-	struct Node
-	{
-		Node* Next = nullptr;
-		Message Msg;
-	};
-
-	std::atomic<Node*> mHead = nullptr;
-};
+#include "thread/MPSCMessageQueue.h"
+#include "container/EnumArray.h"
 
 using ThreadId = std::thread::id;
 
@@ -146,6 +83,15 @@ void LogConsumerThread::Flush()
 	sema.acquire();
 }
 
+static EnumArray<ELogVerbosity, const char*> sColourCodes =
+{
+	"\x1b[1",
+	"\x1b[1",
+	"\x1b[3",
+	"",
+	""
+};
+
 void LogConsumerThread::DoWork()
 {
 	if (LogPrivate::sLogQueue.IsEmpty())
@@ -165,7 +111,8 @@ void LogConsumerThread::DoWork()
 			}
 			else
 			{
-				std::cout << std::format("[{:%F %T}] {}: [{}] {}\n", std::chrono::floor<std::chrono::milliseconds>(msg.Time),
+				
+				std::cout << std::format("{}[{:%F %T}] {}: [{}] {}\n", sColourCodes[msg.Verbosity], std::chrono::floor<std::chrono::milliseconds>(msg.Time),
 					msg.Category->GetName(), Verbosities[Denum(msg.Verbosity)], msg.Message);
 			}
 	//		const std::time_t time = std::chrono::system_clock::to_time_t(msg.Time);

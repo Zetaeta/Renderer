@@ -29,6 +29,18 @@ DX12Texture::DX12Texture(DeviceTextureDesc const& desc)
 	CreateResource(nullptr);
 }
 
+DX12Texture::DX12Texture(DeviceTextureDesc const& desc, ID3D12Resource_* resource, D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle)
+:IDeviceTexture(desc), mResource(resource)
+{
+	SetResourceName(mResource, Desc.DebugName);
+	RenderTargetDesc rtDesc;
+	rtDesc.Width = Desc.Width;
+	rtDesc.Height = Desc.Height;
+	rtDesc.Format = Desc.Format;
+	rtDesc.DebugName = Desc.DebugName + " RT";
+	mRtv = std::make_shared<DX12RenderTarget>(rtDesc, this, resource, rtvHandle);
+}
+
 u64 DX12Texture::CreateResource(UploadTools* upload)
 {
 	auto resourceDesc = MakeResourceDesc();
@@ -38,7 +50,8 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 	D3D12_CLEAR_VALUE clearVal;
 	clearVal.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::RenderTarget);
 	Zero(clearVal.Color);
-	mResource = rhi.GetAllocator(EResourceType::Texture)->Allocate(resourceDesc, upload ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON, useClearVal ? &clearVal : nullptr);
+	mLastState = upload ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
+	mResource = rhi.GetAllocator(EResourceType::Texture)->Allocate(resourceDesc, mLastState, useClearVal ? &clearVal : nullptr);
 	SetResourceName(mResource, Desc.DebugName);
 
 	if (!!(Desc.Flags & TF_SRV))
@@ -48,7 +61,7 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::SRV);
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Texture2D.MipLevels = Desc.NumMips;
+		srvDesc.Texture2D.MipLevels = Desc.NumMips <= 0 ? -1 : Desc.NumMips;
 		rhi.Device()->CreateShaderResourceView(mResource.Get(), &srvDesc, mSrvDesc);
 	}
 	if (!!(Desc.Flags & TF_RenderTarget))
@@ -61,7 +74,7 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 		rtDesc.Height = Desc.Height;
 		D3D12_RENDER_TARGET_VIEW_DESC dxDesc {};
 		dxDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::RenderTarget);
-		if (Desc.SampleCount > 1)
+		if (Desc.SampleCount == 1)
 		{
 			dxDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 			dxDesc.Texture2D = {};
@@ -70,7 +83,29 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 		{
 			dxDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
 		}
-		mRtv = std::make_shared<DX12RenderTarget>(rtDesc, mResource.Get(), dxDesc);
+		mRtv = std::make_shared<DX12RenderTarget>(rtDesc, this, mResource.Get(), dxDesc);
+	}
+	if (!!(Desc.Flags & TF_DEPTH))
+	{
+		DepthStencilDesc dsDesc;
+		dsDesc.DebugName = Desc.DebugName + " RT";
+		dsDesc.Format = Desc.Format;
+		dsDesc.Dimension = ETextureDimension::TEX_2D;
+		dsDesc.Width = Desc.Width;
+		dsDesc.Height = Desc.Height;
+		D3D12_DEPTH_STENCIL_VIEW_DESC dxDesc {};
+		dxDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::DepthStencil);
+		if (Desc.SampleCount == 1)
+		{
+			dxDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+			dxDesc.Texture2D = {};
+		}
+		else
+		{
+			dxDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
+			dxDesc.Texture2DMS = {};
+		}
+		mDsv = std::make_shared<DX12DepthStencil>(dsDesc, this, mResource.Get(), dxDesc);
 	}
 
 	return 0;
@@ -90,6 +125,10 @@ D3D12_RESOURCE_DESC DX12Texture::MakeResourceDesc()
 	{
 		resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 	}
+	if (Desc.Flags & TF_DEPTH)
+	{
+		resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+	}
 	return resourceDesc;
 }
 
@@ -105,17 +144,17 @@ OpaqueData<8> DX12Texture::GetTextureHandle() const
 
 OpaqueData<8> DX12Texture::GetData() const
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	return mSrvDesc;
 }
 
 rnd::IRenderTarget::Ref DX12Texture::GetRT()
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	return mRtv;
 }
 
 rnd::IDepthStencil::Ref DX12Texture::GetDS()
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	return mDsv;
 }
 
 void DX12Texture::CreateSRV()
@@ -135,6 +174,7 @@ void DX12Texture::Unmap(u32 subResource)
 
 CopyableMemory<8> DX12Texture::GetShaderResource(ShaderResourceId id /*= 0*/)
 {
+	ZE_ASSERT(Desc.Flags & TF_SRV);
 	return mSrvDesc.ptr;
 }
 
@@ -145,14 +185,21 @@ OpaqueData<8> DX12Texture::GetUAV(UavId id /*= */)
 
 void DX12Texture::TransitionState(ID3D12GraphicsCommandList_* cmdList, D3D12_RESOURCE_STATES fromState, D3D12_RESOURCE_STATES toState)
 {
-	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mResource.Get(), fromState, toState);
-	cmdList->ResourceBarrier(1, &barrier);
+	//if (mLastState != D3D12_RESOURCE_STATE_COMMON)
+	{
+		RLOG(LogGlobal, Verbose, "Transitioning %s from %d to %d", Desc.DebugName.c_str(), fromState, toState);
+		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mResource.Get(), fromState, toState);
+		cmdList->ResourceBarrier(1, &barrier);
+	}
 	mLastState = toState;
 }
 
 void DX12Texture::TransitionTo(ID3D12GraphicsCommandList_* cmdList, D3D12_RESOURCE_STATES toState)
 {
-	TransitionState(cmdList, mLastState, toState);
+	if (mLastState != toState)
+	{
+		TransitionState(cmdList, mLastState, toState);
+	}
 }
 
 DX12Texture::~DX12Texture()
@@ -173,12 +220,26 @@ DX12RenderTarget::~DX12RenderTarget()
 	}
 }
 
-DX12RenderTarget::DX12RenderTarget(RenderTargetDesc const& desc, ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC const& dxDesc)
-:IRenderTarget(desc), mResource(resource)
+DX12RenderTarget::DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC const& dxDesc)
+:IRenderTarget(desc), mResource(resource), BaseTex(tex)
 {
 	auto& rhi = GetRHI();
 	DescriptorHdl = rhi.GetDescriptorAllocator(EDescriptorType::RTV)->Allocate(EDescriptorType::RTV);
 	rhi.Device()->CreateRenderTargetView(resource, &dxDesc, DescriptorHdl);
+}
+
+DX12RenderTarget::DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_CPU_DESCRIPTOR_HANDLE existingRtvDesc)
+:IRenderTarget(desc), DescriptorHdl(existingRtvDesc), mResource(resource), BaseTex(tex)
+{
+
+}
+
+DX12DepthStencil::DX12DepthStencil(DepthStencilDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC const& dxDesc)
+:IDepthStencil(desc), mResource(resource), BaseTex(tex)
+{
+	auto& rhi = GetRHI();
+	mDesc = rhi.GetDescriptorAllocator(EDescriptorType::DSV)->Allocate(EDescriptorType::DSV);
+	rhi.Device()->CreateDepthStencilView(resource, &dxDesc, mDesc);
 }
 
 }

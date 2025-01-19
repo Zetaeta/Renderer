@@ -64,8 +64,6 @@ static GaussianBlurCS:: BlurData blurData;
 SSAOPass::SSAOPass(RenderContext* rCtx, RGShaderResources&& srvs, RGUnorderedAccessViews&& uavs)
 :RenderPass(rCtx, "SSAO"), mSRVs(std::move(srvs)), mAOTexture(uavs.Handles[0])
 {
-	SSAO_CS::FrameData temp;
-	mCB = rCtx->GetCBPool()->AcquireConstantBuffer(ECBLifetime::Static, sizeof(SSAO_CS::FrameData), {reinterpret_cast<const u8*>(&temp), sizeof(temp)});
 	DeviceTextureDesc aoDesc = rCtx->GetPrimaryRT()->Desc;
 	aoDesc.Format = ETextureFormat::R16_Float;
 	aoDesc.Flags = TF_SRV | TF_UAV;
@@ -86,7 +84,6 @@ SSAOPass::SSAOPass(RenderContext* rCtx, RGShaderResources&& srvs, RGUnorderedAcc
 
 SSAOPass::~SSAOPass()
 {
-	mRCtx->GetCBPool()->ReleaseConstantBuffer(mCB);
 }
 
 void SSAOPass::Execute(RenderContext& renderCtx)
@@ -123,13 +120,17 @@ void SSAOPass::Execute(RenderContext& renderCtx)
 		cb.projectionMat = renderCtx.GetCamera().GetProjection();
 		cb.inverseProjection = renderCtx.GetCamera().GetInverseProjection();
 
-		renderCtx.DeviceCtx()->UpdateConstantBuffer(mCB, cb);
-		renderCtx.DeviceCtx()->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(mCB));
-		context->SetComputeShader(doPixelDebug ? mDebugShader : mShader);
-
 		constexpr uint2 numThreads = {8, 8};
 		const ComputeDispatch threadGroups = {DivideRoundUp(cb.screenSize.x, numThreads.x), DivideRoundUp(cb.screenSize.y, numThreads.y), 1};
-		context->DispatchCompute(threadGroups);
+		{
+			ScopedCBClaim ssaoCB(mRCtx->GetCBPool(), cb);
+			renderCtx.DeviceCtx()->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(ssaoCB));
+			context->SetComputeShader(doPixelDebug ? mDebugShader : mShader);
+
+			context->DispatchCompute(threadGroups);
+
+		}
+
 
 		if (blur)
 		{
@@ -139,15 +140,22 @@ void SSAOPass::Execute(RenderContext& renderCtx)
 			context->SetUAVs(EShaderType::Compute, Single(mSecondaryTextureUav));
 			context->SetShaderResources(EShaderType::Compute, Single(mAOTextureIn));
 			blurData.direction = {0, 1};
-			renderCtx.DeviceCtx()->UpdateConstantBuffer(mCB, blurData);
-			context->DispatchCompute(threadGroups);
+			{
+				ScopedCBClaim blurCB1(renderCtx.GetCBPool(), blurData);
+				renderCtx.DeviceCtx()->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(blurCB1));
+				context->DispatchCompute(threadGroups);
+			}
+//			mCB = renderCtx.GetCBPool()->AcquireConstantBuffer(ECBLifetime::Dynamic, blurData);
 
 			context->SetShaderResources(EShaderType::Compute, Single<ResourceView const>({}));
 			context->SetUAVs(EShaderType::Compute, Single(mAOTextureUav));
 			context->SetShaderResources(EShaderType::Compute, Single(mSecondaryTextureIn));
 			blurData.direction = {1, 0};
-			renderCtx.DeviceCtx()->UpdateConstantBuffer(mCB, blurData);
-			context->DispatchCompute(threadGroups);
+			{
+				ScopedCBClaim blurCB(renderCtx.GetCBPool(), blurData);
+				renderCtx.DeviceCtx()->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(blurCB));
+				context->DispatchCompute(threadGroups);
+			}
 
 		}
 

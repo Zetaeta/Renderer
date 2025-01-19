@@ -22,4 +22,23 @@ DeviceMeshRef BasicMeshFactory::GetFullScreenTri()
 	return FullScreenTriangle;
 }
 
+DeviceTextureRef BasicTextureMgr::GetBlackTexture(IRenderDevice* device)
+{
+	if (mBlack == nullptr)
+	{
+		u32 const empty = 0x00000000;
+		DeviceTextureDesc emptyDesc;
+		emptyDesc.Width = 1;
+		emptyDesc.Height = 1;
+		emptyDesc.DebugName = "PlainBlack";
+		mBlack = device->CreateTexture2D(emptyDesc, &empty);
+	}
+	return mBlack;
+}
+
+void BasicTextureMgr::Teardown()
+{
+	mBlack = nullptr;
+}
+
 }

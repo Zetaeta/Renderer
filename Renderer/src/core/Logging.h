@@ -5,7 +5,7 @@
 
 enum class ELogVerbosity : u8
 {
-	Critical,
+	Critical = 0,
 	Error,
 	Warning,
 	Info,

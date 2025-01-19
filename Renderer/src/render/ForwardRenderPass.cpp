@@ -11,9 +11,9 @@ ForwardRenderPass::ForwardRenderPass(RenderContext* rctx, Name const& name, Came
 {
 }
 
-void ForwardRenderPass::Accept(SceneComponent const* sceneComp, MeshPart const* mesh)
+void ForwardRenderPass::Accept(DrawData const& dd)
 {
-	DrawData const& dd = mBuffer.emplace_back(mesh, sceneComp);
+	mBuffer.emplace_back(dd);
 	if (mRCtx->Settings.LayersEnabled[Denum(EShadingLayer::BASE)])
 	{
 		Draw(dd);

@@ -12,9 +12,9 @@ GBufferPass::GBufferPass(RenderContext* rctx, Name const& name, Camera::Ref came
 {
 }
 
-void GBufferPass::Accept(SceneComponent const* sceneComp, MeshPart const* mesh)
+void GBufferPass::Accept(DrawData const& dd)
 {
-	Draw({ mesh, sceneComp });
+	Draw(dd);
 }
 
 void GBufferPass::BeginRender()

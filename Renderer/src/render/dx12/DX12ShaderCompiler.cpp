@@ -14,3 +14,12 @@ OwningPtr<rnd::IDeviceShader> rnd::dx12::DX12LegacyShaderCompiler::CompileShader
 	}
 	return nullptr;
 }
+
+rnd::dx12::DX12LegacyShaderCompiler::DX12LegacyShaderCompiler()
+{
+	mSrcDir = "src\\shaders";
+	mOutDir = "generated\\shaders";
+	mTypeStrings[EShaderType::Pixel] = "ps_5_0";
+	mTypeStrings[EShaderType::Vertex] = "vs_5_0";
+	mTypeStrings[EShaderType::Compute] = "cs_5_0";
+}

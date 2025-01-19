@@ -17,6 +17,7 @@ bool Material::NeedsUpdate() const
 
 void Material::MarkUpdated()
 {
+	rnd::IRenderResourceManager::UpdateMaterials(Id);
 	m_Updated.store(true, std::memory_order_release);
 }
 
@@ -27,7 +28,7 @@ void Material::MarkUpdateDone()
 
 void Material::OnPropertyUpdate()
 {
-	translucent = colour.a < 1;
+	Props.translucent = Props.colour.a < 1;
 }
 
 rnd::MaterialPixelShader const* MaterialArchetypeDesc::GetShader(rnd::ShaderManager& shaderMgr, EShadingLayer layer,

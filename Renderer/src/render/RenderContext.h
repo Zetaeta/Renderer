@@ -28,12 +28,24 @@ struct std::hash<u32vec2>
 class Scene;
 struct DX11Ctx;
 class StaticMeshComponent;
+namespace rnd { class RendererScene; }
 namespace rnd { class RenderCubemap; }
 
 namespace rnd { class IRenderDevice; }
 
 namespace rnd
 {
+
+__declspec(align(16))
+struct PerFrameVertexData
+{
+	DECLARE_STI_NOBASE(PerFrameVertexData);
+	mat4 screen2World;
+	mat4 world2Light;
+	vec3 cameraPos;
+};
+DECLARE_CLASS_TYPEINFO(PerFrameVertexData);
+
 
 struct PixelDebuggingSwitch : SHADER_PERM_BOOL("PIXEL_DEBUGGING");
 
@@ -100,12 +112,12 @@ struct RenderSettings
 class RenderContext
 {
 public:
-	RenderContext(IRenderDeviceCtx* DeviceCtx, Camera::Ref camera, IDeviceTexture::Ref target, RenderSettings const& settings = {});
+	RenderContext(IRenderDeviceCtx* DeviceCtx, RendererScene* scene, Camera::Ref camera, IDeviceTexture::Ref target, RenderSettings const& settings = {});
 	~RenderContext();
 
 	void SetupRenderTarget();
 	void SetupPasses();
-	void RenderFrame(Scene const& scene);
+	void RenderFrame();
 
 	RGBuilder& GraphBuilder()
 	{
@@ -144,7 +156,7 @@ public:
 
 	MaterialManager* GetMaterialManager()
 	{
-		return mDeviceCtx->MatManager;
+		return &mDeviceCtx->Device->MatMgr;
 	}
 
 	ICBPool* GetCBPool()
@@ -164,7 +176,7 @@ public:
 		mPasses.emplace_back(MakeOwning<TPass>(this, std::forward<Args>(args)...));
 	}
 
-	const Scene& GetScene() const { return *mScene; }
+	const RendererScene& GetScene() const { return *mScene; }
 
 	uint2 GetPrimaryRenderSize() const;
 
@@ -177,7 +189,7 @@ public:
 	IDeviceTexture* mDebugCube = nullptr;
 
 	void DrawPrimComp(const StaticMeshComponent* component, const IDeviceMaterial* matOverride = nullptr, EShadingLayer layer = EShadingLayer::BASE);
-	void DrawPrimitive(const MeshPart* primitive, const mat4& transform, const mat4& viewMatrix, const IDeviceMaterial* matOverride = nullptr, EShadingLayer layer = EShadingLayer::BASE);
+	void DrawPrimitive(const IDeviceIndexedMesh* mesh, const mat4& transform, const mat4& viewMatrix, RenderMaterial* matOverride = nullptr, EShadingLayer layer = EShadingLayer::BASE);
 	void SetScreenObjId(ScreenObjectId id)
 	{
 		mCurrentId = id;
@@ -232,7 +244,7 @@ private:
 
 	Vector<IDeviceTexture::Ref> tempRemember;
 
-	bool mUseMSAA = true;
+	bool mUseMSAA = false;
 	u32 msaaSampleCount = 4;
 
 	IDeviceTexture::Ref mMsaaTarget;
@@ -245,7 +257,7 @@ private:
 	IDeviceTexture::Ref mDSTex;
 	IRenderDevice* mDevice = nullptr;
 	IRenderDeviceCtx* mDeviceCtx = nullptr;
-	Scene const* mScene = nullptr;
+	RendererScene* mScene = nullptr;
 	Vector<OwningPtr<RenderPass>> mPasses;
 	RenderCubemap* mDebugCubePass;
 	Vector<OwningPtr<RenderPass>> mPPPasses;
