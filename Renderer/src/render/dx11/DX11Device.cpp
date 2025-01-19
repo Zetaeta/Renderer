@@ -14,7 +14,6 @@ DX11Device::DX11Device(ID3D11Device* pDevice)
 	mSemanticsToMask["Normal"] = VA_Normal;
 	mSemanticsToMask["Tangent"] = VA_Tangent;
 	mSemanticsToMask["TexCoord"] = VA_TexCoord;
-	ResourceMgr.OnDevicesReady();
 }
 
 DX11Device::~DX11Device()

@@ -24,6 +24,8 @@ public:
 
 	void Resize(u32 width, u32 height, rnd::IDeviceTexture::Ref backbuffer);
 
+	void SetBackbuffer(rnd::IDeviceTexture::Ref backbuffer);
+
 	void Reset();
 	void SetScene(Scene* scene);
 

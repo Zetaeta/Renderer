@@ -32,6 +32,11 @@ void Viewport::Resize(u32 width, u32 height, rnd::IDeviceTexture::Ref backbuffer
 	mHeight = height;
 }
 
+void Viewport::SetBackbuffer(rnd::IDeviceTexture::Ref backbuffer)
+{
+	mRCtx->SetTarget(backbuffer);
+}
+
 void Viewport::Reset()
 {
 	mWidth = mHeight = 0;

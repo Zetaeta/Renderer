@@ -21,9 +21,11 @@
 
 namespace rnd
 {
+RenderSettings  GSettings;
 
 RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, RendererScene* scene, Camera::Ref camera, IDeviceTexture::Ref target, RenderSettings const& settings)
-	: mCamera(camera), mRGBuilder(DeviceCtx->Device), Settings(settings), mScene(scene)
+	: mCamera(camera), mRGBuilder(DeviceCtx->Device)//, Settings(settings)
+	, mScene(scene)
 {
 	mTarget = target;
 	mDeviceCtx = DeviceCtx;
@@ -185,6 +187,11 @@ void RenderContext::SetupPostProcess()
 	Postprocessing();
 	mDeviceCtx->ClearResourceBindings();
 }
+
+ void RenderContext::SetTarget(IDeviceTexture::Ref newTarget)
+ {
+	 mTarget = newTarget;
+ }
 
 void RenderContext::BuildGraph()
 {

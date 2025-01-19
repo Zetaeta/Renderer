@@ -66,7 +66,7 @@ void DX12Context::FinalizeGraphicsState()
 
 		for (u32 i=0; i<stage->RootCBVs.size(); ++i)
 		{
-			mCmdList->SetGraphicsRootConstantBufferView(mGraphicsState.RootSig().RootCBVIndices[stage.Shader], stage->RootCBVs[i]);
+			mCmdList->SetGraphicsRootConstantBufferView(mGraphicsState.RootSig().RootCBVIndices[stage.Shader] + i, stage->RootCBVs[i]);
 		}
 	}
 

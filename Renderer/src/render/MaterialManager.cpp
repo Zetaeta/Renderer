@@ -117,7 +117,7 @@ void MaterialManager::UpdateMaterial(MaterialID matId, TexturedRenderMaterial* t
 		}
 		else
 		{
-			texMat->m_Roughness = mDevice->BasicTextures.GetBlackTexture(mDevice);
+			texMat->m_Roughness = nullptr; mDevice->BasicTextures.GetBlackTexture(mDevice);
 		}
 }
 

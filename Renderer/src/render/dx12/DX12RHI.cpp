@@ -58,12 +58,14 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 		mScene = scene;
 		mContext = std::make_unique<DX12Context>(mCmdList.CmdList.Get());
 		mViewport = std::make_unique<Viewport>(mContext.get(), scene, camera);
+		mViewport->Resize(width, height, mSwapchainBufferTextures[mBufferIndex]);
 	}
 	{
 		mTest = MakeOwning<DX12Test>(mDevice.Get());
 	}
 
 	WaitForGPU();
+	ResourceMgr.OnDevicesReady();
 
 }
 
@@ -139,7 +141,7 @@ void DX12RHI::Tick()
 		{
 			mViewport->mRScene = RendererScene::Get(*mScene, mContext.get());
 		}
-		mViewport->Resize(mWidth, mHeight, mSwapchainBufferTextures[mBufferIndex]);
+		mViewport->SetBackbuffer(mSwapchainBufferTextures[mBufferIndex]);
 		GRenderController.BeginRenderFrame();
 		GRenderController.EndRenderFrame();
 	}
@@ -342,6 +344,10 @@ void DX12RHI::ResizeSwapChain()
 
 	mSwapChain->ResizeBuffers(mNumBuffers, mWidth, mHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
 	GetSwapChainBuffers();
+	if (mViewport)
+	{
+		mViewport->Resize(mWidth, mHeight, mSwapchainBufferTextures[mBufferIndex]);
+	}
 }
 
 void DX12RHI::GetSwapChainBuffers()
@@ -412,7 +418,7 @@ DeviceMeshRef DX12RHI::CreateDirectMesh(EPrimitiveTopology topology, VertexBuffe
 
 RefPtr<IDeviceIndexedMesh> DX12RHI::CreateIndexedMesh(EPrimitiveTopology topology, VertexBufferData vertexBuffer, Span<u16> indexBuffer, BatchedUploadHandle uploadHandle)
 {
-	u32 vbSize = NumCast<u32>(vertexBuffer.VertSize * vertexBuffer.VertAtts);
+	u32 vbSize = NumCast<u32>(vertexBuffer.VertSize * vertexBuffer.NumVerts);
 	auto uploadCtx = mUploader.StartUpload();
 	auto* result = mIndexedMeshes.Acquire();
 	result->VertBuff = CreateVertexBuffer(vertexBuffer, uploadCtx.CmdList.Get());
@@ -430,7 +436,7 @@ RefPtr<IDeviceIndexedMesh> DX12RHI::CreateIndexedMesh(EPrimitiveTopology topolog
 	uploadCtx.CmdList->ResourceBarrier(1, &barrier);
 
 	auto uploadLoc = mUploadBuffer->Reserve(ibSize, IndexBufferAlignment);
-	memcpy(uploadLoc.WriteAddress, indexBuffer.data(), indexBuffer.size());;
+	memcpy(uploadLoc.WriteAddress, indexBuffer.data(), ibSize);;
 	uploadCtx.CmdList->CopyBufferRegion(ibResource.Get(), 0, mUploadBuffer->GetCurrentBuffer(), uploadLoc.Offset, ibSize);
 	//barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 	//	ibResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER);
@@ -641,6 +647,7 @@ ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc const& PSODesc)
 	auto& pso = mPSOs[PSODesc];
 	if (pso == nullptr)
 	{
+//		CD3DX12_GRAPHICS_PIPELINE_STATE_DESC
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
 		desc.pRootSignature = PSODesc.RootSig.Get();
 		desc.VS = GetBytecode(PSODesc.Shaders[EShaderType::Vertex]);
@@ -649,6 +656,7 @@ ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc const& PSODesc)
 		desc.DS = GetBytecode(PSODesc.Shaders[EShaderType::TessEval]);
 		desc.HS = GetBytecode(PSODesc.Shaders[EShaderType::TessControl]);
 		ApplyBlendState(PSODesc.BlendState, desc.BlendState);
+		desc.SampleMask = UINT_MAX;
 		desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT{});
 		ApplyDepthMode(PSODesc.DepthMode, desc.DepthStencilState);
 		ApplyStencilMode(PSODesc.StencilMode, desc.DepthStencilState);

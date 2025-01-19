@@ -108,6 +108,7 @@ struct RenderSettings
 	int2 DebugPixel {0};
 	bool EnablePixelDebug = false;
 };
+extern RenderSettings  GSettings;
 
 class RenderContext
 {
@@ -118,6 +119,8 @@ public:
 	void SetupRenderTarget();
 	void SetupPasses();
 	void RenderFrame();
+
+	void SetTarget(IDeviceTexture::Ref newTarget);
 
 	RGBuilder& GraphBuilder()
 	{
@@ -180,7 +183,7 @@ public:
 
 	uint2 GetPrimaryRenderSize() const;
 
-	RenderSettings Settings;
+	RenderSettings& Settings = GSettings;
 
 	static int mBrdf;
 

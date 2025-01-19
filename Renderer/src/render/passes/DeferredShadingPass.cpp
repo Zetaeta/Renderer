@@ -84,14 +84,17 @@ void DeferredShadingPass::Execute(RenderContext& renderCtx)
 	cbuf.screen2World = mCamera->GetInverseProjWorld();
 	cbuf.screenSize = mRCtx->GetPrimaryRenderSize();
 	cbuf.cameraPos = mCamera->GetPosition();
-	renderCtx.DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, sizeof(DeferredShadingPS::CBPerInst))->WriteData(cbuf);
+	auto cb =renderCtx.DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, sizeof(DeferredShadingPS::CBPerInst));
+	cb->WriteData(cbuf);
 	context->SetDepthMode(EDepthMode::Disabled);
 	context->SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
 
+	IConstantBuffer* cbs[2] = {renderCtx.DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerFrame), cb};
 	{
 		SetupShadingLayer(mRCtx, EShadingLayer::BASE, 0);
 		context->SetShaderResources(EShaderType::Pixel, srvs);
 		context->SetPixelShader(mPixelShader[0]);
+		context->SetConstantBuffers(EShaderType::Pixel, cbs);
 		context->DrawMesh(tri);
 	}
 	context->SetBlendMode(EBlendState::COL_ADD | EBlendState::ALPHA_MAX);
@@ -110,6 +113,7 @@ void DeferredShadingPass::Execute(RenderContext& renderCtx)
 				LightRenderData const& lrd = mRCtx->GetLightData(GetLightFromLayer(layer), i);
 				srvs.back().Resource = lrd.mShadowMap;
 				context->SetShaderResources(EShaderType::Pixel, srvs);
+		context->SetConstantBuffers(EShaderType::Pixel, cbs);
 
 				context->DrawMesh(tri);
 			}

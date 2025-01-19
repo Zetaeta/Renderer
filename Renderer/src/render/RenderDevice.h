@@ -43,6 +43,10 @@ public:
 	{
 		return AcquireConstantBuffer(lifetime, sizeof(T), {reinterpret_cast<const byte*>(&data), sizeof(data)});
 	}
+	PooledCBHandle AcquireConstantBuffer(ECBLifetime lifetime, std::span<const byte> data)
+	{
+		return AcquireConstantBuffer(lifetime, NumCast<u32>(data.size()), data);
+	}
 	[[nodiscard]] virtual PooledCBHandle AcquireConstantBuffer(ECBLifetime lifetime, u32 size, std::span<const byte> initialData) = 0;
 	virtual void	 ReleaseConstantBuffer(PooledCBHandle handle) = 0;
 

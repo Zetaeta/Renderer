@@ -88,8 +88,8 @@ DX12Test::DX12Test(ID3D12Device_* device)
 	psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	psoDesc.SampleDesc.Count = 1;
 	HR_ERR_CHECK(device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&mPSO)));
-	DeviceTextureDesc desc = gDirt->MakeDesc();
-	mTexture = GetRHI().CreateTexture2D(desc, gDirt->GetData());
+	//DeviceTextureDesc desc = gDirt->MakeDesc();
+	//mTexture = GetRHI().CreateTexture2D(desc, gDirt->GetData());
 
 	ZE_ASSERT(gDirt.IsValid());
 
