@@ -9,19 +9,18 @@ void TexturedRenderMaterial::Bind(RenderContext& rctx, EShadingLayer layer)
 	Archetype->Bind(rctx, layer, mMatType);
 
 	auto& texMgr = rctx.TextureManager;
-	if (layer == EShadingLayer::NONE || layer == EShadingLayer::Depth)
-	{
-		texMgr.ClearFlags();
-		texMgr.Bind(rctx.DeviceCtx());
-		return;
-	}
-	//ID3D11ShaderResourceView* srvs[] = { m_Albedo->GetSRV(), m_Normal != nullptr ? m_Normal->GetSRV() : nullptr, m_Emissive != nullptr ? m_Emissive->GetSRV() : nullptr };
+	//if (layer == EShadingLayer::NONE || layer == EShadingLayer::Depth)
+	//{
+	//	texMgr.ClearFlags();
+	//	texMgr.Bind(rctx.DeviceCtx());
+	//	return;
+	//}
 	texMgr.SetTexture(E_TS_DIFFUSE, m_Albedo);
 	texMgr.SetTexture(E_TS_ROUGHNESS, m_Roughness);
 	texMgr.SetTexture(E_TS_NORMAL, m_Normal);
 	texMgr.SetTexture(E_TS_EMISSIVE, m_Emissive);
 	texMgr.ClearFlags();
-	if (layer < EShadingLayer::SHADING_COUNT)
+//	if (layer < EShadingLayer::SHADING_COUNT)
 	{
 		texMgr.SetFlags(F_TS_DIFFUSE);
 	}
@@ -29,7 +28,7 @@ void TexturedRenderMaterial::Bind(RenderContext& rctx, EShadingLayer layer)
 	{
 		texMgr.SetFlags(F_TS_EMISSIVE);
 	}
-	else
+	else if (layer < EShadingLayer::SHADING_COUNT)
 	{
 		texMgr.SetFlags(F_TS_NORMAL);
 		texMgr.SetFlags(F_TS_ROUGHNESS);

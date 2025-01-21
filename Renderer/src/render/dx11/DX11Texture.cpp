@@ -345,12 +345,12 @@ DX11Texture::~DX11Texture()
 
 IRenderTarget::Ref DX11Texture::GetRT()
 {
-	return mRenderTarget;
+	return {mRenderTarget};
 }
 
 IDepthStencil::Ref DX11Texture::GetDS()
 {
-	return mDepthStencil;
+	return {mDepthStencil};
 }
 
 MappedResource DX11Texture::Map(u32 subResource, ECpuAccessFlags flags)

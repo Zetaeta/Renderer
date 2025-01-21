@@ -140,7 +140,7 @@ IRenderTarget::Ref DX11Cubemap::GetRT()
 
 IDepthStencil::Ref DX11Cubemap::GetDS()
 {
-	return mDepthStencil;
+	return {mDepthStencil};
 }
 
 MappedResource DX11Cubemap::Map(u32 subResource, ECpuAccessFlags flags)

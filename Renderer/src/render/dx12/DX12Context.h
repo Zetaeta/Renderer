@@ -17,7 +17,7 @@ struct ShaderBindingState
 		return NumCast<u32>(UAVs.size() + SRVs.size());
 	}
 
-	void Apply(ID3D12GraphicsCommandList_* cmdList);
+//	void Apply(ID3D12GraphicsCommandList_* cmdList);
 	bool DescTablesDirty  = true;
 };
 
@@ -134,6 +134,44 @@ public:
 	void SetActive(EShaderType stage)
 	{
 		ShaderMask &= (1 << Denum(stage));
+	}
+};
+
+struct ComputePSODesc
+{
+	DX12ComputeRootSignature RootSig;
+	RefPtr<ComputeShader const> Shader;
+
+	bool operator==(GraphicsPSODesc const& other) const
+	{
+		return memcmp(this, &other, sizeof(GraphicsPSODesc)) == 0;
+	}
+};
+template<typename Hasher>
+void HashAppend(Hasher& hasher, ComputePSODesc const& psoDesc)
+{
+	HashAppend(hasher, psoDesc.RootSig.Get());
+	HashAppend(hasher, psoDesc.Shader);
+}
+
+struct ComputePipelineStateCache
+{
+	ComputePSODesc PSODesc;
+	ShaderBindingState Bindings;
+	bool PSODirty = true;
+	bool BindingsDirty = true;
+	bool RootSigDirty = true;
+
+	template<typename T>
+	bool UpdatePSO(T& currentState, T const& newState)
+	{
+		if (currentState != newState)
+		{
+			currentState = newState;
+			PSODirty = true;
+			return true;
+		}
+		return false;
 	}
 };
 
@@ -259,11 +297,7 @@ public:
 	void SetShaderResources(EShaderType shader, ShaderResources srvs, u32 startIdx = 0) override;
 
 
-	void SetUAVs(EShaderType shader, Span<UnorderedAccessView const> uavs, u32 startIdx = 0) override
-	{
-//		throw std::logic_error("The method or operation is not implemented.");
-	}
-
+	void SetUAVs(EShaderType shader, Span<UnorderedAccessView const> uavs, u32 startIdx = 0) override;
 
 	void UnbindUAVs(EShaderType shader, u32 clearNum, u32 startIdx = 0) override
 	{
@@ -309,7 +343,11 @@ public:
 
 	void SetComputeShader(ComputeShader const* shader) override
 	{
-//		throw std::logic_error("The method or operation is not implemented.");
+		if (shader != mComputeState.PSODesc.Shader)
+		{
+			mComputeState.PSODesc.Shader = shader;
+			mComputeState.PSODirty = true;
+		}
 	}
 
 
@@ -347,9 +385,15 @@ public:
 	}
 
 	void FinalizeGraphicsState();
-private:
+protected:
+	void BindAndTransition(Vector<UnorderedAccessView>& outBindings, Span<UnorderedAccessView const> inUAVs, u32 startIdx = 0);
+	void BindAndTransition(Vector<ResourceView>& outBindings, Span<ResourceView const> inSRVs,
+		D3D12_RESOURCE_STATES targetState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		u32 startIdx = 0);
+
 	ID3D12GraphicsCommandList_* mCmdList;
 	GraphicsPipelineStateCache mGraphicsState;
+	ComputePipelineStateCache mComputeState;
 	EnumArray<ECBFrequency, DX12DynamicCB> mDynamicCBs;
 };
 

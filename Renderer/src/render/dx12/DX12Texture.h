@@ -65,12 +65,18 @@ class DX12DepthStencil : public IDepthStencil
 {
 public:
 	DX12DepthStencil(DepthStencilDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC const& dxDesc);
+	~DX12DepthStencil();
 
-	OpaqueData<8> GetData() const override { return mDesc; }
+	OpaqueData<8> GetData() const override { return mDesc[0]; }
+
+	D3D12_CPU_DESCRIPTOR_HANDLE GetHandle(u32 idx = 0) const
+	{
+		return mDesc[idx];
+	}
 
 	DX12Texture* BaseTex = nullptr;
 private:
-	D3D12_CPU_DESCRIPTOR_HANDLE mDesc{};
+	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 6> mDesc{};
 	ComPtr<ID3D12Resource> mResource;
 
 };
@@ -81,9 +87,13 @@ public:
 	DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC const& dxDesc);
 	DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_CPU_DESCRIPTOR_HANDLE existingRtvDesc);
 	~DX12RenderTarget();
-	OpaqueData<8> GetRTData() override { return DescriptorHdl; }
-	OpaqueData<8> GetData() const override { return DescriptorHdl; }
-	D3D12_CPU_DESCRIPTOR_HANDLE DescriptorHdl{};
+	OpaqueData<8> GetRTData() override { return DescriptorHdl[0]; }
+	OpaqueData<8> GetData() const override { return DescriptorHdl[0]; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetHandle(u32 idx = 0) const
+	{
+		return DescriptorHdl[idx];
+	}
+	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 6> DescriptorHdl{};
 	ComPtr<ID3D12Resource> mResource;
 
 	DX12Texture* BaseTex = nullptr;

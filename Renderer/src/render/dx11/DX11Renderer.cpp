@@ -717,7 +717,7 @@ void DX11Renderer::PrepareMaterial(MaterialID mid)
 
 void DX11Renderer::SetBackbuffer(DX11Texture::Ref backBufferTex, u32 width, u32 height)
 {
-	m_MainRenderTarget = static_pointer_cast<DX11RenderTarget>(backBufferTex->GetRT());
+	m_MainRenderTarget = static_pointer_cast<DX11RenderTarget>(backBufferTex->GetRT().RT);
 
 	mViewport->Resize(width, height, backBufferTex);
 	m_Ctx.mRCtx = mRCtx = mViewport->GetRenderContext();
@@ -1113,7 +1113,7 @@ void DX11Renderer::UpdateInputLayout()
 
 void DX11Renderer::SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int RTArrayIdx, int DSArrayIdx)
 {
-	auto*					dx11DS = static_cast<DX11DepthStencil*>(ds.get());
+	auto*					dx11DS = static_cast<DX11DepthStencil*>(ds.DS.get());
 	ID3D11DepthStencilView* dsv= nullptr;
 	D3D11_VIEWPORT vp {};
 	vp.MaxDepth = 1;
@@ -1128,13 +1128,13 @@ void DX11Renderer::SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int 
 		{
 			dsv = dx11DS->GetDSV();
 		}
-		vp.Width = float(ds->Desc.Width);
-		vp.Height = float(ds->Desc.Height);
-		scissor = CD3D11_RECT(0, 0, ds->Desc.Width, ds->Desc.Height);
+		vp.Width = float(ds.DS->Desc.Width);
+		vp.Height = float(ds.DS->Desc.Height);
+		scissor = CD3D11_RECT(0, 0, ds.DS->Desc.Width, ds.DS->Desc.Height);
 	}
 
 	ID3D11RenderTargetView* rtv= nullptr;
-	auto*					dx11RT = static_cast<DX11RenderTarget*>(rt.get());
+	auto*					dx11RT = static_cast<DX11RenderTarget*>(rt.RT.get());
 	if (dx11RT != nullptr)
 	{
 		if (RTArrayIdx != -1)
@@ -1147,7 +1147,7 @@ void DX11Renderer::SetRTAndDS(IRenderTarget::Ref rt, IDepthStencil::Ref ds, int 
 		}
 		vp.Width = float(rt->Desc.Width);
 		vp.Height = float(rt->Desc.Height);
-		scissor = CD3D11_RECT(0, 0, rt->Desc.Width, rt->Desc.Height);
+		scissor = CD3D11_RECT(0, 0, rt->Desc.Width, rt.RT->Desc.Height);
 	}
 //	scissor = CD3D11_RECT(0, 0, vp.Width, vp.Height);
 	
@@ -1167,9 +1167,9 @@ void DX11Renderer::SetRTAndDS(Span<IRenderTarget::Ref> rts, IDepthStencil::Ref d
 	{
 		if (rts[i] != nullptr)
 		{
-			renderTargets[i] = static_cast<DX11RenderTarget*>(rts[i].get())->GetRTV();
-			vp.Width = float(rts[i]->Desc.Width);
-			vp.Height = float(rts[i]->Desc.Height);
+			renderTargets[i] = static_cast<DX11RenderTarget*>(rts[i].RT.get())->GetRTV();
+			vp.Width = float(rts[i].RT->Desc.Width);
+			vp.Height = float(rts[i].RT->Desc.Height);
 			scissor = CD3D11_RECT(0, 0, rts[i]->Desc.Width, rts[i]->Desc.Height);
 		}
 	}

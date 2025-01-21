@@ -54,6 +54,7 @@ enum class EResourceType : u8
 	Texture = 0x1,
 	Texture1D = 0x3,
 	Texture2D = 0x5,
+	TextureCube = 0x7,
 	Texture3D = 0x9,
 	Buffer = 0x10,
 	VertexBuffer = 0x20

@@ -112,4 +112,62 @@ DX12GraphicsRootSignature::DX12GraphicsRootSignature()
 	}
 }
 
+struct CRSSignature
+{
+	u32 numCBs;
+	u32 numUAVs;
+	bool operator==(CRSSignature const& other) const
+	{
+		return memcmp(this, &other, sizeof(*this)) == 0;
+	}
+};
+static std::unordered_map<CRSSignature, DX12ComputeRootSignature, GenericHash<>> sComputeRootSigs;
+
+DX12ComputeRootSignature DX12ComputeRootSignature::MakeStandardRootSig(u32 numCBs, u32 numUAVs /*= 0*/)
+{
+	DX12ComputeRootSignature& result = sComputeRootSigs[CRSSignature{numCBs, numUAVs}];
+	if (result.Get() == nullptr)
+	{
+		SmallVector<D3D12_ROOT_PARAMETER, 4> params(numCBs + 1);
+		u32 offset = 0;
+		D3D12_DESCRIPTOR_RANGE tableRanges[2];
+		Zero(tableRanges);
+		bool hasUAVs = numUAVs > 0;
+		if (hasUAVs)
+		{
+			tableRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+			tableRanges[0].NumDescriptors = numUAVs;
+		}
+		tableRanges[hasUAVs].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		tableRanges[hasUAVs].OffsetInDescriptorsFromTableStart = numUAVs;
+		tableRanges[hasUAVs].NumDescriptors = -1;
+
+		params[offset].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		params[offset].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		params[offset].DescriptorTable.NumDescriptorRanges = hasUAVs + 1;
+		params[offset].DescriptorTable.pDescriptorRanges = tableRanges;
+		offset = 1;
+		for (u32 i = 0; i < numUAVs; ++i)
+		{
+			params[i + offset].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+			params[i + offset].Descriptor = {i, 0};
+			params[i + offset].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		}
+		CD3DX12_STATIC_SAMPLER_DESC samplerDesc[2] = {CD3DX12_STATIC_SAMPLER_DESC(0), CD3DX12_STATIC_SAMPLER_DESC(1)};
+		samplerDesc[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS;
+		samplerDesc[1].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc;
+		rootSigDesc.Init(Size(params), Addr(params), 2, samplerDesc, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+		ComPtr<ID3DBlob> signature;
+		ComPtr<ID3DBlob> error;
+		if (!SUCCEEDED(D3D12SerializeRootSignature(&rootSigDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error)) && error)
+		{
+			RLOG(LogGlobal, Error, "Root signature error: %s", error->GetBufferPointer());
+			ZE_ENSURE(false);
+		}
+		DXCALL(GetD3D12Device()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&result.mRootSig)));
+	}
+	return result;
+}
+
 }

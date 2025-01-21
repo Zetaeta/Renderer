@@ -14,6 +14,7 @@ public:
 		: mDevice(device) {}
 
 	DeviceMeshRef GetFullScreenTri();
+	void Teardown() {FullScreenTriangle = nullptr;}
 
 private:
 	RefPtr<IDeviceMesh> FullScreenTriangle;

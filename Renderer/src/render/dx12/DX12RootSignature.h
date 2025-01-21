@@ -11,6 +11,10 @@ public:
 	{
 		return mRootSig.Get();
 	}
+	bool operator==(DX12RootSignature const& other)
+	{
+		return mRootSig == other.mRootSig;
+	}
 protected:
 	ComPtr<ID3D12RootSignature> mRootSig;
 };
@@ -35,6 +39,16 @@ public:
 	//u8 PixelUAVTable = 0;
 	//u8 VertexUAVTable = 0;
 	static DX12GraphicsRootSignature MakeStandardRootSig(u32 numVertexCBs, u32 numPixelCBs, u32 vertexUAVs = 0, u32 pixelUAVs = 0);
+};
+
+class DX12ComputeRootSignature : public DX12RootSignature
+{
+public:
+	DX12ComputeRootSignature() {}
+	// Standard layout: 1 SRV/UAV descriptor table starting with UAVs, followed by 1 or more CBVs
+	u32 NumUAVs = 0;
+	u32 NumCBs = 0;
+	static DX12ComputeRootSignature MakeStandardRootSig(u32 numCBs, u32 numUAVs = 0);
 };
 
 }

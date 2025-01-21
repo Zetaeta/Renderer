@@ -25,7 +25,7 @@ struct DeviceChildDesc
 
 struct DepthStencilDesc : DeviceChildDesc
 {
-	ETextureDimension Dimension;
+	ETextureDimension Dimension = ETextureDimension::TEX_2D;
 	ETextureFormat Format = ETextureFormat::D24_Unorm_S8_Uint;
 	u32 Width = 0;
 	u32 Height = 0;
@@ -33,7 +33,7 @@ struct DepthStencilDesc : DeviceChildDesc
 
 struct RenderTargetDesc : DeviceChildDesc
 {
-	ETextureDimension Dimension;
+	ETextureDimension Dimension = ETextureDimension::TEX_2D;
 	ETextureFormat Format = ETextureFormat::RGBA8_Unorm_SRGB;
 	u32 Width = 0;
 	u32 Height = 0;
@@ -50,7 +50,34 @@ public:
 
 //	virtual void*	 GetData() const = 0;
 	DEFINE_DEVICE_RESOURCE_GETTER(GetData);
-	using Ref = std::shared_ptr<IDepthStencil>;
+//	using Ref = std::shared_ptr<IDepthStencil>;
+
+	struct Ref
+	{
+		Ref(std::nullptr_t n) {}
+
+		Ref(std::shared_ptr<IDepthStencil> const& rt = nullptr, u32 idx = 0)
+		:DS(rt), Index(idx) { }
+		//operator std::shared_ptr<IDepthStencil>() const {
+		//	return DS;
+		//}
+		operator bool() const
+		{
+			return DS != nullptr;
+		}
+		bool operator!=(std::nullptr_t) { return DS != nullptr; }
+		IDepthStencil* operator->() const {return DS.get(); }
+		IDepthStencil* get() const {return DS.get(); }
+		Ref& operator=(std::shared_ptr<IDepthStencil> const& ds)
+		{
+			DS = ds;
+			Index = 0;
+			return *this;
+		}
+
+		std::shared_ptr<IDepthStencil> DS;
+		u32 Index = 0;
+	};
 	DepthStencilDesc const& GetDesc() const { return Desc; }
 
 	DepthStencilDesc Desc;
@@ -68,7 +95,28 @@ public:
 //	virtual void*	 GetDSData() = 0;
 	DEFINE_DEVICE_RESOURCE_GETTER(GetData);
 
-	using Ref = std::shared_ptr<IRenderTarget>;
+	struct Ref
+	{
+		Ref(std::nullptr_t n) {}
+		Ref(std::shared_ptr<IRenderTarget> rt = nullptr, u32 idx = 0)
+		:RT(rt), Index(idx) { }
+
+		operator bool() const
+		{
+			return RT != nullptr;
+		}
+		IRenderTarget* operator->() const {return RT.get(); }
+		IRenderTarget* get() const {return RT.get(); }
+		Ref& operator=(std::shared_ptr<IRenderTarget> const& rt)
+		{
+			RT = rt;
+			Index = 0;
+			return *this;
+		}
+		bool operator!=(std::nullptr_t) { return RT != nullptr; }
+		std::shared_ptr<IRenderTarget> RT;
+		u32 Index = 0;
+	};
 
 	RenderTargetDesc Desc;
 };

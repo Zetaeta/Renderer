@@ -25,7 +25,7 @@ DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, ETextureFormatContext co
 	case ETextureFormat::RGBA8_Unorm:
 		return DXGI_FORMAT_R8G8B8A8_UNORM;
 	case ETextureFormat::RGBA8_Unorm_SRGB:
-		return DXGI_FORMAT_R8G8B8A8_UNORM;
+		return DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	case ETextureFormat::R32_Uint:
 		return DXGI_FORMAT_R32_UINT;
 	case ETextureFormat::D24_Unorm_S8_Uint:

@@ -14,9 +14,25 @@ void DX12Context::SetShaderResources(EShaderType shader, ShaderResources srvs, u
 {
 	if (shader < EShaderType::GraphicsCount)
 	{
-		mGraphicsState.ShaderStates[shader].SRVs.clear();
-		mGraphicsState.ShaderStates[shader].SRVs.insert(mGraphicsState.ShaderStates[shader].SRVs.end(), srvs.begin(), srvs.end());
+		//.clear();
+		//mGraphicsState.ShaderStates[shader].SRVs.insert(mGraphicsState.ShaderStates[shader].SRVs.end(), srvs.begin(), srvs.end());
 		mGraphicsState.ShaderStates[shader].DescTablesDirty = true;
+		mGraphicsState.mBindingsDirty = true;
+		BindAndTransition(mGraphicsState.ShaderStates[shader].SRVs, srvs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, startIdx);
+		//for (auto const& srv : srvs)
+		//{
+		//	if (srv.Resource)
+		//	{
+		//		static_cast<DX12Texture*>(srv.Resource.get())->TransitionTo(mCmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//	}
+		//}
+	}
+	else
+	{
+		ZE_ASSERT(shader == EShaderType::Compute);
+		mComputeState.BindingsDirty = true;
+		mComputeState.Bindings.DescTablesDirty = true;
+		BindAndTransition(mComputeState.Bindings.SRVs, srvs, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, startIdx);
 	}
 	//auto& rhi = GetRHI();
 	//auto loc = rhi.GetResourceDescTableAlloc()->Reserve(NumCast<u32>(srvs.size()));
@@ -91,12 +107,10 @@ void DX12Context::FinalizeGraphicsState()
 			}
 			for (ResourceView& view : stage->SRVs)
 			{
-				if (view.Resource)
-				{
-					auto src = view.Resource->GetShaderResource<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
+				auto rsc = view.Resource ? view.Resource : GetRHI().BasicTextures.GetBlackTexture(&GetRHI());
+					auto src = rsc->GetShaderResource<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
 					rhi.Device()->CopyDescriptorsSimple(1,dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-					dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
-				}
+				dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
 			}
 			s8 tablePos = mGraphicsState.RootSig().SRVTableIndices[stage.Shader];
 			if (tablePos >= 0)
@@ -114,7 +128,8 @@ void DX12Context::FinalizeGraphicsState()
 
 void DX12Context::SetRTAndDS(IRenderTarget::Ref rts, IDepthStencil::Ref ds, int RTArrayIdx, int DSArrayIdx)
 {
-	SetRTAndDS(rts? Single(rts) : Span<IRenderTarget::Ref>{(IRenderTarget::Ref*)nullptr, 0}, ds);
+	IRenderTarget::Ref adjustedRT{rts.RT, NumCast<u32>(max(RTArrayIdx, 0))};
+	SetRTAndDS(rts? Single<IRenderTarget::Ref>(adjustedRT) : Span<IRenderTarget::Ref>{(IRenderTarget::Ref*)nullptr, 0}, {ds.DS, NumCast<u32>(max(DSArrayIdx, 0))});
 }
 
 void DX12Context::SetRTAndDS(Span<IRenderTarget::Ref> rts, IDepthStencil::Ref ds)
@@ -123,7 +138,7 @@ void DX12Context::SetRTAndDS(Span<IRenderTarget::Ref> rts, IDepthStencil::Ref ds
 	D3D12_CPU_DESCRIPTOR_HANDLE dsHandle = {};
 	if (ds)
 	{
-		dsHandle = ds->GetData<D3D12_CPU_DESCRIPTOR_HANDLE>();
+		dsHandle = static_cast<DX12DepthStencil*>(ds.get())->GetHandle(ds.Index);
 		mGraphicsState.UpdatePSO(mGraphicsState.PSOState.DSVFormat, GetDxgiFormat(ds->Desc.Format, ETextureFormatContext::DepthStencil));
 	}
 	else
@@ -136,7 +151,7 @@ void DX12Context::SetRTAndDS(Span<IRenderTarget::Ref> rts, IDepthStencil::Ref ds
 		if (DX12RenderTarget* rt = static_cast<DX12RenderTarget*>(rts[i].get()))
 		{
 			rt->BaseTex->TransitionTo(mCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-			rtHandles[i] = rt->DescriptorHdl;
+			rtHandles[i] = rt->DescriptorHdl[rts[i].Index];
 			mGraphicsState.UpdatePSO(mGraphicsState.PSOState.RTVFormats[i], GetDxgiFormat(rt->Desc.Format, ETextureFormatContext::RenderTarget));
 		}
 	}
@@ -269,8 +284,22 @@ void DX12Context::Copy(DeviceResourceRef dst, DeviceResourceRef src)
 
 void DX12Context::ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour)
 {
+	if (!rt)
+	{
+		return;
+	}
 	static_cast<DX12RenderTarget*>(rt.get())->BaseTex->TransitionTo(mCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	mCmdList->ClearRenderTargetView(rt->GetData<D3D12_CPU_DESCRIPTOR_HANDLE>(), &clearColour[0], 0, nullptr);
+	if (rt->Desc.Dimension == ETextureDimension::TEX_2D)
+	{
+		mCmdList->ClearRenderTargetView(rt->GetData<D3D12_CPU_DESCRIPTOR_HANDLE>(), &clearColour[0], 0, nullptr);
+	}
+	else
+	{
+		for (u32 i = 0; i < 6; ++i)
+		{
+			mCmdList->ClearRenderTargetView(static_cast<DX12RenderTarget*>(rt.get())->GetHandle(i), &clearColour[0], 0, nullptr);
+		}
+	}
 }
 
 void DX12Context::ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMode, float depth, u8 stencil /*= 0*/)
@@ -285,7 +314,62 @@ void DX12Context::ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMod
 	{
 		flags |= D3D12_CLEAR_FLAG_STENCIL;
 	}
-	mCmdList->ClearDepthStencilView(ds->GetData<D3D12_CPU_DESCRIPTOR_HANDLE>(), flags, depth, stencil, 0, nullptr);
+	if (ds->Desc.Dimension == ETextureDimension::TEX_2D)
+	{
+		mCmdList->ClearDepthStencilView(ds->GetData<D3D12_CPU_DESCRIPTOR_HANDLE>(), flags, depth, stencil, 0, nullptr);
+	}
+	else
+	{
+		for (u32 i = 0; i < 6; ++i)
+		{
+			mCmdList->ClearDepthStencilView(static_cast<DX12DepthStencil*>(ds.get())->GetHandle(i), flags, depth, stencil, 0, nullptr);
+		}
+	}
+}
+
+void DX12Context::SetUAVs(EShaderType shader, Span<UnorderedAccessView const> uavs, u32 startIdx /*= 0*/)
+{
+	return;
+	if (shader == EShaderType::Compute)
+	{
+		mComputeState.BindingsDirty = true;
+		BindAndTransition(mComputeState.Bindings.UAVs, uavs);
+	}
+	else
+	{
+		Assertf(false, "non-compute UAVs not yet supported");
+	}
+}
+
+void DX12Context::BindAndTransition(Vector<UnorderedAccessView>& outBindings, Span<UnorderedAccessView const> inUAVs, u32 startIdx)
+{
+	outBindings.clear();
+	Append(outBindings, inUAVs);
+	for (auto const& uav : inUAVs)
+	{
+		if (DX12Texture* tex = static_cast<DX12Texture*>(uav.Resource.get()))
+		{
+			tex->TransitionTo(mCmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		}
+	}
+}
+
+void DX12Context::BindAndTransition(Vector<ResourceView>& outBindings, Span<ResourceView const> inSRVs, D3D12_RESOURCE_STATES targetState, u32 startIdx /*= 0*/)
+{
+	outBindings.resize(max(outBindings.size(), startIdx + inSRVs.size()));
+//	outBindings.clear();
+
+	for (u32 i = 0; i < inSRVs.size(); ++i)
+	{
+		outBindings[startIdx + i] = inSRVs[i];
+	}
+	for (auto const& srv : inSRVs)
+	{
+		if (DX12Texture* tex = static_cast<DX12Texture*>(srv.Resource.get()))
+		{
+			tex->TransitionTo(mCmdList, targetState);
+		}
+	}
 }
 
 }

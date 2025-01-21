@@ -263,7 +263,8 @@ LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 l
 		{
 			cameraType = ECameraType::CUBE;
 			DeviceTextureDesc desc;
-			desc.Flags = TF_DEPTH;
+			desc.Flags = TF_DEPTH | TF_SRV;
+			desc.Format = ETextureFormat::D32_Float;
 			desc.Height = desc.Width = 1024;
 			desc.DebugName = std::format("{} {}", "PointLightShadow", lightIdx);
 			lrd.mShadowMap = mDevice->CreateTextureCube(desc);
@@ -285,6 +286,7 @@ LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 l
 			DeviceTextureDesc desc;
 			desc.Flags = TF_DEPTH | TF_SRV;
 			desc.Height = desc.Width = 1024;
+			desc.Format = ETextureFormat::D32_Float;
 			desc.DebugName = debugName;
 			desc.Format = ETextureFormat::D32_Float;
 			lrd.mShadowMap = mDevice->CreateTexture2D(desc);
@@ -384,7 +386,7 @@ void RenderContext::DrawControls()
 			needsRebuild = true;
 			pass.SetEnabled(enabled);
 		}
-		if (enabled)
+		if (enabled && pass.GetTimer())
 		{
 			ImGui::Text("GPU Time: %f", pass.GetTimer()->GPUTimeMs);
 			pass.AddControls();
@@ -457,6 +459,7 @@ void RenderContext::DrawPrimitive(const IDeviceIndexedMesh* mesh, const mat4& tr
 		//	matArch = deviceMat->Archetype;
 		//}
 	}
+	matOverride->Bind(*this, layer);
 
 	if (matArch)
 	{
@@ -516,7 +519,6 @@ void RenderContext::DrawPrimitive(const IDeviceIndexedMesh* mesh, const mat4& tr
 		}
 		DeviceCtx()->SetConstantBuffers(EShaderType::Vertex, cbs);
 	}
-	matOverride->Bind(*this, layer);
 
 //	DeviceCtx()->DrawMesh(*primitive, layer, matOverride == nullptr);
 	DeviceCtx()->DrawMesh(mesh);

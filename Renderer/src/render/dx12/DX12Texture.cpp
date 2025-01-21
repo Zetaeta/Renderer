@@ -58,10 +58,19 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 	{
 		mSrvDesc = rhi.GetDescriptorAllocator(EDescriptorType::SRV)->Allocate(EDescriptorType::SRV);
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		if (Desc.ResourceType == EResourceType::Texture2D)
+		{
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MipLevels = Desc.NumMips <= 0 ? 1 : Desc.NumMips;
+		}
+		else
+		{
+			ZE_ASSERT(Desc.ResourceType == EResourceType::TextureCube);
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			srvDesc.TextureCube.MipLevels = Desc.NumMips <= 0 ? 1 : Desc.NumMips;
+		}
 		srvDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::SRV);
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srvDesc.Texture2D.MipLevels = Desc.NumMips <= 0 ? -1 : Desc.NumMips;
 		rhi.Device()->CreateShaderResourceView(mResource.Get(), &srvDesc, mSrvDesc);
 	}
 	if (!!(Desc.Flags & TF_RenderTarget))
@@ -74,14 +83,25 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 		rtDesc.Height = Desc.Height;
 		D3D12_RENDER_TARGET_VIEW_DESC dxDesc {};
 		dxDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::RenderTarget);
-		if (Desc.SampleCount == 1)
+		if (Desc.ResourceType == EResourceType::Texture2D)
 		{
-			dxDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-			dxDesc.Texture2D = {};
+			if (Desc.SampleCount == 1)
+			{
+				dxDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+				dxDesc.Texture2D = {};
+			}
+			else
+			{
+				dxDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+			}
 		}
-		else
+		else if (Desc.ResourceType == EResourceType::TextureCube)
 		{
-			dxDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DMS;
+			dxDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+			dxDesc.Texture2DArray.ArraySize = 6;
+			dxDesc.Texture2DArray.FirstArraySlice = 0;
+			dxDesc.Texture2DArray.MipSlice = 0;
+			rtDesc.Dimension = ETextureDimension::TEX_CUBE;
 		}
 		mRtv = std::make_shared<DX12RenderTarget>(rtDesc, this, mResource.Get(), dxDesc);
 	}
@@ -95,15 +115,26 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 		dsDesc.Height = Desc.Height;
 		D3D12_DEPTH_STENCIL_VIEW_DESC dxDesc {};
 		dxDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::DepthStencil);
-		if (Desc.SampleCount == 1)
+		if (Desc.ResourceType == EResourceType::Texture2D)
 		{
-			dxDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-			dxDesc.Texture2D = {};
+			if (Desc.SampleCount == 1)
+			{
+				dxDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+				dxDesc.Texture2D = {};
+			}
+			else
+			{
+				dxDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
+				dxDesc.Texture2DMS = {};
+			}
 		}
-		else
+		else if (Desc.ResourceType == EResourceType::TextureCube)
 		{
-			dxDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
-			dxDesc.Texture2DMS = {};
+			dxDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+			dxDesc.Texture2DArray.ArraySize = 6;
+			dxDesc.Texture2DArray.FirstArraySlice = 0;
+			dxDesc.Texture2DArray.MipSlice = 0;
+			dsDesc.Dimension = ETextureDimension::TEX_CUBE;
 		}
 		mDsv = std::make_shared<DX12DepthStencil>(dsDesc, this, mResource.Get(), dxDesc);
 	}
@@ -118,6 +149,10 @@ D3D12_RESOURCE_DESC DX12Texture::MakeResourceDesc()
 	resourceDesc.Width = Desc.Width;
 	resourceDesc.Height = Desc.Height;
 	resourceDesc.DepthOrArraySize = Desc.ArraySize;
+	if (Desc.ResourceType == EResourceType::TextureCube)
+	{
+		resourceDesc.DepthOrArraySize *= 6;
+	}
 	resourceDesc.MipLevels = Desc.NumMips;
 	resourceDesc.SampleDesc.Count = Desc.SampleCount;
 	resourceDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::Resource);
@@ -214,9 +249,12 @@ DX12Texture::~DX12Texture()
 
 DX12RenderTarget::~DX12RenderTarget()
 {
-	if (IsValid(DescriptorHdl))
+	for (int i = 0; i < DescriptorHdl.size(); ++i)
 	{
-		GetRHI().FreeDescriptor(EDescriptorType::SRV, DescriptorHdl);
+		if (IsValid(DescriptorHdl[i]))
+		{
+			GetRHI().FreeDescriptor(EDescriptorType::RTV, DescriptorHdl[i]);
+		}
 	}
 }
 
@@ -224,22 +262,61 @@ DX12RenderTarget::DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* te
 :IRenderTarget(desc), mResource(resource), BaseTex(tex)
 {
 	auto& rhi = GetRHI();
-	DescriptorHdl = rhi.GetDescriptorAllocator(EDescriptorType::RTV)->Allocate(EDescriptorType::RTV);
-	rhi.Device()->CreateRenderTargetView(resource, &dxDesc, DescriptorHdl);
+	if (dxDesc.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2DARRAY)
+	{
+		auto subDesc = dxDesc;
+		for (u32 i = dxDesc.Texture2DArray.FirstArraySlice; i < dxDesc.Texture2DArray.ArraySize;++i)
+		{
+			subDesc.Texture2DArray.FirstArraySlice = i;
+			DescriptorHdl[i] = rhi.GetDescriptorAllocator(EDescriptorType::RTV)->Allocate(EDescriptorType::RTV);
+			rhi.Device()->CreateRenderTargetView(resource, &subDesc, DescriptorHdl[i]);
+		}
+	}
+	else
+	{
+		DescriptorHdl[0] = rhi.GetDescriptorAllocator(EDescriptorType::RTV)->Allocate(EDescriptorType::RTV);
+		rhi.Device()->CreateRenderTargetView(resource, &dxDesc, DescriptorHdl[0]);
+
+	}
 }
 
 DX12RenderTarget::DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_CPU_DESCRIPTOR_HANDLE existingRtvDesc)
-:IRenderTarget(desc), DescriptorHdl(existingRtvDesc), mResource(resource), BaseTex(tex)
+:IRenderTarget(desc), mResource(resource), BaseTex(tex)
 {
-
+	DescriptorHdl[0] = existingRtvDesc;
 }
 
 DX12DepthStencil::DX12DepthStencil(DepthStencilDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC const& dxDesc)
 :IDepthStencil(desc), mResource(resource), BaseTex(tex)
 {
 	auto& rhi = GetRHI();
-	mDesc = rhi.GetDescriptorAllocator(EDescriptorType::DSV)->Allocate(EDescriptorType::DSV);
-	rhi.Device()->CreateDepthStencilView(resource, &dxDesc, mDesc);
+	if (dxDesc.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
+	{
+		auto subDesc = dxDesc;
+		subDesc.Texture2DArray.ArraySize = 1;
+		for (u32 i = dxDesc.Texture2DArray.FirstArraySlice; i < dxDesc.Texture2DArray.ArraySize;++i)
+		{
+			subDesc.Texture2DArray.FirstArraySlice = i;
+			mDesc[i] = rhi.GetDescriptorAllocator(EDescriptorType::DSV)->Allocate(EDescriptorType::DSV);
+			rhi.Device()->CreateDepthStencilView(resource, &subDesc, mDesc[i]);
+		}
+	}
+	else
+	{
+		mDesc[0] = rhi.GetDescriptorAllocator(EDescriptorType::DSV)->Allocate(EDescriptorType::DSV);
+		rhi.Device()->CreateDepthStencilView(resource, &dxDesc, mDesc[0]);
+	}
+}
+
+DX12DepthStencil::~DX12DepthStencil()
+{
+	for (u32 i = 0; i < mDesc.size(); ++i)
+	{
+		if (IsValid(mDesc[i]))
+		{
+			GetRHI().FreeDescriptor(EDescriptorType::DSV, mDesc[i]);
+		}
+	}
 }
 
 }

@@ -97,6 +97,10 @@ void MaterialManager::UpdateMaterial(MaterialID matId, TexturedRenderMaterial* t
 		{
 			texMat->m_Albedo = mDevice->ResourceMgr.GetDeviceTexture(&*mat.albedo);
 		}
+		else
+		{
+			texMat->m_Albedo = mDevice->BasicTextures.GetBlackTexture(mDevice);
+		}
 		if (mat.normal.IsValid())
 		{
 			texMat->m_Normal = mDevice->ResourceMgr.GetDeviceTexture(&*mat.normal);
@@ -109,7 +113,7 @@ void MaterialManager::UpdateMaterial(MaterialID matId, TexturedRenderMaterial* t
 		}
 		else
 		{
-			texMat->m_Emissive = mDevice->BasicTextures.GetBlackTexture(mDevice);
+			texMat->m_Emissive = nullptr;
 		}
 		if (mat.roughnessMap.IsValid())
 		{

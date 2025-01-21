@@ -26,7 +26,7 @@ protected:
 
 	void GrowUsedTracker(SizeType newSize)
 	{
-		mInUse.resize(newSize);
+		mInUse.resize(newSize + mInUse.size());
 	}
 
 	void CheckUsed(SizeType index) const

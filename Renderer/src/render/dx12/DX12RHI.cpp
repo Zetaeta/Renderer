@@ -17,6 +17,7 @@
 #include "render/RenderController.h"
 #include "editor/Viewport.h"
 #include "render/RendererScene.h"
+#include "imgui.h"
 
 #pragma comment(lib, "d3d12.lib")
 
@@ -74,6 +75,10 @@ DX12RHI::~DX12RHI()
 	mViewport = nullptr;
 	mContext = nullptr;
 	mSwapchainBufferTextures = {};
+	ResourceMgr.Teardown();
+	MatMgr.Release();
+	BasicTextures.Teardown();
+	BasicMeshes.Teardown();
 	GRenderController.RemoveRenderBackend(this);
 	RendererScene::OnShutdownDevice(this);
 	mTest = nullptr;
@@ -103,6 +108,15 @@ void DX12RHI::Tick()
 	{
 		ResizeSwapChain();
 	}
+
+	if (mViewport)
+	{
+		ImGui::Begin("DX12");
+		mViewport->mRCtx->DrawControls();
+		ImGui::End();
+	}
+
+
 	StartFrame();
 	auto& cmd = mCmdList.CmdList;
 	cmd->Reset(mCmdList.Allocators[mFrameIndex].Get(), mTest->mPSO.Get());
@@ -490,6 +504,16 @@ IDeviceTexture::Ref DX12RHI::CreateTexture2D(DeviceTextureDesc const& desc, Text
 
 	return result;
 }
+IDeviceTexture::Ref DX12RHI::CreateTextureCube(DeviceTextureDesc const& inDesc, CubemapData const& initialData)
+{
+	if (initialData.Tex)
+	{
+		return nullptr;
+	}
+	DeviceTextureDesc actualDesc = inDesc;
+	actualDesc.ResourceType = EResourceType::TextureCube;
+	return std::make_shared<DX12Texture>(actualDesc);
+}
 
 DX12DescriptorAllocator* DX12RHI::GetDescriptorAllocator(EDescriptorType descType)
 {
@@ -741,7 +765,7 @@ void DX12DirectMesh::OnFullyReleased()
 
 void DX12IndexedMesh::OnFullyReleased()
 {
-
+	GetRHI().FreeIndexedMesh(this);
 }
 
 }
