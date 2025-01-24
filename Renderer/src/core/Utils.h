@@ -505,7 +505,7 @@ T const* GetZeroData(size_t requiredSize)
 }
 
 template<typename InContainer, typename OutContainer>
-void Append(OutContainer to, InContainer from)
+void Append(OutContainer& to, InContainer const& from)
 {
 	to.insert(to.end(), from.begin(), from.end());
 }
@@ -534,6 +534,14 @@ template<typename... Args>
 constexpr u32 MaxSize()
 {
 	return TMaxSize<Args...>::size;
+}
+
+template<typename T>
+bool SetWasChanged(T& out, T const& value)
+{
+	bool wasChanged = out != value;
+	out = value;
+	return wasChanged;
 }
 
 //template<typename... Args>

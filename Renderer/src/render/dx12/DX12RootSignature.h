@@ -33,6 +33,7 @@ public:
 	//u8 VertexCBStart = 0;
 	//u8 PixelCBStart = 0;
 	GraphicsStageArray<s8> RootCBVIndices;
+	GraphicsStageArray<u8> NumUAVs {};
 	//u8 PixelSRVTable = 0;
 	//u8 VertexSRVTable = 0;
 	GraphicsStageArray<s8> SRVTableIndices;
@@ -48,6 +49,8 @@ public:
 	// Standard layout: 1 SRV/UAV descriptor table starting with UAVs, followed by 1 or more CBVs
 	u32 NumUAVs = 0;
 	u32 NumCBs = 0;
+	constexpr static u32 SRVTableIndex = 0;
+	constexpr static u32 CBVStartIndex = 1;
 	static DX12ComputeRootSignature MakeStandardRootSig(u32 numCBs, u32 numUAVs = 0);
 };
 

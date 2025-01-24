@@ -115,6 +115,13 @@ ITER_ENUM(EShaderType);
 
 class ShaderManager;
 
+struct ShaderRequirements
+{
+	u32 NumUAVs = 0;
+	u32 NumSRVs = 0;
+	u32 NumCBs = 0;
+};
+
 class Shader : public RefCountedObject
 {
 public:
@@ -124,7 +131,12 @@ public:
 		return DeviceShader.get();
 	}
 
+	ShaderRequirements const& GetRequirements()
+	{
+		return mRequirements;
+	}
 protected:
+	ShaderRequirements mRequirements;
 	OwningPtr<IDeviceShader> DeviceShader;
 	friend ShaderManager;
 };

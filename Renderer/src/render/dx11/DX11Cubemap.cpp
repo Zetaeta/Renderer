@@ -92,7 +92,6 @@ DX11Cubemap DX11Cubemap::FoldUp(DX11Ctx& ctx, TextureRef tex)
 	res.Desc.Flags = TF_SRGB;
 	constexpr u32 const startPos[6] = {
 		6, 4, 1, 9, 5, 7
-
 	};
 	ComPtr<ID3D11Texture2D> cubeTex;
 

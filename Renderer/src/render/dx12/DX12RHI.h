@@ -166,6 +166,7 @@ public:
 	OwningPtr<LiveObjectReporter> GetLiveObjectReporter();
 
 	ID3D12PipelineState* GetPSO(GraphicsPSODesc const& PSODesc);
+	ID3D12PipelineState* GetPSO(ComputePSODesc const& PSODesc);
 
 	void FreeDirectMesh(DX12DirectMesh* mesh);
 	void FreeIndexedMesh(DX12IndexedMesh* mesh);
@@ -209,6 +210,7 @@ private:
 	std::array<std::shared_ptr<DX12Texture>, MaxSwapchainBufferCount> mSwapchainBufferTextures;
 	std::array<Vector<ComPtr<ID3D12Pageable>>, MaxSwapchainBufferCount> mDeferredReleaseResources;
 	std::unordered_map<GraphicsPSODesc, ComPtr<ID3D12PipelineState>, GenericHash<>> mPSOs;
+	std::unordered_map<ComputePSODesc, ComPtr<ID3D12PipelineState>, GenericHash<>> mComputePSOs;
 	DX12DescriptorHeap mRTVHeap;
 	DX12CommandList mCmdList;
 	ESwapchainBufferCount mNumBuffers;

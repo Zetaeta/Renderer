@@ -18,15 +18,6 @@ namespace rnd::dx
 
 ComPtr<ID3DBlob> DXCompileFile(wchar_t const* filePath, char const* entryPoint, char const* shaderTarget, D3D_SHADER_MACRO const* macros, UINT flags );
 
-class DX11ShaderReflector final : public IShaderReflector
-{
-public:
-	DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflection);
-	SmallVector<CBDesc, 4> GetConstantBuffers() override;
-private:
-	ComPtr<ID3D11ShaderReflection> mReflection;
-};
-
 class DXShaderCompiler
 {
 protected:

@@ -34,6 +34,8 @@ DX12GraphicsRootSignature DX12GraphicsRootSignature::MakeStandardRootSig(u32 num
 		Zero(tableRanges);
 		bool hasUavs[2] = {vertexUAVs > 0, pixelUAVs > 0};
 		u32 uavs[2] = {vertexUAVs, pixelUAVs};
+		result.NumUAVs[EShaderType::Vertex] = vertexUAVs;
+		result.NumUAVs[EShaderType::Pixel] = pixelUAVs;
 		for (u32 i = 0; i < 2; ++i)
 		{
 			if (hasUavs[i])
@@ -147,7 +149,7 @@ DX12ComputeRootSignature DX12ComputeRootSignature::MakeStandardRootSig(u32 numCB
 		params[offset].DescriptorTable.NumDescriptorRanges = hasUAVs + 1;
 		params[offset].DescriptorTable.pDescriptorRanges = tableRanges;
 		offset = 1;
-		for (u32 i = 0; i < numUAVs; ++i)
+		for (u32 i = 0; i < numCBs; ++i)
 		{
 			params[i + offset].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 			params[i + offset].Descriptor = {i, 0};
@@ -166,6 +168,8 @@ DX12ComputeRootSignature DX12ComputeRootSignature::MakeStandardRootSig(u32 numCB
 			ZE_ENSURE(false);
 		}
 		DXCALL(GetD3D12Device()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&result.mRootSig)));
+		result.NumCBs = numCBs;
+		result.NumUAVs = numUAVs;
 	}
 	return result;
 }

@@ -99,8 +99,11 @@ void DX12Context::FinalizeGraphicsState()
 	{
 		if (stage->GetRequiredDescriptors() > 0)
 		{
-			for (UnorderedAccessView& view : stage->UAVs)
+			u32 tableSize = 0;
+			auto numUAVs = min(stage->UAVs.size(), (u64) mGraphicsState.PSOState.RootSig.NumUAVs[stage.Shader]);
+			for (u32 i=0; i<numUAVs; ++i)
 			{
+				UnorderedAccessView& view = stage->UAVs[i];
 				auto src = view.Resource->GetUAV<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
 				rhi.Device()->CopyDescriptorsSimple(1,dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
@@ -108,8 +111,8 @@ void DX12Context::FinalizeGraphicsState()
 			for (ResourceView& view : stage->SRVs)
 			{
 				auto rsc = view.Resource ? view.Resource : GetRHI().BasicTextures.GetBlackTexture(&GetRHI());
-					auto src = rsc->GetShaderResource<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
-					rhi.Device()->CopyDescriptorsSimple(1,dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				auto src = rsc->GetShaderResource<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
+				rhi.Device()->CopyDescriptorsSimple(1,dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
 			}
 			s8 tablePos = mGraphicsState.RootSig().SRVTableIndices[stage.Shader];
@@ -121,10 +124,69 @@ void DX12Context::FinalizeGraphicsState()
 			{
 				ZE_ASSERT(false);
 			}
-			tableStart.Offset(NumCast<u32>(stage->SRVs.size()), DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
+			tableStart.Offset(NumCast<u32>(stage->SRVs.size() + stage->UAVs.size()), DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
 		}
 	}
 }
+void DX12Context::SetupDescriptorTable(ShaderBindingState const& bindings, u32 rootArgument, DescriptorTableLoc& inoutLocation, u32 numUAVs)
+{
+	CD3DX12_CPU_DESCRIPTOR_HANDLE dest(inoutLocation.CPUHandle);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE tableStart(inoutLocation.GPUHandle);
+	auto& rhi = GetRHI();
+	numUAVs = min(numUAVs, (u32)bindings.UAVs.size());
+	for (u32 i=0; i<numUAVs; ++i)
+	{
+		UnorderedAccessView const& view = bindings.UAVs[i];
+		auto src = view.Resource->GetUAV<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
+		rhi.Device()->CopyDescriptorsSimple(1, dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
+	}
+	for (ResourceView const& view : bindings.SRVs)
+	{
+		auto rsc = view.Resource ? view.Resource : GetRHI().BasicTextures.GetBlackTexture(&GetRHI());
+		auto src = rsc->GetShaderResource<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
+		rhi.Device()->CopyDescriptorsSimple(1,dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
+	}
+	tableStart.Offset(NumCast<u32>(bindings.SRVs.size() + bindings.UAVs.size()), DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
+	inoutLocation.CPUHandle = dest;
+	inoutLocation.GPUHandle = tableStart;
+}
+
+
+void DX12Context::FinalizeComputeState()
+{
+	auto& rhi = GetRHI();
+	if (mComputeState.PSODirty)
+	{
+		mComputeState.RootSigDirty = SetWasChanged(mComputeState.PSODesc.RootSig,
+			DX12ComputeRootSignature::MakeStandardRootSig(NumCast<u32>(mComputeState.Bindings.RootCBVs.size()),
+														  NumCast<u32>(mComputeState.Bindings.UAVs.size())));
+		mCmdList->SetPipelineState(rhi.GetPSO(mComputeState.PSODesc));
+//		mComputeState.PSODirty = false;
+		mComputeState.RootSigDirty = true;
+	}
+	if (mComputeState.RootSigDirty)
+	{
+		mCmdList->SetComputeRootSignature(mComputeState.PSODesc.RootSig.Get());
+//		mComputeState.RootSigDirty = false;
+	}
+
+	for (u32 i=0; i<mComputeState.Bindings.RootCBVs.size(); ++i)
+	{
+		mCmdList->SetComputeRootConstantBufferView(mComputeState.PSODesc.RootSig.CBVStartIndex + i, mComputeState.Bindings.RootCBVs[i]);
+	}
+
+	if (mComputeState.BindingsDirty)
+	{
+		auto loc = rhi.GetResourceDescTableAlloc()->Reserve(NumCast<u32>(mComputeState.Bindings.UAVs.size() + mComputeState.Bindings.SRVs.size()));
+		mCmdList->SetDescriptorHeaps(1, &loc.Heap);
+		mCmdList->SetComputeRootDescriptorTable(mComputeState.PSODesc.RootSig.SRVTableIndex, loc.GPUHandle);
+		SetupDescriptorTable(mComputeState.Bindings, mComputeState.PSODesc.RootSig.SRVTableIndex, loc, mComputeState.PSODesc.RootSig.NumUAVs);
+		mComputeState.BindingsDirty = false;
+	}
+}
+
 
 void DX12Context::SetRTAndDS(IRenderTarget::Ref rts, IDepthStencil::Ref ds, int RTArrayIdx, int DSArrayIdx)
 {
@@ -166,30 +228,24 @@ void DX12Context::SetRTAndDS(Span<IRenderTarget::Ref> rts, IDepthStencil::Ref ds
 
 void DX12Context::SetConstantBuffers(EShaderType shaderType, Span<IConstantBuffer* const> buffers)
 {
-	if (shaderType < EShaderType::GraphicsCount)
+	auto& targetVec = shaderType < EShaderType::GraphicsCount ? mGraphicsState.ShaderStates[shaderType].RootCBVs : mComputeState.Bindings.RootCBVs;
+	targetVec.clear();
+	for (IConstantBuffer* cb : buffers)
 	{
-		auto& targetVec = mGraphicsState.ShaderStates[shaderType].RootCBVs;
-		targetVec.clear();
-		for (IConstantBuffer* cb : buffers)
+		if (cb)
 		{
-			if (cb)
-			{
-				targetVec.push_back(static_cast<DX12DynamicCB*>(cb)->Commit());
-			}
+			targetVec.push_back(static_cast<DX12DynamicCB*>(cb)->Commit());
 		}
 	}
 }
 
 void DX12Context::SetConstantBuffers(EShaderType shaderType, std::span<CBHandle const> cbs)
 {
-	if (shaderType < EShaderType::GraphicsCount)
+	auto& targetVec = shaderType < EShaderType::GraphicsCount ? mGraphicsState.ShaderStates[shaderType].RootCBVs : mComputeState.Bindings.RootCBVs;
+	targetVec.clear();
+	for (CBHandle const& cb : cbs)
 	{
-		auto& targetVec = mGraphicsState.ShaderStates[shaderType].RootCBVs;
-		targetVec.clear();
-		for (CBHandle const& cb : cbs)
-		{
-			targetVec.push_back(cb.UserData.As<D3D12_GPU_VIRTUAL_ADDRESS>());
-		}
+		targetVec.push_back(cb.UserData.As<D3D12_GPU_VIRTUAL_ADDRESS>());
 	}
 
 }
@@ -329,15 +385,17 @@ void DX12Context::ClearDepthStencil(IDepthStencil::Ref ds, EDSClearMode clearMod
 
 void DX12Context::SetUAVs(EShaderType shader, Span<UnorderedAccessView const> uavs, u32 startIdx /*= 0*/)
 {
-	return;
 	if (shader == EShaderType::Compute)
 	{
 		mComputeState.BindingsDirty = true;
+		mComputeState.Bindings.DescTablesDirty = true;
 		BindAndTransition(mComputeState.Bindings.UAVs, uavs);
 	}
 	else
 	{
-		Assertf(false, "non-compute UAVs not yet supported");
+		mGraphicsState.mBindingsDirty = true;
+		mGraphicsState.ShaderStates[shader].DescTablesDirty = true;
+		BindAndTransition(mGraphicsState.ShaderStates[shader].UAVs, uavs, startIdx);
 	}
 }
 
@@ -356,8 +414,8 @@ void DX12Context::BindAndTransition(Vector<UnorderedAccessView>& outBindings, Sp
 
 void DX12Context::BindAndTransition(Vector<ResourceView>& outBindings, Span<ResourceView const> inSRVs, D3D12_RESOURCE_STATES targetState, u32 startIdx /*= 0*/)
 {
+	outBindings.clear();
 	outBindings.resize(max(outBindings.size(), startIdx + inSRVs.size()));
-//	outBindings.clear();
 
 	for (u32 i = 0; i < inSRVs.size(); ++i)
 	{
@@ -370,6 +428,12 @@ void DX12Context::BindAndTransition(Vector<ResourceView>& outBindings, Span<Reso
 			tex->TransitionTo(mCmdList, targetState);
 		}
 	}
+}
+
+void DX12Context::DispatchCompute(ComputeDispatch args)
+{
+	FinalizeComputeState();
+	mCmdList->Dispatch(args.ThreadGroupsX, args.ThreadGroupsY, args.ThreadGroupsZ);
 }
 
 }

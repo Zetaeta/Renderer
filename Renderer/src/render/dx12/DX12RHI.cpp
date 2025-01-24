@@ -506,13 +506,40 @@ IDeviceTexture::Ref DX12RHI::CreateTexture2D(DeviceTextureDesc const& desc, Text
 }
 IDeviceTexture::Ref DX12RHI::CreateTextureCube(DeviceTextureDesc const& inDesc, CubemapData const& initialData)
 {
-	if (initialData.Tex)
-	{
-		return nullptr;
-	}
 	DeviceTextureDesc actualDesc = inDesc;
+	bool foldUp = initialData.Tex && initialData.Format == ECubemapDataFormat::FoldUp;
+	u32 faceWidth = 0;
+	if (foldUp)
+	{
+		faceWidth = initialData.Tex->width / 4;;
+		ZE_ASSERT(faceWidth * 4 == initialData.Tex->width);
+		ZE_ASSERT(faceWidth * 3 == initialData.Tex->height);
+		actualDesc.Width = actualDesc.Height = faceWidth;
+	}
 	actualDesc.ResourceType = EResourceType::TextureCube;
-	return std::make_shared<DX12Texture>(actualDesc);
+	auto result = std::make_shared<DX12Texture>(actualDesc);
+	if (foldUp)
+	{
+		auto& uploadCtx = mUploader.StartUpload();
+		u64 uploadSize = GetRequiredIntermediateSize(result->GetTextureHandle<ID3D12Resource*>(), 0, 6); // TODO mips
+		auto alloc = mUploadBuffer->Reserve(uploadSize, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+		D3D12_SUBRESOURCE_DATA srcData[6];
+		Zero(srcData);
+		constexpr u32 const startPos[6] = {
+			6, 4, 1, 9, 5, 7
+		};
+		for (u32 i=0; i<6; ++i)
+		{
+			srcData[i].pData = initialData.Tex->GetData() + (faceWidth * faceWidth * (startPos[i] / 4) * 4) + faceWidth * (startPos[i] % 4);
+			srcData[i].RowPitch = u32(initialData.Tex->width) * sizeof(u32);
+		}
+
+		UpdateSubresources<6>(uploadCtx.CmdList.Get(), result->GetTextureHandle<ID3D12Resource*>(), mUploadBuffer->GetCurrentBuffer(),
+			alloc.Offset, 0u, 6u, srcData);
+		uploadCtx.FinishUploadSynchronous();
+		result->UpdateCurrentState(D3D12_RESOURCE_STATE_COMMON);
+	}
+	return result;
 }
 
 DX12DescriptorAllocator* DX12RHI::GetDescriptorAllocator(EDescriptorType descType)
@@ -717,9 +744,23 @@ ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc const& PSODesc)
 		desc.DSVFormat = PSODesc.DSVFormat;
 		desc.SampleDesc = PSODesc.SampleDesc;
 		desc.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT{});
-		mDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso));
+		DXCALL(mDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
 	}
 
+	return pso.Get();
+}
+
+ID3D12PipelineState* DX12RHI::GetPSO(ComputePSODesc const& PSODesc)
+{
+	auto& pso = mComputePSOs[PSODesc];
+	if (pso == nullptr)
+	{
+		D3D12_COMPUTE_PIPELINE_STATE_DESC desc {};
+		desc.CS = GetBytecode(PSODesc.Shader);
+		desc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+		desc.pRootSignature = PSODesc.RootSig.Get();
+		DXCALL(mDevice->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pso)));
+	}
 	return pso.Get();
 }
 

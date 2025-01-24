@@ -35,7 +35,11 @@ RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, RendererScene* scene, 
 	CubemapData cubeData;
 	cubeData.Format = ECubemapDataFormat::FoldUp;
 	cubeData.Tex = bgTex;
-	mBGCube = mDevice->CreateTextureCube({}, cubeData);
+	DeviceTextureDesc desc;
+	desc.Format = ETextureFormat::RGBA8_Unorm_SRGB;
+	desc.DebugName = "Background";
+	desc.ResourceType = EResourceType::TextureCube;
+	mBGCube = mDevice->CreateTextureCube(desc, cubeData);
 
 	SetupRenderTarget();
 	SetupPasses();

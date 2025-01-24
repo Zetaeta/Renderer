@@ -73,6 +73,18 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		rhi.Device()->CreateShaderResourceView(mResource.Get(), &srvDesc, mSrvDesc);
 	}
+	if (!!(Desc.Flags & TF_UAV))
+	{
+		mUavDesc = rhi.GetDescriptorAllocator(EDescriptorType::UAV)->Allocate(EDescriptorType::UAV);
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+		if (Desc.ResourceType == EResourceType::Texture2D)
+		{
+			uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+			uavDesc.Texture2D = {};
+			uavDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::UAV);
+			rhi.Device()->CreateUnorderedAccessView(mResource.Get(), nullptr, &uavDesc, mUavDesc);
+		}
+	}
 	if (!!(Desc.Flags & TF_RenderTarget))
 	{
 		RenderTargetDesc rtDesc;
@@ -164,6 +176,10 @@ D3D12_RESOURCE_DESC DX12Texture::MakeResourceDesc()
 	{
 		resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 	}
+	if (Desc.Flags & TF_UAV)
+	{
+		resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	}
 	return resourceDesc;
 }
 
@@ -215,7 +231,8 @@ CopyableMemory<8> DX12Texture::GetShaderResource(ShaderResourceId id /*= 0*/)
 
 OpaqueData<8> DX12Texture::GetUAV(UavId id /*= */)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	ZE_ASSERT(Desc.Flags & TF_UAV);
+	return mUavDesc;
 }
 
 void DX12Texture::TransitionState(ID3D12GraphicsCommandList_* cmdList, D3D12_RESOURCE_STATES fromState, D3D12_RESOURCE_STATES toState)

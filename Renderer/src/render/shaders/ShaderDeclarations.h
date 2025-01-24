@@ -40,5 +40,20 @@ public:
 	DECLARE_SHADER(FlatPS);
 };
 
+class CubemapVS : public VertexShader
+{
+	VS_INPUTS_START
+	VS_INPUT_STATIC(VA_Position)
+	VS_INPUTS_END
+	DECLARE_SHADER(CubemapVS)
+};
 
+
+class CubemapPS : public PixelShader
+{
+public:
+	struct Greyscale : SHADER_PERM_BOOL("DEPTH_SAMPLE");
+	using Permutation = PermutationDomain<Greyscale>;
+	DECLARE_SHADER(CubemapPS);
+};
 }

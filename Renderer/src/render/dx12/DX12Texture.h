@@ -54,6 +54,7 @@ private:
 
 	ComPtr<ID3D12Resource> mResource;
 	D3D12_CPU_DESCRIPTOR_HANDLE mSrvDesc{};
+	D3D12_CPU_DESCRIPTOR_HANDLE mUavDesc{};
 	D3D12_RESOURCE_STATES mLastState = D3D12_RESOURCE_STATE_COMMON;
 	IDepthStencil::Ref mDsv;
 	IRenderTarget::Ref mRtv;

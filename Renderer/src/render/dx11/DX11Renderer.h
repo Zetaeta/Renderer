@@ -92,7 +92,7 @@ public:
 	void DispatchCompute(ComputeDispatch args) override;
 	void ClearResourceBindings() override;
 
-	virtual void SetShaderResources(EShaderType shader, Span<ResourceView const> const srvs, u32 startIdx) override;
+	virtual void SetShaderResources(EShaderType shader, Span<ResourceView const> const srvs, u32 startIdx = 0) override;
 	void SetPixelShader(PixelShader const* shader) override;
 	void SetVertexShader(VertexShader const* shader) override;
 	void SetComputeShader(ComputeShader const* shader) override;

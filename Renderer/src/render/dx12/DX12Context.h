@@ -3,6 +3,8 @@
 #include "DX12RootSignature.h"
 #include "container/Vector.h"
 
+namespace rnd { namespace dx12 { struct DescriptorTableLoc; } }
+
 namespace rnd::dx12
 {
 
@@ -142,16 +144,16 @@ struct ComputePSODesc
 	DX12ComputeRootSignature RootSig;
 	RefPtr<ComputeShader const> Shader;
 
-	bool operator==(GraphicsPSODesc const& other) const
+	bool operator==(ComputePSODesc const& other) const
 	{
-		return memcmp(this, &other, sizeof(GraphicsPSODesc)) == 0;
+		return memcmp(this, &other, sizeof(*this)) == 0;
 	}
 };
 template<typename Hasher>
 void HashAppend(Hasher& hasher, ComputePSODesc const& psoDesc)
 {
 	HashAppend(hasher, psoDesc.RootSig.Get());
-	HashAppend(hasher, psoDesc.Shader);
+	HashAppend(hasher, psoDesc.Shader.Get());
 }
 
 struct ComputePipelineStateCache
@@ -251,10 +253,7 @@ public:
 	void DrawMesh(IDeviceMesh const* mesh) override;
 
 
-	void DispatchCompute(ComputeDispatch args) override
-	{
-//		throw std::logic_error("The method or operation is not implemented.");
-	}
+	void DispatchCompute(ComputeDispatch args) override;
 
 
 	IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) override
@@ -385,6 +384,8 @@ public:
 	}
 
 	void FinalizeGraphicsState();
+	void FinalizeComputeState();
+	void SetupDescriptorTable(ShaderBindingState const& bindings, u32 rootArgument, DescriptorTableLoc& inoutLocation, u32 numUAVs);
 protected:
 	void BindAndTransition(Vector<UnorderedAccessView>& outBindings, Span<UnorderedAccessView const> inUAVs, u32 startIdx = 0);
 	void BindAndTransition(Vector<ResourceView>& outBindings, Span<ResourceView const> inSRVs,

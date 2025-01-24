@@ -1,4 +1,5 @@
 #include "ShaderManager.h"
+#include "shaders/ShaderReflection.h"
 
 namespace rnd
 {
@@ -23,6 +24,18 @@ ShaderManager::~ShaderManager()
 		shader = nullptr;
 	}
 	mCompiledShaders.clear();
+}
+
+ShaderRequirements ShaderManager::GetRequirements(IShaderReflector* forShader)
+{
+	ShaderRequirements result;
+	SmallVector<IShaderReflector::UAVDesc, 4> uavs;
+	SmallVector<IShaderReflector::SRVDesc, 4> srvs;
+	forShader->GetBindingInfo(srvs, uavs);
+	result.NumCBs = NumCast<u32>(forShader->GetConstantBuffers().size());
+	result.NumSRVs = NumCast<u32>(srvs.size());
+	result.NumUAVs = NumCast<u32>(uavs.size());
+	return result;
 }
 
 }

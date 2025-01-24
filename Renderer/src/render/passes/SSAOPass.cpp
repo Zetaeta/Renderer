@@ -94,7 +94,7 @@ void SSAOPass::Execute(RenderContext& renderCtx)
 	context->ClearResourceBindings();
 	bool doPixelDebug = mDebugPixel && renderCtx.Settings.EnablePixelDebug;
 	UnorderedAccessView uavs[] = {mAOTextureUav, doPixelDebug ? renderCtx.GetPixelDebugUav() : UnorderedAccessView{}};
-	context->SetUAVs(EShaderType::Compute, uavs);
+	context->SetUAVs(EShaderType::Compute, doPixelDebug ? uavs : Single(uavs[0]));
 	context->ClearUAV(mAOTextureUav, vec4{1});
 	if (doPixelDebug)
 	{

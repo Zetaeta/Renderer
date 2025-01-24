@@ -34,14 +34,20 @@ public:
 		auto& shaderInfo = ShaderRegistry::Get().GetRegisteredShader(id);
 		OwningPtr<IDeviceShader> deviceShader;
 		ShaderType* shader = new ShaderType;
+		OwningPtr<IShaderReflector> reflector;
 		if constexpr (ShaderType::Type == EShaderType::Vertex)
 		{
-			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, inputSig, outReflector);
+			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, inputSig, &reflector);
 			shader->InputSigInst = inputSig;
 		}
 		else
 		{
-			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, {}, outReflector);
+			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, {}, &reflector);
+		}
+		shader->mRequirements = GetRequirements(reflector.get());
+		if (outReflector)
+		{
+			*outReflector = std::move(reflector);
 		}
 		shader->DeviceShader = std::move(deviceShader);
 		mCompiledShaders[instanceId] = shader;
@@ -73,6 +79,8 @@ public:
 	{
 		return GetCompiledShader<ShaderType>(ShaderType::sRegistryId, permutation);
 	}
+
+	ShaderRequirements GetRequirements(IShaderReflector* forShader);
 
 #if ALLOW_RECOMPILATION
 	void RecompileAll(bool bForce);

@@ -1,11 +1,24 @@
 #include "DXShaderCompiler.h"
 #include "d3dcompiler.h"
 #include "d3d11shader.h"
+#include "SharedD3D.h"
 
 DEFINE_LOG_CATEGORY(LogShaderCompiler);
 
 namespace rnd::dx
 {
+
+class DX11ShaderReflector final : public IShaderReflector
+{
+public:
+	DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflection);
+	SmallVector<CBDesc, 4> GetConstantBuffers() override;
+
+	void GetBindingInfo(OUT SmallVector<UAVDesc, 4>& uavs, OUT SmallVector<SRVDesc, 4>& srvs) override;
+
+private:
+	ComPtr<ID3D11ShaderReflection> mReflection;
+};
 
 constexpr bool ShaderCompileDebugging = false;
 ComPtr<ID3DBlob> FXCShaderCompiler::GetShaderBytecode(ShaderInstanceId const& id, const ShaderDesc& desc,
@@ -140,4 +153,53 @@ DX11ShaderReflector::DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflec
 
 }
 
+void DX11ShaderReflector::GetBindingInfo(_Out_ SmallVector<UAVDesc, 4>& uavs, _Out_ SmallVector<SRVDesc, 4>& srvs)
+{
+	D3D11_SHADER_DESC desc;
+	mReflection->GetDesc(&desc);
+
+	for (u32 i=0; i<desc.BoundResources; ++i)
+	{
+		D3D11_SHADER_INPUT_BIND_DESC bindDesc;
+		DXCALL(mReflection->GetResourceBindingDesc(i, &bindDesc));
+		BindingDesc result;
+		result.Name = bindDesc.Name;
+		switch (bindDesc.Dimension)
+		{
+		case D3D_SRV_DIMENSION_UNKNOWN:
+			result.Type = EResourceType::Unknown;
+		case D3D_SRV_DIMENSION_BUFFER:
+			result.Type = EResourceType::Buffer;
+			break;
+		case D3D_SRV_DIMENSION_TEXTURE2D:
+		case D3D_SRV_DIMENSION_TEXTURE2DMS:
+			result.Type = EResourceType::Texture2D;
+			break;
+		case D3D_SRV_DIMENSION_TEXTURECUBE:
+			result.Type = EResourceType::TextureCube;
+			break;
+		default:
+			ZE_ASSERT(false);
+			break;
+		}
+		switch (bindDesc.Type)
+		{
+		case D3D_SIT_TEXTURE:
+		case D3D_SIT_STRUCTURED:
+			srvs.push_back(result);
+			break;
+		case D3D_SIT_UAV_RWTYPED:
+		case D3D_SIT_UAV_RWSTRUCTURED:
+			uavs.push_back(result);
+			break;
+		case D3D_SIT_CBUFFER:
+			break;
+		case D3D_SIT_SAMPLER:
+			break;
+		default:
+			ZE_ASSERT(false);
+			break;
+		}
+	}
+}
 }

@@ -3,6 +3,8 @@
 #include "RenderContext.h"
 #include "dx11/DX11Ctx.h"
 #include "dx11/DX11Renderer.h"
+#include "shaders/ShaderDeclarations.h"
+#include "VertexTypes.h"
 
 namespace rnd
 {
@@ -19,9 +21,19 @@ void RenderCubemap::Execute(RenderContext& renderCtx)
 	{
 		return;
 	}
+	auto context = renderCtx.DeviceCtx();
 	renderCtx.DeviceCtx()->SetDepthStencilMode(mMode == EFlatRenderMode::BACK ? EDepthMode::Less : EDepthMode::Disabled);
 	renderCtx.DeviceCtx()->SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
-	renderCtx.DeviceCtx()->DrawCubemap(mCubemap);
+//	renderCtx.DeviceCtx()->DrawCubemap(mCubemap);
+	std::shared_ptr<void> dummy;
+	DeviceTextureRef	  sp(dummy, mCubemap);
+	context->SetVertexShader(mRCtx->GetShader<CubemapVS>());
+	context->SetPixelShader(mRCtx->GetShader<CubemapPS>());
+	ResourceView srv {sp};
+	context->SetShaderResources(EShaderType::Pixel, Single<ResourceView>(srv));
+	context->SetConstantBuffers(EShaderType::Vertex, Single<IConstantBuffer* const>(context->GetConstantBuffer(ECBFrequency::VS_PerFrame)));
+	context->SetVertexLayout(GetVertAttHdl<FlatVert>());
+	context->DrawMesh(context->Device->BasicMeshes.GetFullScreenTri());
 }
 
 void RenderCubemap::SetCubemap(IDeviceTextureCube* cubemap)

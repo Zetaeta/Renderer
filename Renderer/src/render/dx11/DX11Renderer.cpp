@@ -25,6 +25,7 @@
 #include "../../scene/StaticMeshComponent.h"
 #include "render/MaterialManager.h"
 #include "render/RendererScene.h"
+#include "render/shaders/ShaderDeclarations.h"
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -493,12 +494,22 @@ void DX11Renderer::DrawCubemap(ID3D11ShaderResourceView* srv, bool depth)
 
 	pContext->PSSetShaderResources(0, 1, &srv);
 
-	pContext->Draw(3,0);
+//	pContext->Draw(3,0);
+	DrawMesh(BasicMeshes.GetFullScreenTri());
 }
 
 void DX11Renderer::DrawCubemap(IDeviceTextureCube* cubemap)
 {
-	DrawCubemap(cubemap->GetTextureHandle<ID3D11ShaderResourceView*>(), cubemap->IsDepthStencil());
+//	DrawCubemap(cubemap->GetTextureHandle<ID3D11ShaderResourceView*>(), cubemap->IsDepthStencil());
+	std::shared_ptr<void> dummy;
+	DeviceTextureRef	  sp(dummy, cubemap);
+	SetVertexShader(mRCtx->GetShader<CubemapVS>());
+	SetPixelShader(mRCtx->GetShader<CubemapPS>());
+	ResourceView srv {sp};
+	SetShaderResources(EShaderType::Pixel, Single<ResourceView>(srv));
+	SetConstantBuffers(EShaderType::Vertex, Single<IConstantBuffer* const>(&m_VSPerFrameBuff));
+	SetVertexLayout(GetVertAttHdl<FlatVert>());
+	DrawMesh(BasicMeshes.GetFullScreenTri());
 }
 
 void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
