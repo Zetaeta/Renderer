@@ -80,7 +80,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WL_PLATFORM_WINDOWS;WL_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Walnut\vendor\imgui;..\Walnut\vendor\glfw\include;..\Walnut\vendor\glm;..\nativefiledialog\src\include;..\Walnut\Walnut\src;src;C:\VulkanSDK\1.3.268.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src\3rd\imgui;src\3rd\glm;..\nativefiledialog\src\include;src;C:\VulkanSDK\1.3.268.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
@@ -99,7 +99,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WL_PLATFORM_WINDOWS;WL_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Walnut\vendor\imgui;..\Walnut\vendor\glfw\include;..\Walnut\vendor\glm;..\nativefiledialog\src\include;..\Walnut\Walnut\src;src;C:\VulkanSDK\1.3.268.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src\3rd\imgui;src\3rd\glm;..\nativefiledialog\src\include;src;C:\VulkanSDK\1.3.268.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -123,7 +123,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>WL_PLATFORM_WINDOWS;WL_DIST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Walnut\vendor\imgui;..\Walnut\vendor\glfw\include;..\Walnut\vendor\glm;..\nativefiledialog\src\include;..\Walnut\Walnut\src;src;C:\VulkanSDK\1.3.268.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src\3rd\imgui;src\3rd\glm;..\nativefiledialog\src\include;src;C:\VulkanSDK\1.3.268.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>None</DebugInformationFormat>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -143,6 +143,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\3rd\imgui\imgui.h" />
+    <ClInclude Include="src\3rd\imgui\imgui_internal.h" />
+    <ClInclude Include="src\3rd\imgui\imstb_rectpack.h" />
+    <ClInclude Include="src\3rd\imgui\imstb_textedit.h" />
+    <ClInclude Include="src\3rd\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\3rd\imgui\misc\cpp\imgui_stdlib.h" />
     <ClInclude Include="src\3rd\stb_image.h" />
     <ClInclude Include="src\common\CommonEnums.h" />
     <ClInclude Include="src\common\SceneDataInterface.h" />
@@ -305,6 +311,12 @@
     <ClInclude Include="src\thread\ThreadUtils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\3rd\imgui\imgui.cpp" />
+    <ClCompile Include="src\3rd\imgui\imgui_demo.cpp" />
+    <ClCompile Include="src\3rd\imgui\imgui_draw.cpp" />
+    <ClCompile Include="src\3rd\imgui\imgui_tables.cpp" />
+    <ClCompile Include="src\3rd\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\3rd\imgui\misc\cpp\imgui_stdlib.cpp" />
     <ClCompile Include="src\3rd\stb_image.cpp">
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
@@ -545,9 +557,6 @@
   <ItemGroup>
     <ProjectReference Include="..\nativefiledialog\build\vs2010\nfd.vcxproj">
       <Project>{5d94880b-c99d-887c-5219-9f7cbe21947c}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\Walnut\Walnut\Walnut.vcxproj">
-      <Project>{C038E8D9-ACDA-12B0-9595-260481D69900}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

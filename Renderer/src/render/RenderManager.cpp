@@ -155,7 +155,7 @@ void RenderManager::SceneControls()
 					ImGui::Text("Albedo: %s", material.albedo->GetName());
 					if (const DeviceTextureRef& DeviceTex = material.albedo->GetDeviceTexture())
 					{
-						ImGui::Image(DeviceTex->GetTextureHandle<void*>(), {500, 500}, { 0, 1 }, {1,0});
+						ImGui::Image(DeviceTex->GetTextureHandle<u64>(), {500, 500}, { 0, 1 }, {1,0});
 					}
 				}
 				if (modified)

@@ -1,6 +1,5 @@
 #pragma once
 #include "RenderManager.h"
-#include "Walnut/Timer.h"
 
 class ImageRenderMgr : public RenderManager
 {
@@ -65,7 +64,7 @@ public:
 	std::vector<u32> m_ImgData;
 	u32 m_ViewWidth;
 	u32 m_ViewHeight;
-	Walnut::Timer m_Timer;
+	Timer m_Timer;
 
 	bool m_SizeChanged = true;
 	bool m_Paused = true;

@@ -58,7 +58,7 @@ public:
 
 	std::unique_ptr<DX11Renderer> m_hardwareRenderer;
 protected:
-	Walnut::Timer m_HwTimer;
+	Timer m_HwTimer;
 	float m_HwFrame = 0;
 	OwningPtr<dx12::DX12RHI> dx12Win = nullptr;
 	OwningPtr<dx12::DX12RHI::LiveObjectReporter> dx12LOR;

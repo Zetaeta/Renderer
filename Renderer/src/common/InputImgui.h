@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Walnut/vendor/imgui/imgui.h"
+#include "imgui.h"
 #include "Input.h"
 #include <windows.h>
 

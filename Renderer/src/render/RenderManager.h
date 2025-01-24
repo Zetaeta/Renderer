@@ -16,6 +16,7 @@
 #include "assimp/Importer.hpp"
 #include <assimp/scene.h>		// Output data structure
 #include <assimp/postprocess.h> // Post processing flags
+#include "core/Timer.h"
 
 using namespace glm;
 namespace fs = std::filesystem;
@@ -24,24 +25,6 @@ namespace rnd
 {
 	class IRenderDeviceCtx;
 }
-
-namespace ch = std::chrono;
-class Timer
-{
-public:
-	void Reset()
-	{
-		m_StartTime = std::chrono::system_clock::now();
-	}
-
-	double ElapsedMillis()
-	{
-		std::chrono::time_point<std::chrono::system_clock> endTime = std::chrono::system_clock::now();
-		return double(std::chrono::duration_cast<ch::milliseconds>(endTime - m_StartTime).count());
-	}
-
-	std::chrono::time_point<std::chrono::system_clock> m_StartTime;
-};
 
 class RenderManager
 {

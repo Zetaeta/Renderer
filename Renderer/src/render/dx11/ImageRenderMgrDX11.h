@@ -25,7 +25,7 @@ public:
 	{
 //		m_Img = std::make_unique<DX11Texture>(m_Device);
 		m_Img->Init(m_ViewWidth, m_ViewHeight, &m_ImgData[0], TF_NONE);
-		ImGui::Image(m_Img->GetHandle(), { static_cast<float>(m_ViewWidth), static_cast<float>(m_ViewHeight) }, { 0, 1 }, { 1, 0 });
+		ImGui::Image(reinterpret_cast<u64>(m_Img->GetHandle()), { static_cast<float>(m_ViewWidth), static_cast<float>(m_ViewHeight) }, { 0, 1 }, { 1, 0 });
 	}
 	std::unique_ptr<DX11Texture> m_Img;
 	ID3D11Device* m_Device;

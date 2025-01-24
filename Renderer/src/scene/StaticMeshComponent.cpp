@@ -1,6 +1,6 @@
 #include "StaticMeshComponent.h"
 #include "Scene.h"
-#include "../../../Walnut/vendor/imgui/imgui.h"
+#include "imgui.h"
 
 StaticMeshComponent::StaticMeshComponent(AssetPath const& path)
 	: m_Mesh(path)

@@ -380,7 +380,7 @@ int MainDX11(int argc, char** argv)
 			{
 				//ImGuiID dockspace_id = ImGui::GetID("VulkanAppDockspace");
 				//ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-				ImGui::DockSpaceOverViewport(viewport,dockspace_flags);
+				ImGui::DockSpaceOverViewport(0, viewport, dockspace_flags);
 			}
 			/* if (m_MenubarCallback)
 			{

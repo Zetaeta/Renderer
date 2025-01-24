@@ -4,6 +4,7 @@
 #include "CoreTypes.h"
 #include <glm/gtc/quaternion.hpp>
 #include <glm/ext/quaternion_float.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_operation.hpp>
 #include <glm/gtx/compatibility.hpp>
 #define _USE_MATH_DEFINES

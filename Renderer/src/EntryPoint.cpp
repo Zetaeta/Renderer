@@ -1,7 +1,5 @@
 
-#include "Walnut/Application.h"
 #include "render/dx11/DX11Backend.h"
-#include "Walnut/EntryPoint.h"
 
 int main(int argc, char** argv)
 {
@@ -11,5 +9,4 @@ int main(int argc, char** argv)
 		return MainDX11(argc, argv);
 	}
 #endif
-	Walnut::Main(argc, argv);
 }
