@@ -55,6 +55,8 @@ public:
 
 	MaterialID GetMaterial(u32 meshPartIdx);
 
+	void SetSelected(bool selected) override;
+
 protected:
 	EType m_Type = EType::VISIBLE;
 	PrimitiveId mPrimId = InvalidPrimId();

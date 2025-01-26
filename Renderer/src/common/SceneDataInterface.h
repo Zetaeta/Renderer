@@ -46,6 +46,7 @@ public:
 		std::shared_ptr<CompoundMesh> Mesh;
 		SmallVector<MaterialID, 4> Materials;
 		PrimitiveId Id;
+		ScreenObjectId ScreenId;
 	};
 
 	struct SceneData
@@ -57,6 +58,7 @@ public:
 //		Vector<MaterialID> Materials;
 //		Vector<SubPrimitiveRange> SubPrimitives;
 		BitVector TransformsDirty;
+		BitVector Selected;
 		Vector<SMCreationData> AddedPrimitives;
 		Vector<PrimitiveId> RemovedPrimitives;
 		SceneData() = default;
@@ -71,6 +73,12 @@ public:
 		auto& data = GetMainThreadData();
 		data.Transforms[id] = transform;
 		data.TransformsDirty[id] = true;
+	}
+
+	void UpdateSelected_MainThread(PrimitiveId id, bool selected)
+	{
+		auto& data = GetMainThreadData();
+		data.Selected[id] = selected;
 	}
 
 	void FlipBuffer_MainThread()

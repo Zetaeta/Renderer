@@ -67,5 +67,8 @@ public:
 	Scene* mScene = nullptr;
 	rnd::RendererScene* mRScene = nullptr;
 	rnd::IRenderDeviceCtx* mDeviceCtx = nullptr;
+#if HIT_TESTING
+	rnd::DeviceTextureRef mScreenIdTex;
+#endif
 };
  

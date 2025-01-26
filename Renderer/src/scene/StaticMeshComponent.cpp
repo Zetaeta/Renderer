@@ -97,6 +97,15 @@ MaterialID StaticMeshComponent::GetMaterial(u32 meshPartIdx)
 }
 
 
+void StaticMeshComponent::SetSelected(bool selected)
+{
+	Super::SetSelected(selected);
+	if (mPrimId != InvalidPrimId())
+	{
+		GetScene().DataInterface().UpdateSelected_MainThread(mPrimId, selected);
+	}
+}
+
 //DEFINE_CLASS_TYPEINFO(PrimitiveComponent)
 //BEGIN_REFL_PROPS()
 //END_REFL_PROPS()

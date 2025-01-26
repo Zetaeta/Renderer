@@ -23,6 +23,7 @@ PrimitiveId SceneDataInterface::AddPrimitive(PrimitiveComponent* component)
 		data.Transforms.push_back(component->GetWorldTransform());
 		data.TransformsDirty.push_back(true);
 		SMCreationData& creationData = data.AddedPrimitives.emplace_back();
+		creationData.ScreenId = component->GetScreenId();
 		creationData.Id = newId;
 		creationData.Materials ;
 		creationData.Mesh = mesh;
@@ -34,6 +35,7 @@ PrimitiveId SceneDataInterface::AddPrimitive(PrimitiveComponent* component)
 			creationData.Materials.push_back(smc->GetMaterial(i));
 		}
 		//data.SubPrimitives.push_back({NumCast<u32>(currTotalSubs), numSubs});
+		data.Selected.push_back(false);
 
 		return newId;
 	}
@@ -57,6 +59,7 @@ void SceneDataInterface::CopyFrameData(u32 from, u32 to)
 	//mData[to].Materials = mData[from].Materials;
 	mData[to].RemovedPrimitives.clear();
 	mData[to].AddedPrimitives.clear();
+	mData[to].Selected = mData[from].Selected;
 	u32 const clearSize = NumCast<u32>(min(mData[to].TransformsDirty.size(), mData[from].TransformsDirty.size()));
 	mData[to].TransformsDirty.resize(mData[to].Transforms.size(), false);
 	for (u32 i = 0; i < clearSize; ++i)

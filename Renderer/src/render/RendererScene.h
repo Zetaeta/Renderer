@@ -13,6 +13,9 @@ struct RenderObject
 {
 	SmallVector<RefPtr<IDeviceIndexedMesh>, 1> MeshData;
 	SmallVector<RefPtr<RenderMaterial>, 1> Materials;
+	#if HIT_TESTING
+	ScreenObjectId ScreenId;
+	#endif
 };
 
 /**
@@ -126,15 +129,15 @@ public:
 
 	ScreenObjectId GetScreenObjId(PrimitiveId prim) const
 	{
-		return {};
+		return mPrimitives.at(prim).ScreenId;
 	}
 
 	bool IsSelected(PrimitiveId prim) const
 	{
-		return false;
+		return mDataInterface->GetRenderThreadData().Selected[prim];
 	}
 
-	WorldTransform GetPrimTransform(PrimitiveId prim) const
+	WorldTransform const& GetPrimTransform(PrimitiveId prim) const
 	{
 		return mDataInterface->GetRenderThreadData().Transforms[prim];
 	}

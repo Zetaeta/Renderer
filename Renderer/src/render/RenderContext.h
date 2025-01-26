@@ -170,7 +170,7 @@ public:
 	template<typename TPass, typename... Args>
 	void RunSinglePass(Args&&... args)
 	{
-		MakeOwning<TPass>(this, std::forward<Args>(args)...)->Execute(*this);
+		MakeOwning<TPass>(this, std::forward<Args>(args)...)->ExecuteWithProfiling(*this);
 	}
 
 	template<typename TPass, typename... Args>

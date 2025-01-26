@@ -237,18 +237,18 @@ void Editor::Tick(float dt)
 void Editor::SelectComponent(SceneComponent* Component)
 {
 	
-	if (IsValid(mSelectedComponent))
+	if (IsValid(mSelectedComponent) && Component != mSelectedComponent)
 	{
-		mSelectedComponent->Selected = false;
+		mSelectedComponent->SetSelected(false);
 	}
 	SelectObject(Component->GetOwner());
 
 	ForEachCompRecursive(*Component->GetOwner()->GetRoot(), [](SceneComponent& comp)
 	{
-		comp.Selected = false;
+		comp.SetSelected(false);
 	});
 	mSelectedComponent = Component->shared_from_this();
-	Component->Selected = true;
+	Component->SetSelected(true);
 }
 
 void Editor::ClickComponent(class SceneComponent* Component)
@@ -302,7 +302,7 @@ void Editor::SelectObject(const SceneObject* obj)
 	{
 		ForEachCompRecursive(*old->GetRoot(), [](SceneComponent& comp)
 		{
-			comp.Selected = false;
+			comp.SetSelected(false);
 		});
 	}
 	
@@ -312,7 +312,7 @@ void Editor::SelectObject(const SceneObject* obj)
 		mSelectedComponent = (*it)->GetRoot();
 		ForEachCompRecursive(*obj->GetRoot(), [](SceneComponent& comp)
 		{
-			comp.Selected = true;
+			comp.SetSelected(true);
 		});
 	}
 }

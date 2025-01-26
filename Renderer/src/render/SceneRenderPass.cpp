@@ -187,9 +187,11 @@ void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, m
 	{
 		DeviceCtx()->SetStencilState({EStencilMode::Overwrite | EStencilMode::IgnoreDepth | EStencilMode::UseBackFace, 250});
 	}
+	mRCtx->SetScreenObjId(mRCtx->GetScene().GetScreenObjId(data.primitive));
 #endif
 	mRCtx->DrawPrimitive(data.mesh, mScene->GetPrimTransform(data.primitive), projWorld,
 						mMatOverride ? mMatOverride : data.material, mLayer);
+	mRCtx->SetScreenObjId(SO_NONE);
 #if ZE_BUILD_EDITOR
 	if (selected)
 	{

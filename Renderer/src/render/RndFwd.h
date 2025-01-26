@@ -17,3 +17,6 @@ using DeviceMeshRef = RefPtr<IDeviceMesh>;
 using VertAttDescHandle = s64;
 
 }
+
+using ScreenObjectId = u32;
+

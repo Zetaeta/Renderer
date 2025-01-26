@@ -63,6 +63,12 @@ void SceneComponent::Modify(bool allChildren)
 
 void SceneComponent::Initialize()
 {
+	//#if R_EDITOR
+	if (Editor* editor = Editor::Get())
+	{
+		mScreenId = editor->GetScreenObjManager().Register<SOSceneComponent>(this);
+	}
+	//#endif
 	for (auto const& child : m_Children)
 	{
 		child->SetParent(this);
@@ -70,12 +76,6 @@ void SceneComponent::Initialize()
 	}
 	OnInitialize();
 	m_Initialized = true;
-	//#if R_EDITOR
-	if (Editor* editor = Editor::Get())
-	{
-		mScreenId = editor->GetScreenObjManager().Register<SOSceneComponent>(this);
-	}
-	//#endif
 }
 
 void SceneComponent::ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive /*= false*/)
@@ -89,6 +89,11 @@ void SceneComponent::ForAllChildren(std::function<void(BaseSerialized*)> callbac
 		}
 	}
 
+}
+
+void SceneComponent::SetSelected(bool selected)
+{
+	Selected = selected;
 }
 
 void SceneComponent::OnUpdate(Scene& scene)

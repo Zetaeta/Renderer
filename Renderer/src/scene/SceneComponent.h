@@ -137,7 +137,9 @@ public:
 	ScreenObjectId GetScreenId() const { return mScreenId; }
 
 
- void ForAllChildren(std::function<void(BaseSerialized*)>, bool recursive = false) override;
+	 void ForAllChildren(std::function<void(BaseSerialized*)>, bool recursive = false) override;
+
+	 virtual void SetSelected(bool selected);
 
 protected:
 
