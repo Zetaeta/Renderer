@@ -232,6 +232,7 @@ void DX11Texture::CreateResources(TextureData textureData /*= {}*/)
 void DX11Texture::CreateRenderTarget(D3D11_TEXTURE2D_DESC const& textureDesc)
 {
 	CD3D11_RENDER_TARGET_VIEW_DESC rtDesc(Desc.SampleCount > 1 ? D3D11_RTV_DIMENSION_TEXTURE2DMS : D3D11_RTV_DIMENSION_TEXTURE2D, textureDesc.Format);
+	rtDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::RenderTarget);
 	RenderTargetDesc myRtDesc;
 	myRtDesc.DebugName = Desc.DebugName + " RT";
 	myRtDesc.Dimension = ETextureDimension::TEX_2D;
@@ -247,7 +248,7 @@ void DX11Texture::CreateSRV(D3D11_TEXTURE2D_DESC const& textureDesc)
 {
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
-	srvDesc.Format = textureDesc.Format;
+	srvDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::SRV);
 	if (srvDesc.Format == DXGI_FORMAT_R8G8B8A8_UNORM && (Desc.Flags & TF_SRGB))
 	{
 		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
@@ -273,7 +274,7 @@ void DX11Texture::CreateSRV(D3D11_TEXTURE2D_DESC const& textureDesc)
 	SetResourceName(m_SRV, Desc.DebugName);
 }
 
-void DX11Texture::CreateSRV()
+void DX11Texture::CreateSRV(u32 subresource)
 {
 	Desc.Flags &= TF_SRV;
 	D3D11_TEXTURE2D_DESC dx11Desc;
@@ -281,13 +282,15 @@ void DX11Texture::CreateSRV()
 	CreateSRV(dx11Desc);
 }
 
-void DX11Texture::CreateUAV(u32 mip /*= 0*/)
+UavId DX11Texture::CreateUAV(u32 subresource /*= 0*/)
 {
 	D3D11_UNORDERED_ACCESS_VIEW_DESC desc;
 	desc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::UAV);
 	desc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
-	desc.Texture2D.MipSlice = mip;
+	desc.Texture2D.MipSlice = subresource;
+	ZE_ASSERT(subresource == 0);
 	HR_ERR_CHECK(m_Ctx->pDevice->CreateUnorderedAccessView(m_Texture.Get(), &desc, &mUAV));
+	return subresource;
 }
 
 void DX11Texture::DestroyResources()

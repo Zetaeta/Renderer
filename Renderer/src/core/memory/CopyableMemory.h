@@ -13,6 +13,8 @@ struct CopyableMemory
 	std::array<byte, Size> Data;
 
 	CopyableMemory() = default;
+	CopyableMemory(CopyableMemory const& other) = default;
+	CopyableMemory& operator=(CopyableMemory const& other) = default;
 
 	template<typename T>
 	struct FitsInMe_
@@ -39,21 +41,25 @@ struct CopyableMemory
 		return *this;
 	}
 	
-	CopyableMemory(CopyableMemory const& other) = default;
-	CopyableMemory& operator=(CopyableMemory const& other) = default;
-
 	template<typename T>
 		requires(FitsInMe<T>)
-	T& As()
+	T& As() &
 	{
-		return *reinterpret_cast<T*>(&Data[0]);
+		return *std::launder(reinterpret_cast<T*>(&Data[0]));
 	}
 
 	template<typename T>
 		requires(FitsInMe<T>)
-	T const& As() const
+	T const& As() const &
 	{
-		return *reinterpret_cast<T const*>(&Data[0]);
+		return *std::launder(reinterpret_cast<T const*>(&Data[0]));
+	}
+
+	template<typename T>
+		requires(FitsInMe<T>)
+	T As() &&
+	{
+		return *std::launder(reinterpret_cast<T const*>(&Data[0]));
 	}
 };
 

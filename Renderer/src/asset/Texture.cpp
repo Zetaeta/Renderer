@@ -7,7 +7,7 @@ TextureRef Texture::LoadFrom(char const* fileName, bool isSRGB)
 {
 	int x, y, comp;
 	unsigned char* data = stbi_load(fileName, &x, &y, &comp, 4);
-	fprintf(stdout, "%s: width: %d, height: %d, comp: %d\n", fileName, x, y, comp);
+//	fprintf(stdout, "%s: width: %d, height: %d, comp: %d\n", fileName, x, y, comp);
 	if (data == nullptr)
 	{
 		return TextureRef {};

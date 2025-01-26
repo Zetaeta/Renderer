@@ -18,6 +18,7 @@ public:
 		DX12UploadBuffer& Buffer;
 		ID3D12GraphicsCommandList_* UploadCmdList;
 	};
+	using Ref=std::shared_ptr<DX12Texture>;
 
 	DX12Texture(DeviceTextureDesc const& desc, TextureData data, UploadTools& uploadData);
 	DX12Texture(DeviceTextureDesc const& desc);
@@ -30,11 +31,13 @@ public:
 	OpaqueData<8> GetData() const override;
 	IRenderTarget::Ref GetRT() override;
 	IDepthStencil::Ref GetDS() override;
-	void CreateSRV() override;
+	void CreateSRV(u32 srvIndex) override;
 	MappedResource Map(u32 subResource, ECpuAccessFlags flags) override;
 	void Unmap(u32 subResource) override;
 	CopyableMemory<8> GetShaderResource(ShaderResourceId id) override;
 	OpaqueData<8> GetUAV(UavId id) override;
+
+	UavId CreateUAV(u32 subresourceIdx) override;
 
 	void TransitionState(ID3D12GraphicsCommandList_* cmdList, D3D12_RESOURCE_STATES fromState, D3D12_RESOURCE_STATES toState);
 	void TransitionTo(ID3D12GraphicsCommandList_* cmdList, D3D12_RESOURCE_STATES toState);
@@ -55,6 +58,8 @@ private:
 	ComPtr<ID3D12Resource> mResource;
 	D3D12_CPU_DESCRIPTOR_HANDLE mSrvDesc{};
 	D3D12_CPU_DESCRIPTOR_HANDLE mUavDesc{};
+	SmallVector<D3D12_CPU_DESCRIPTOR_HANDLE, 5> mAdditionalUAVs;
+	Vector<D3D12_CPU_DESCRIPTOR_HANDLE> mAdditionalSRVs;
 	D3D12_RESOURCE_STATES mLastState = D3D12_RESOURCE_STATE_COMMON;
 	IDepthStencil::Ref mDsv;
 	IRenderTarget::Ref mRtv;

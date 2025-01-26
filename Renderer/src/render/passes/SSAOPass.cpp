@@ -35,13 +35,13 @@ struct SSAO_CS : public ComputeShader
 
 DEFINE_SHADER(SSAO_CS, "SSAO_CS", "main");
 
-struct DownsampleCS : public ComputeShader
-{
-
-	DECLARE_SHADER(DownsampleCS)
-};
-
-DEFINE_SHADER(DownsampleCS, "Downsample", "main");
+//struct DownsampleCS : public ComputeShader
+//{
+//
+//	DECLARE_SHADER(DownsampleCS)
+//};
+//
+//DEFINE_SHADER(DownsampleCS, "Downsample", "main");
 
 struct GaussianBlurCS : public ComputeShader
 {

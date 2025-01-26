@@ -16,6 +16,8 @@ using namespace rnd::dx;
 
 class DX12RHI;
 class DX12Allocator;
+class DX12Texture;
+	using DX12TextureRef=std::shared_ptr<DX12Texture>;
 
 constexpr bool IsValid(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
 {

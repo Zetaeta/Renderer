@@ -91,6 +91,13 @@ using Primitive = MeshPart;
 
 struct ComputeDispatch
 {
+	ComputeDispatch() = default;
+	ComputeDispatch(uvec2 xy, u32 z = 1)
+		: ThreadGroupsX(xy.x), ThreadGroupsY(xy.y), ThreadGroupsZ(z) {}
+	ComputeDispatch(uvec3 xyz)
+		: ThreadGroupsX(xyz.x), ThreadGroupsY(xyz.y), ThreadGroupsZ(xyz.z) {}
+	ComputeDispatch(u32 x, u32 y, u32 z)
+		: ThreadGroupsX(x), ThreadGroupsY(y), ThreadGroupsZ(z) {}
 	u32 ThreadGroupsX = 1;
 	u32 ThreadGroupsY = 1;
 	u32 ThreadGroupsZ = 1;

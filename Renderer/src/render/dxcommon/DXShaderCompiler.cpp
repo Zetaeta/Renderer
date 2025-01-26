@@ -14,13 +14,13 @@ public:
 	DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflection);
 	SmallVector<CBDesc, 4> GetConstantBuffers() override;
 
-	void GetBindingInfo(OUT SmallVector<UAVDesc, 4>& uavs, OUT SmallVector<SRVDesc, 4>& srvs) override;
+	void GetBindingInfo(OUT SmallVector<SRVDesc, 4>& srvs, OUT SmallVector<UAVDesc, 4>& uavs) override;
 
 private:
 	ComPtr<ID3D11ShaderReflection> mReflection;
 };
 
-constexpr bool ShaderCompileDebugging = false;
+constexpr bool ShaderCompileDebugging = true;
 ComPtr<ID3DBlob> FXCShaderCompiler::GetShaderBytecode(ShaderInstanceId const& id, const ShaderDesc& desc,
 	const ShaderCompileEnv& env, EShaderType shaderType, OwningPtr<IShaderReflector>* outReflector, bool forceRecompile)
 {
@@ -153,7 +153,7 @@ DX11ShaderReflector::DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflec
 
 }
 
-void DX11ShaderReflector::GetBindingInfo(_Out_ SmallVector<UAVDesc, 4>& uavs, _Out_ SmallVector<SRVDesc, 4>& srvs)
+void DX11ShaderReflector::GetBindingInfo(_Out_ SmallVector<SRVDesc, 4>& srvs, _Out_ SmallVector<UAVDesc, 4>& uavs)
 {
 	D3D11_SHADER_DESC desc;
 	mReflection->GetDesc(&desc);

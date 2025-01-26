@@ -511,6 +511,12 @@ void Append(OutContainer& to, InContainer const& from)
 }
 
 
+template<typename InContainer, typename OutContainer>
+void AppendMove(OutContainer& to, InContainer&& from)
+{
+	to.insert(to.end(), std::move_iterator(from.begin()), std::move_iterator(from.end()));
+}
+
 template<typename... Args>
 struct TMaxSize
 {

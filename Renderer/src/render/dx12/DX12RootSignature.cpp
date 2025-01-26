@@ -155,9 +155,18 @@ DX12ComputeRootSignature DX12ComputeRootSignature::MakeStandardRootSig(u32 numCB
 			params[i + offset].Descriptor = {i, 0};
 			params[i + offset].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 		}
-		CD3DX12_STATIC_SAMPLER_DESC samplerDesc[2] = {CD3DX12_STATIC_SAMPLER_DESC(0), CD3DX12_STATIC_SAMPLER_DESC(1)};
+		CD3DX12_STATIC_SAMPLER_DESC samplerDesc[3] = {CD3DX12_STATIC_SAMPLER_DESC(0), CD3DX12_STATIC_SAMPLER_DESC(1), CD3DX12_STATIC_SAMPLER_DESC(2)};
 		samplerDesc[1].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS;
 		samplerDesc[1].Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+
+		// Point clamped sampler
+		{
+			samplerDesc[2].Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+			samplerDesc[2].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+			samplerDesc[2].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+			samplerDesc[2].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		
+		}
 		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc;
 		rootSigDesc.Init(Size(params), Addr(params), 2, samplerDesc, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 		ComPtr<ID3DBlob> signature;

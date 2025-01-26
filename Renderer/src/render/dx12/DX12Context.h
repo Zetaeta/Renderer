@@ -180,7 +180,7 @@ struct ComputePipelineStateCache
 class DX12Context : public IRenderDeviceCtx
 {
 public:
-	DX12Context(ID3D12GraphicsCommandList_* cmdList);
+	DX12Context(ID3D12GraphicsCommandList_* cmdList, bool manualTransitioning = false);
 
 	void SetRTAndDS(IRenderTarget::Ref rts, IDepthStencil::Ref ds, int RTArrayIdx, int DSArrayIdx) override;
 
@@ -396,6 +396,7 @@ protected:
 	GraphicsPipelineStateCache mGraphicsState;
 	ComputePipelineStateCache mComputeState;
 	EnumArray<ECBFrequency, DX12DynamicCB> mDynamicCBs;
+	bool mManualTransitioning = false;
 };
 
 }

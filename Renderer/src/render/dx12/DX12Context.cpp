@@ -137,7 +137,7 @@ void DX12Context::SetupDescriptorTable(ShaderBindingState const& bindings, u32 r
 	for (u32 i=0; i<numUAVs; ++i)
 	{
 		UnorderedAccessView const& view = bindings.UAVs[i];
-		auto src = view.Resource->GetUAV<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
+		D3D12_CPU_DESCRIPTOR_HANDLE src {view.Resource->GetUAV<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId)};
 		rhi.Device()->CopyDescriptorsSimple(1, dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
 	}
@@ -288,7 +288,8 @@ void DX12Context::Wait(OwningPtr<GPUSyncPoint>&& syncPoint)
 //	static_cast<DX12SyncPoint*>(&syncPoint)->GPUWait(m)
 }
 
-DX12Context::DX12Context(ID3D12GraphicsCommandList_* cmdList) :mCmdList(cmdList)
+DX12Context::DX12Context(ID3D12GraphicsCommandList_* cmdList, bool manualTransitioning)
+	: mCmdList(cmdList), mManualTransitioning(manualTransitioning)
 {
 	Device = &GetRHI();
 	CBPool = &GetRHI().GetCBPool();
@@ -403,11 +404,14 @@ void DX12Context::BindAndTransition(Vector<UnorderedAccessView>& outBindings, Sp
 {
 	outBindings.clear();
 	Append(outBindings, inUAVs);
-	for (auto const& uav : inUAVs)
+	if (!mManualTransitioning)
 	{
-		if (DX12Texture* tex = static_cast<DX12Texture*>(uav.Resource.get()))
+		for (auto const& uav : inUAVs)
 		{
-			tex->TransitionTo(mCmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			if (DX12Texture* tex = static_cast<DX12Texture*>(uav.Resource.get()); tex && uav.ViewId == 0) // we're not doing subresource tracking yet
+			{
+				tex->TransitionTo(mCmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			}
 		}
 	}
 }
@@ -421,11 +425,15 @@ void DX12Context::BindAndTransition(Vector<ResourceView>& outBindings, Span<Reso
 	{
 		outBindings[startIdx + i] = inSRVs[i];
 	}
-	for (auto const& srv : inSRVs)
+	if (!mManualTransitioning)
 	{
-		if (DX12Texture* tex = static_cast<DX12Texture*>(srv.Resource.get()))
+		for (auto const& srv : inSRVs)
 		{
-			tex->TransitionTo(mCmdList, targetState);
+			if (DX12Texture* tex = static_cast<DX12Texture*>(srv.Resource.get()); tex && (srv.ViewId & ((u32) -1)) == 0)
+			{
+//				ZE_ASSERT(srv.ViewId == 0);
+				tex->TransitionTo(mCmdList, targetState);
+			}
 		}
 	}
 }

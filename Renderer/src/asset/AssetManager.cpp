@@ -51,7 +51,7 @@ bool AssetManager::LoadMatTexture(String const& texPath, TextureRef& outTexture,
 		return false;
 	}
 
-	printf("Loading texture %s\n", texPath.c_str());
+//	printf("Loading texture %s\n", texPath.c_str());
 	if (isImport)
 	{
 		fs::path mp = meshPath;

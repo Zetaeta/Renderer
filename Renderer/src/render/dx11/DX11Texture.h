@@ -76,8 +76,8 @@ public:
 	virtual void		   Unmap(u32 subResource) override;
 
 public:
-	void CreateSRV() override;
-	void CreateUAV(u32 mip = 0);
+	void CreateSRV(u32 subresource = 0) override;
+	UavId CreateUAV(u32 subresource = 0);
 
 	void DestroyResources();
 

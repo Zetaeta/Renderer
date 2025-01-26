@@ -9,4 +9,5 @@ DEFINE_SHADER(PostProcessVS, "PostProcess_VS", "main");
 DEFINE_SHADER(FlatPS, "2D_PS", "main");
 DEFINE_SHADER(CubemapVS, "BGVertexShader", "main");
 DEFINE_SHADER(CubemapPS, "BGPixelShader", "main");
+DEFINE_SHADER(DownsampleCS, "Downsample", "DownsampleCS");
 }

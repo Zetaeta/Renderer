@@ -190,6 +190,18 @@ vec<3,T, Q> DivideRoundUp(vec<3, T, Q> const& x, vec<3, T, Q> const& y)
 	return {DivideRoundUp(x.x, y.x), DivideRoundUp(x.y, y.y), DivideRoundUp(x.z, y.z)};
 }
 
+
+template<typename T, qualifier Q>
+vec<2, T, Q> DivideRoundUp(vec<2, T, Q> const& x, T y)
+{
+	return {DivideRoundUp(x.x, y), DivideRoundUp(x.y, y)};
+}
+
+template<typename T, qualifier Q>
+vec<3,T, Q> DivideRoundUp(vec<3, T, Q> const& x, T y)
+{
+	return {DivideRoundUp(x.x, y), DivideRoundUp(x.y, y), DivideRoundUp(x.z, y)};
+}
 // Returns a size aligned up from start to alignment
 template<typename SizeType>
 SizeType Align(SizeType start, SizeType alignment)

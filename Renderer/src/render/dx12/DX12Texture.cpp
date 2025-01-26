@@ -50,6 +50,10 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 	D3D12_CLEAR_VALUE clearVal;
 	clearVal.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::RenderTarget);
 	Zero(clearVal.Color);
+	if (Desc.Flags & TF_DEPTH)
+	{
+		clearVal.Color[0] = 1.f;
+	}
 	mLastState = upload ? D3D12_RESOURCE_STATE_COPY_DEST : D3D12_RESOURCE_STATE_COMMON;
 	mResource = rhi.GetAllocator(EResourceType::Texture)->Allocate(resourceDesc, mLastState, useClearVal ? &clearVal : nullptr);
 	SetResourceName(mResource, Desc.DebugName);
@@ -208,9 +212,43 @@ rnd::IDepthStencil::Ref DX12Texture::GetDS()
 	return mDsv;
 }
 
-void DX12Texture::CreateSRV()
+void DX12Texture::CreateSRV(u32 srvIndex)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	D3D12_CPU_DESCRIPTOR_HANDLE* srvDescriptor = nullptr;
+	if (srvIndex == 0)
+	{
+		srvDescriptor = &mSrvDesc;
+	}
+	else
+	{
+		if (mAdditionalSRVs.size() < srvIndex)
+		{
+			mAdditionalSRVs.resize(srvIndex);
+		}
+		srvDescriptor = &mAdditionalSRVs[srvIndex - 1];
+	}
+	if (srvDescriptor->ptr != 0)
+	{
+		return;
+	}
+	auto& rhi = GetRHI();
+	*srvDescriptor = rhi.GetDescriptorAllocator(EDescriptorType::SRV)->Allocate(EDescriptorType::SRV);
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	if (Desc.ResourceType == EResourceType::Texture2D)
+	{
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = -1;
+		srvDesc.Texture2D.MostDetailedMip = srvIndex;
+	}
+	else
+	{
+		ZE_ASSERT(Desc.ResourceType == EResourceType::TextureCube);
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+		srvDesc.TextureCube.MipLevels = -1;//Desc.NumMips <= 0 ? 1 : Desc.NumMips;
+	}
+	srvDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::SRV);
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	rhi.Device()->CreateShaderResourceView(mResource.Get(), &srvDesc, *srvDescriptor);
 }
 
 rnd::MappedResource DX12Texture::Map(u32 subResource, ECpuAccessFlags flags)
@@ -226,12 +264,23 @@ void DX12Texture::Unmap(u32 subResource)
 CopyableMemory<8> DX12Texture::GetShaderResource(ShaderResourceId id /*= 0*/)
 {
 	ZE_ASSERT(Desc.Flags & TF_SRV);
-	return mSrvDesc.ptr;
+	if ((id & u32(-1)) == 0)
+	{
+		return mSrvDesc;
+	}
+	else
+	{
+		return mAdditionalSRVs[id - 1];
+	}
 }
 
 OpaqueData<8> DX12Texture::GetUAV(UavId id /*= */)
 {
 	ZE_ASSERT(Desc.Flags & TF_UAV);
+	if (id > 0)
+	{
+		return mAdditionalUAVs[id - 1];
+	}
 	return mUavDesc;
 }
 
@@ -239,7 +288,7 @@ void DX12Texture::TransitionState(ID3D12GraphicsCommandList_* cmdList, D3D12_RES
 {
 	//if (mLastState != D3D12_RESOURCE_STATE_COMMON)
 	{
-		RLOG(LogGlobal, Verbose, "Transitioning %s from %d to %d", Desc.DebugName.c_str(), fromState, toState);
+//		RLOG(LogGlobal, Verbose, "Transitioning %s from %d to %d", Desc.DebugName.c_str(), fromState, toState);
 		auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mResource.Get(), fromState, toState);
 		cmdList->ResourceBarrier(1, &barrier);
 	}
@@ -261,7 +310,37 @@ DX12Texture::~DX12Texture()
 	{
 		rhi.FreeDescriptor(EDescriptorType::SRV, mSrvDesc);
 	}
+	rhi.DeferredRelease(mResource);
 
+}
+
+UavId DX12Texture::CreateUAV(u32 subresourceIdx)
+{
+	auto&							 rhi = GetRHI();
+	D3D12_CPU_DESCRIPTOR_HANDLE* uavDescriptor = nullptr;
+	if (subresourceIdx > 0)
+	{
+		if (mAdditionalUAVs.size() < subresourceIdx)
+		{
+			mAdditionalUAVs.resize(subresourceIdx);
+		}
+		uavDescriptor = &mAdditionalUAVs[subresourceIdx - 1];
+	}
+	else
+	{
+		uavDescriptor = &mUavDesc;
+	}
+	*uavDescriptor = rhi.GetDescriptorAllocator(EDescriptorType::UAV)->Allocate(EDescriptorType::UAV);
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+	if (Desc.ResourceType == EResourceType::Texture2D)
+	{
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		uavDesc.Texture2D = {};
+		uavDesc.Texture2D.MipSlice = subresourceIdx;
+		uavDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::UAV);
+		rhi.Device()->CreateUnorderedAccessView(mResource.Get(), nullptr, &uavDesc, *uavDescriptor);
+	}
+	return subresourceIdx;
 }
 
 DX12RenderTarget::~DX12RenderTarget()

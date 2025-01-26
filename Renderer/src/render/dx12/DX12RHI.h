@@ -20,10 +20,13 @@
 #include "DX12Context.h"
 #include "scene/Camera.h"
 
+namespace rnd { namespace dx12 { class DX12CommandAllocatorPool; } }
+
 namespace rnd { namespace dx12 { class DX12Texture; } }
 
 namespace rnd { namespace dx12 { class DX12DescriptorTableAllocator; } }
 
+DECLARE_LOG_CATEGORY(LogDX12);
 
 namespace rnd::dx12
 {
@@ -32,12 +35,24 @@ class DX12DescriptorAllocator;
 class DX12UploadBuffer;
 enum class EDescriptorType : u8;
 
+struct DX12CommandAllocator
+{
+	ComPtr<ID3D12CommandAllocator> Allocator;
+	D3D12_COMMAND_LIST_TYPE Type;
+	ID3D12CommandAllocator* operator->() const
+	{
+		return Allocator.Get();
+	}
+
+};
+
 struct DX12CommandList
 {
 	ComPtr<ID3D12GraphicsCommandList_> CmdList;
-	std::array<ComPtr<ID3D12CommandAllocator>, MaxSwapchainBufferCount> Allocators;
+	void							   Reset(ID3D12PipelineState* pso);
+	ComPtr<ID3D12CommandAllocator> Allocator;
+	D3D12_COMMAND_LIST_TYPE Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 };
-
 struct DX12DirectMesh : public IDeviceMesh
 {
 	void OnFullyReleased() override;
@@ -171,6 +186,13 @@ public:
 	void FreeDirectMesh(DX12DirectMesh* mesh);
 	void FreeIndexedMesh(DX12IndexedMesh* mesh);
 
+	DX12CommandAllocator AcquireCommandAllocator(D3D12_COMMAND_LIST_TYPE type);
+	void ReleaseCommandAllocator(DX12CommandAllocator&& allocator);
+
+	DX12CommandAllocatorPool* GetCommandAllocatorPool(D3D12_COMMAND_LIST_TYPE type);
+
+	void GenerateMips(ID3D12GraphicsCommandList_* cmdList, DX12TextureRef texture);
+
 private:
 	void WaitFence(u64 value);
 
@@ -205,6 +227,7 @@ private:
 	OwningPtr<DX12DescriptorAllocator> mDSVAlloc;
 	OwningPtr<DX12DescriptorTableAllocator> mShaderResourceDescTables;
 	OwningPtr<DX12DescriptorTableAllocator> mSamplerDescTables;
+	std::array<OwningPtr<DX12CommandAllocatorPool>, 3> mCmdAllocatorPools;
 //	OwningPtr<DX12SyncPointPool> mSyncPoints;
 	std::array<ComPtr<ID3D12Resource_>, MaxSwapchainBufferCount> mRenderTargets;
 	std::array<std::shared_ptr<DX12Texture>, MaxSwapchainBufferCount> mSwapchainBufferTextures;

@@ -80,6 +80,8 @@ public:
 	{
 		return GetUAV(id).As<T>();
 	}
+
+	virtual UavId CreateUAV(u32 subresourceIdx) { return 0; }
 };
 
 using DeviceResourceRef = std::shared_ptr<IDeviceResource>;

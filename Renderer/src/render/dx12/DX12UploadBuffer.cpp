@@ -25,6 +25,7 @@ void DX12UploadBuffer::CreateHeap(size_t size)
 
 DX12UploadBuffer::Allocation DX12UploadBuffer::Reserve(u64 size, u64 alignment)
 {
+	ZE_ASSERT(size > 0);
 	u64 result = 0;
 	if (TryReserve(size, alignment, result))
 	{

@@ -227,6 +227,7 @@
     <ClInclude Include="src\render\dx11\SharedD3D11.h" />
     <ClInclude Include="src\render\dx12\DX12Allocator.h" />
     <ClInclude Include="src\render\dx12\DX12CBPool.h" />
+    <ClInclude Include="src\render\dx12\DX12CommandAllocatorPool.h" />
     <ClInclude Include="src\render\dx12\DX12CommandQueue.h" />
     <ClInclude Include="src\render\dx12\DX12Context.h" />
     <ClInclude Include="src\render\dx12\DX12DescriptorAllocator.h" />
@@ -428,6 +429,7 @@
     <ClCompile Include="src\render\dx11\SharedD3D11.cpp" />
     <ClCompile Include="src\render\dx12\DX12Allocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12CBPool.cpp" />
+    <ClCompile Include="src\render\dx12\DX12CommandAllocatorPool.cpp" />
     <ClCompile Include="src\render\dx12\DX12Context.cpp" />
     <ClCompile Include="src\render\dx12\DX12DescriptorAllocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12DescriptorHeap.cpp" />

@@ -161,6 +161,11 @@ struct DeviceTextureDesc : public DeviceResourceDesc
 
 	u64 GetSize() const;
 	u32 GetRowPitch() const;
+
+	uvec2 Extent() const
+	{
+		return {Width, Height};
+	}
 };
 
 enum class ECubemapDataFormat : u8
@@ -177,7 +182,7 @@ struct CubemapData
 
 using TextureData = void const*;
 
-constexpr ShaderResourceId SRV_StencilBuffer = 1;
+constexpr ShaderResourceId SRV_StencilBuffer = 1ull << 63;
 constexpr ShaderResourceId SRV_Texture = 0;
 
 class IDeviceTexture : public IDeviceResource
@@ -200,7 +205,7 @@ public:
 	virtual IRenderTarget::Ref GetRT() = 0;
 	virtual IDepthStencil::Ref GetDS() = 0;
 
-	virtual void CreateSRV() = 0;
+	virtual void CreateSRV(u32 srvIndex) = 0;
 
 	DeviceTextureDesc Desc;
 };

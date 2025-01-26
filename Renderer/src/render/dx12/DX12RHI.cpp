@@ -18,8 +18,12 @@
 #include "editor/Viewport.h"
 #include "render/RendererScene.h"
 #include "imgui.h"
+#include "DX12CommandAllocatorPool.h"
+#include "render/shaders/ShaderDeclarations.h"
 
 #pragma comment(lib, "d3d12.lib")
+
+DEFINE_LOG_CATEGORY(LogDX12);
 
 namespace rnd
 {
@@ -64,6 +68,7 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 	{
 		mTest = MakeOwning<DX12Test>(mDevice.Get());
 	}
+	mCmdList.CmdList->Reset(mCmdList.Allocator.Get(), mTest->mPSO.Get());
 
 	WaitForGPU();
 	ResourceMgr.OnDevicesReady();
@@ -89,7 +94,7 @@ DX12RHI::~DX12RHI()
 	mDSVAlloc = nullptr;
 	mShaderResourceDescAlloc = nullptr;
 
-	WaitFence(mCurrentFrame);
+	WaitFence(mCurrentFrame - 1);
 	for (auto& deferredReleases : mDeferredReleaseResources)
 	{
 		deferredReleases.clear();
@@ -119,7 +124,7 @@ void DX12RHI::Tick()
 
 	StartFrame();
 	auto& cmd = mCmdList.CmdList;
-	cmd->Reset(mCmdList.Allocators[mFrameIndex].Get(), mTest->mPSO.Get());
+//	cmd->Reset(mCmdList.Allocators[mFrameIndex].Get(), );
 	mRecordingCommands = true;
 
 	D3D12_VIEWPORT vp {};
@@ -169,6 +174,7 @@ void DX12RHI::Tick()
 	cmd->Close();
 	ID3D12CommandList* const cmdList = cmd.Get();
 	mQueues.Direct->ExecuteCommandLists(1, &cmdList);
+	mCmdList.Reset(mTest->mPSO.Get());
 	EndFrame();
 }
 
@@ -204,8 +210,6 @@ void DX12RHI::WaitAndReleaseFrameIdx(u32 frameIdx)
 
 void DX12RHI::StartFrame()
 {
-	WaitAndReleaseFrameIdx(mFrameIndex);
-	++mCurrentFrame;
 	//if (mFenceValue > 2)
 	//{
 
@@ -219,7 +223,9 @@ void DX12RHI::EndFrame()
 //	mCurrentFrame = mFenceValues[mFrameIndex];
 
 	HR_ERR_CHECK(mQueues.Direct->Signal(mFrameFence.Get(), mCurrentFrame));
-	mFrameIndex = (mCurrentFrame - 1) % mNumBuffers;
+	++mCurrentFrame;
+	mFrameIndex = (mCurrentFrame) % mNumBuffers;
+	WaitAndReleaseFrameIdx(mFrameIndex);
 	mBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 }
 
@@ -244,6 +250,10 @@ void DX12RHI::DeferredRelease(ComPtr<ID3D12Pageable>&& resource)
 void DX12RHI::ProcessDeferredRelease(u32 frameIndex)
 {
 	mDeferredReleaseResources[frameIndex].clear();
+	for (auto& pool : mCmdAllocatorPools)
+	{
+		pool->ProcessDeferredReleases(frameIndex);
+	}
 }
 
 void DX12RHI::Resize_WndProc(u32 resizeWidth, u32 resizeHeight)
@@ -267,7 +277,7 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 		{
 			debugController->EnableDebugLayer();
-//			debugController->SetEnableGPUBasedValidation(true);
+			debugController->SetEnableGPUBasedValidation(true);
 			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 		}
 	}
@@ -309,6 +319,10 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 	mQueues.Copy = DX12CommandQueue(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COPY);
 	mQueues.Compute = DX12CommandQueue(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE);
 
+	mCmdAllocatorPools[0] = MakeOwning<DX12CommandAllocatorPool>(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	mCmdAllocatorPools[1] = MakeOwning<DX12CommandAllocatorPool>(D3D12_COMMAND_LIST_TYPE_COMPUTE);
+	mCmdAllocatorPools[2] = MakeOwning<DX12CommandAllocatorPool>(D3D12_COMMAND_LIST_TYPE_COPY);
+
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
 	swapChainDesc.BufferCount = mNumBuffers;
 	swapChainDesc.Width = mWidth;
@@ -327,9 +341,9 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 
 	// Create command list + allocators
 	HR_ERR_CHECK(mDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&mCmdList.CmdList)));
-	for (u32 i = 0; i < mNumBuffers; ++i)
+//	for (u32 i = 0; i < mNumBuffers; ++i)
 	{
-		HR_ERR_CHECK(mDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&mCmdList.Allocators[i])));
+		HR_ERR_CHECK(mDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&mCmdList.Allocator)));
 	}
 
 	GetSwapChainBuffers();
@@ -345,7 +359,9 @@ void DX12RHI::ResizeSwapChain()
 	{
 		mViewport->Reset();
 	}
+	mSwapchainBufferTextures = {};
 	WaitForGPU();
+	mDeferredReleaseResources = {};
 	mRTVHeap = {};
 	mWidth = mResizeWidth;
 	mHeight = mResizeHeight;
@@ -356,7 +372,7 @@ void DX12RHI::ResizeSwapChain()
 		mSwapchainBufferTextures[i] = nullptr;
 	}
 
-	mSwapChain->ResizeBuffers(mNumBuffers, mWidth, mHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
+	DXCALL(mSwapChain->ResizeBuffers(mNumBuffers, mWidth, mHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
 	GetSwapChainBuffers();
 	if (mViewport)
 	{
@@ -474,24 +490,33 @@ bool DX12RHI::ShouldDirectUpload(EResourceType resourceType, u64 size)
 
 IDeviceTexture::Ref DX12RHI::CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData /*= nullptr*/)
 {
-	auto result = std::make_shared<DX12Texture>(desc);
+	DeviceTextureDesc realDesc = desc;
+	if (desc.NumMips == 0)
+	{
+		realDesc.Flags |= TF_UAV;
+		realDesc.NumMips = max(RoundUpLog2(desc.Width), RoundUpLog2(desc.Height));
+	}
+	auto result = std::make_shared<DX12Texture>(realDesc);
 	if (!initialData)
 	{
 		return result;
 	}
+	ZE_ASSERT(desc.SampleCount == 1);
 
-	u64 uploadSize = GetRequiredIntermediateSize(result->GetTextureHandle<ID3D12Resource*>(), 0, desc.NumMips); // TODO mips
-	auto alloc = mUploadBuffer->Reserve(uploadSize, desc.SampleCount > 1 ? D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT
-																		: D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
+	u64 uploadSize = GetRequiredIntermediateSize(result->GetTextureHandle<ID3D12Resource*>(), 0, 1); // TODO mips
+	auto alloc = mUploadBuffer->Reserve(uploadSize, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT);
 	D3D12_SUBRESOURCE_DATA srcData{};
 	srcData.pData = initialData;
 	srcData.RowPitch = desc.GetRowPitch();
 
-	if (ShouldDirectUpload(desc.ResourceType))
+	if (ShouldDirectUpload(desc.ResourceType) || desc.NumMips == 0
+	)
 	{
+		static u32 uploadCount = 0;
 		UpdateSubresources<1>(mCmdList.CmdList.Get(), result->GetTextureHandle<ID3D12Resource*>(), mUploadBuffer->GetCurrentBuffer(), alloc.Offset,
 			0u, desc.NumMips == 0 ? 1u : desc.NumMips, &srcData); // TODO mips
 		result->UpdateCurrentState(D3D12_RESOURCE_STATE_COPY_DEST);
+		GenerateMips(mCmdList.CmdList.Get(), result);
 	}
 	else // synchronous upload on copy queue for now
 	{
@@ -568,6 +593,34 @@ void DX12RHI::FreeDescriptor(EDescriptorType descType, D3D12_CPU_DESCRIPTOR_HAND
 {
 	GetDescriptorAllocator(descType)->Free(descriptor);
 }
+
+DX12CommandAllocator DX12RHI::AcquireCommandAllocator(D3D12_COMMAND_LIST_TYPE type)
+{
+	auto allocator = GetCommandAllocatorPool(type)->Acquire();
+	return {allocator, type};
+}
+
+void DX12RHI::ReleaseCommandAllocator(DX12CommandAllocator&& allocator)
+{
+	GetCommandAllocatorPool(allocator.Type)->Release(std::move(allocator.Allocator));
+}
+
+DX12CommandAllocatorPool* DX12RHI::GetCommandAllocatorPool(D3D12_COMMAND_LIST_TYPE type)
+{
+	switch (type)
+	{
+	case D3D12_COMMAND_LIST_TYPE_DIRECT:
+		return mCmdAllocatorPools[0].get();
+	case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+		return mCmdAllocatorPools[1].get();
+	case D3D12_COMMAND_LIST_TYPE_COPY:
+		return mCmdAllocatorPools[2].get();
+	default:
+		ZE_ASSERT(false);
+		return nullptr;
+	}
+}
+
 
 OwningPtr<rnd::dx12::DX12RHI::LiveObjectReporter> DX12RHI::GetLiveObjectReporter()
 {
@@ -789,6 +842,75 @@ bool DX12RHI::IsCreated()
 	return sRHI != nullptr;
 }
 
+void DX12RHI::GenerateMips(ID3D12GraphicsCommandList_* cmdList, DX12Texture::Ref texture)
+{
+	const bool srgb = texture->Desc.Format == ETextureFormat::RGBA8_Unorm_SRGB;
+	if (!srgb)
+	{
+		RLOG(LogDX12, Verbose, "%s is not srgb", texture->Desc.DebugName.c_str());
+	}
+	//else
+	//{
+	//	return;
+	//}
+	u32 lastGenerated = 0;
+	SmallVector<D3D12_RESOURCE_BARRIER, 16> barriers;
+	u32 numMips = texture->Desc.NumMips;
+	barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(texture->GetTextureHandle<ID3D12Resource*>(),
+		 D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, 0));
+	for (u32 i=1; i<numMips; ++i)
+	{
+		texture->CreateUAV(i);
+		barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(texture->GetTextureHandle<ID3D12Resource*>(),
+			D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, lastGenerated + i));
+	}
+	cmdList->ResourceBarrier(NumCast<u32>(barriers.size()), &barriers[0]);
+	barriers.clear();
+	u32 srvBits = 1;
+	while (lastGenerated < numMips - 1)
+	{
+		texture->CreateSRV(lastGenerated);
+		u32										numToGenerate = min(numMips - 1 - lastGenerated, DownsampleCS::MaxDownsamples);
+		if (lastGenerated > 0)
+		{
+			barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(texture->GetTextureHandle<ID3D12Resource*>(),
+				D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, lastGenerated));
+			srvBits |= (1 << lastGenerated);
+			cmdList->ResourceBarrier(NumCast<u32>(barriers.size()), &barriers[0]);
+			barriers.clear();
+		}
+		SmallVector<UnorderedAccessView, DownsampleCS::MaxDownsamples> uavs;
+		for (u32 i = 1; i <= numToGenerate; ++i)
+		{
+			uavs.push_back({texture, i + lastGenerated});
+		}
+
+		DX12Context ctx(cmdList, true);
+		ctx.SetUAVs(EShaderType::Compute, uavs);
+		ctx.SetShaderResources(EShaderType::Compute, Single<ResourceView const>({texture, lastGenerated}));
+		DownsampleCS::Permutation perm;
+		perm.Set<DownsampleCS::IsSrgb>(srgb);
+		perm.Set<DownsampleCS::NumLevels>(numToGenerate);
+		ctx.SetComputeShader(ShaderMgr.GetCompiledShader<DownsampleCS>(perm));
+		uvec2 threadsRequired = DivideRoundUp(texture->Desc.Extent(), 2u << lastGenerated);
+		ctx.DispatchCompute(DivideRoundUp(threadsRequired, 8u));
+		lastGenerated += numToGenerate;
+	}
+	for (u32 i=0; i<texture->Desc.NumMips; ++i)
+	{
+		barriers.push_back(CD3DX12_RESOURCE_BARRIER::Transition(texture->GetTextureHandle<ID3D12Resource*>(),
+			(srvBits & 1) ? D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, i));
+		srvBits >>= 1;
+	}
+
+
+	cmdList->ResourceBarrier(NumCast<u32>(barriers.size()), &barriers[0]);
+	texture->UpdateCurrentState(D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	
+
+}
+
 ID3D12Device_* GetD3D12Device()
 {
 	return sRHI->Device();
@@ -807,6 +929,13 @@ void DX12DirectMesh::OnFullyReleased()
 void DX12IndexedMesh::OnFullyReleased()
 {
 	GetRHI().FreeIndexedMesh(this);
+}
+
+void DX12CommandList::Reset(ID3D12PipelineState* pso)
+{
+	GetRHI().ReleaseCommandAllocator({Allocator, Type});
+	Allocator = GetRHI().AcquireCommandAllocator(Type).Allocator;
+	CmdList->Reset(Allocator.Get(), pso);
 }
 
 }

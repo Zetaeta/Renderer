@@ -6,7 +6,7 @@ namespace rnd::dx12
 
 bool FrameIndexedRingBuffer::TryReserve(u64 size, u64 alignment, u64& outStart)
 {
-	
+//	ZE_ASSERT(IsInRenderThread());
 	if (size > mSize)
 	{
 		return false;

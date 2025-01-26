@@ -171,7 +171,8 @@ void RenderContext::SetupPostProcess()
  void RenderContext::RenderFrame()
 {
 	SetupLightData();
-	mDeviceCtx->ClearRenderTarget(mMainRT, { 0.45f, 0.55f, 0.60f, 1.00f });
+//	mDeviceCtx->ClearRenderTarget(mMainRT, { 0.45f, 0.55f, 0.60f, 1.00f });
+	mDeviceCtx->ClearRenderTarget(mMainRT, { 0.f, 0.f, 0.f, 0.00f });
 	mDeviceCtx->ClearDepthStencil(mMainDS, EDSClearMode::DEPTH_STENCIL, 1.f);
 	mDeviceCtx->ClearUAV(mPixDebugUav, vec4{0.f});
 	for (auto& pass : mPasses)

@@ -478,6 +478,7 @@
     <ClInclude Include="src\3rd\imgui\imstb_textedit.h" />
     <ClInclude Include="src\3rd\imgui\imstb_truetype.h" />
     <ClInclude Include="src\3rd\imgui\misc\cpp\imgui_stdlib.h" />
+    <ClInclude Include="src\render\dx12\DX12CommandAllocatorPool.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -744,6 +745,7 @@
     <ClCompile Include="src\3rd\imgui\imgui_tables.cpp" />
     <ClCompile Include="src\3rd\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\3rd\imgui\misc\cpp\imgui_stdlib.cpp" />
+    <ClCompile Include="src\render\dx12\DX12CommandAllocatorPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

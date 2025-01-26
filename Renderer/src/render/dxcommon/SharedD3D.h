@@ -17,4 +17,10 @@ void SetResourceName(const ResourcePtr& resource, const String& str)
 
 #define NAME_D3DOBJECT(obj, name) SetResourceName(obj, name)
 
+void UnpackSubresource(u32 subresource, u32 arraySize, auto& outArrayIdx, auto& outMip)
+{
+	outArrayIdx = subresource / arraySize;
+	outMip = subresource % arraySize;
+}
+
 }

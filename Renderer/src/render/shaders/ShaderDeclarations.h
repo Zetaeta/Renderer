@@ -56,4 +56,15 @@ public:
 	using Permutation = PermutationDomain<Greyscale>;
 	DECLARE_SHADER(CubemapPS);
 };
+
+class DownsampleCS : public ComputeShader
+{
+public:
+	constexpr static u32 MaxDownsamples = 4;
+	struct NumLevels : SHADER_PERM_UINT("NUM_DOWNSAMPLE_LEVELS", MaxDownsamples);
+	struct IsSrgb : SHADER_PERM_BOOL("IS_SRGB");
+	using Permutation = PermutationDomain<NumLevels, IsSrgb>;
+	DECLARE_SHADER(DownsampleCS);
+
+};
 }

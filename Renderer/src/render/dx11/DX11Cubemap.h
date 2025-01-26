@@ -50,7 +50,7 @@ public:
 	 void Unmap(u32 subResource) override;
 
 
-	 void CreateSRV() override
+	 void CreateSRV(u32) override
 	 {
 		 throw std::logic_error("The method or operation is not implemented.");
 	 }

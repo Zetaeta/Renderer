@@ -44,6 +44,31 @@ struct PermutationBool
 	}
 };
 
+template<u32 Max>
+struct PermutationUint
+{
+	u32 Value = 0;
+	void Set(u32 value)
+	{
+		ZE_ASSERT(value <= Max);
+		Value = value;
+	}
+	String GetValue() const
+	{
+		return std::to_string(Value);
+	}
+
+	constexpr static u32 NumBits()
+	{
+		return RoundUpLog2(Max) + 1;
+	}
+	
+	u64 EncodeBits() const
+	{
+		return Value;
+	}
+};
+
 template<typename T>
 struct TSimpleEnumElement
 {
@@ -88,7 +113,7 @@ struct TSimpleEnumElement
 }
 
 #define SHADER_PERM_BOOL(key) PERM_WITH_KEY(key, PermutationBool)
-#define SHADER_PERM_INT(key) PERM_WITH_KEY(key, TPermutationElement<int>)
+#define SHADER_PERM_UINT(key, Max) PERM_WITH_KEY(key, PermutationUint<Max>)
 #define SHADER_PERM_ENUM(key, enumtype ) PERM_WITH_KEY(key, TSimpleEnumElement<enumtype>)
 
 #define ENUM_PERM_SELECT(key, enumtype, ... ) public TSimpleEnumElement<enumtype> {\
