@@ -27,11 +27,11 @@ RenderPass::RenderPass(RenderContext* rCtx, String&& name /*= ""*/) : mRCtx(rCtx
 }
 
 #if PROFILING
-void RenderPass::ExecuteWithProfiling(RenderContext& renderCtx)
+void RenderPass::ExecuteWithProfiling(IRenderDeviceCtx& deviceCtx)
 {
-	renderCtx.DeviceCtx()->StartTimer(mTimer);
-	Execute(renderCtx);
-	renderCtx.DeviceCtx()->StopTimer(mTimer);
+	deviceCtx.StartTimer(mTimer);
+	Execute(deviceCtx);
+	deviceCtx.StopTimer(mTimer);
 }
 #endif
 

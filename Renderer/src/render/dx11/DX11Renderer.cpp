@@ -26,6 +26,7 @@
 #include "render/MaterialManager.h"
 #include "render/RendererScene.h"
 #include "render/shaders/ShaderDeclarations.h"
+#include "render/RenderController.h"
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -167,11 +168,14 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 	}
 	mFrameTimer = CreateTimer(L"Frame");
 	pContext->QueryInterface<ID3DUserDefinedAnnotation>(&mUserAnnotation);
-//	mCurrVertexLayoutHdl = GetVertAttHdl<Vertex>();
+
+	GRenderController.AddRenderBackend(this);
+	//	mCurrVertexLayoutHdl = GetVertAttHdl<Vertex>();
 }
 
 DX11Renderer::~DX11Renderer()
 {
+	GRenderController.RemoveRenderBackend(this);
 	RendererScene::OnShutdownDevice(this);
 	IRenderDevice::Teardown();
 	ResourceMgr.Teardown();
@@ -423,9 +427,6 @@ void DX11Renderer::PrepareBG()
 
 void DX11Renderer::Render(const Scene& scene)
 {
-	++mFrameNum;
-	ProcessTimers();
-	StartFrameTimer();
 	ProcessTextureCreations();
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 
@@ -437,24 +438,13 @@ void DX11Renderer::Render(const Scene& scene)
 	m_Scale = float(std::min(m_Width, m_Height));
 	m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
 
-	//D3D11_VIEWPORT vp = {
-	//	.TopLeftX = 0,
-	//	.TopLeftY = 0,
-	//	.Width = float(m_Width),
-	//	.Height = float(m_Height),
-	//	.MinDepth = 0,
-	//	.MaxDepth = 1,
-	//};
-	//pContext->RSSetViewports(1u, &vp);
 	if (!mViewport->mRScene->IsInitialized())
 	{
 		mViewport->mRScene = RendererScene::Get(scene, this);
 	}
-//	mViewport->mRScene->BeginFrame();
-	mViewport->mRScene->UpdatePrimitives();
 
 
-	m_Ctx.mRCtx->RenderFrame();
+	//m_Ctx.mRCtx->RenderFrame();
 
 	SetDepthStencilMode(EDepthMode::Disabled);
 	if (m_ViewerTex != nullptr)
@@ -468,7 +458,6 @@ void DX11Renderer::Render(const Scene& scene)
 
 	mRCtx->TextureManager.UnBind(this);
 //	mViewport->mRScene->EndFrame();
-	EndFrameTimer();
 }
 
 
@@ -614,6 +603,44 @@ void DX11Renderer::Copy(DeviceResourceRef dst, DeviceResourceRef src)
 		ZE_ENSURE(false);
 		break;
 	}
+}
+
+rnd::MappedResource DX11Renderer::Readback(DeviceResourceRef resource, u32 subresource, _Out_opt_ RefPtr<GPUSyncPoint>* completionSyncPoint)
+{
+	struct DX11DummySyncPoint : public GPUSyncPoint
+	{
+		void OnFullyReleased() override
+		{
+			delete this;
+		}
+		bool Wait(u32 forMS) override
+		{
+			return true;
+		}
+	};
+
+	if (completionSyncPoint)
+	{
+		*completionSyncPoint = new DX11DummySyncPoint;
+	}
+
+	if (resource->GetResourceType() == EResourceType::Texture2D)
+	{
+		auto* tex = static_cast<DX11Texture*>(resource.get());
+		MappedResource result = tex->Map(subresource, ECpuAccessFlags::Read);
+		result.Release = [tex, subresource]
+		{
+			tex->Unmap(subresource);
+		};
+		return result;
+	}
+	else //if (resource->GetResourceType() == EResourceType::Buffer)
+	{
+		ZE_ASSERT(false);
+		return {};
+	}
+
+
 }
 
 IConstantBuffer* DX11Renderer::GetConstantBuffer(ECBFrequency freq, size_t size /* = 0 */)
@@ -900,6 +927,35 @@ IDeviceTexture::Ref DX11Renderer::CreateTexture2D(DeviceTextureDesc const& desc,
 //	return DX11Cubemap::FoldUp(m_Ctx, )
 //	return DX11Texture::Create(&m_Ctx, desc.width, desc.height, reinterpret_cast<u32 const*>(initialData), TF_DEPTH);
 	return std::make_shared<DX11Texture>(m_Ctx, desc, initialData);
+}
+
+void DX11Renderer::ExecuteCommand(std::function<void(IRenderDeviceCtx&)>&& command, char const* name)
+{
+	command(*this);
+}
+
+void DX11Renderer::BeginFrame()
+{
+	++mFrameNum;
+	ProcessTimers();
+	StartFrameTimer();
+
+	ProcessTextureCreations();
+
+	ImVec4 clear_color = ImVec4();
+
+	m_Scale = float(std::min(m_Width, m_Height));
+	m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
+
+	//if (!mViewport->mRScene->IsInitialized())
+	//{
+	//	mViewport->mRScene = RendererScene::Get(scene, this);
+	//}
+}
+
+void DX11Renderer::EndFrame()
+{
+	EndFrameTimer();
 }
 
 void DX11Renderer::SetShaderResources(EShaderType shader, Span<ResourceView const> srvs, u32 startIdx)

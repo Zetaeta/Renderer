@@ -2,6 +2,7 @@
 #include "platform/windows/WinEvent.h"
 #include "container/MovableObjectPool.h"
 #include "SharedD3D12.h"
+#include "render/GPUSyncPoint.h"
 
 namespace rnd
 {
@@ -16,7 +17,9 @@ struct DX12SyncData
 
 class DX12SyncPointPool;
 
-class DX12SyncPoint : private DX12SyncData
+// Currently being passed by value internally, using RefPtr for GPUSyncPoint API.
+// TODO Decide actual architecture
+class DX12SyncPoint : public GPUSyncPoint, private DX12SyncData
 {
 public:
 	DX12SyncPoint(DX12SyncData const& data, u32 handle)
@@ -57,9 +60,24 @@ public:
 		return evt;
 	}
 
+	void OnFullyReleased() override
+	{
+		delete this;
+	}
+
 	void Release();
 
-	bool Wait(u32 forMS = INFINITE, bool thenRelease = true)
+	bool Wait(u32 forMS = INFINITE) override
+	{
+		return WaitInternal(forMS, false);
+	}
+	bool WaitAndRelease(u32 forMS = INFINITE)
+	{
+		return WaitInternal(forMS, true);
+	}
+
+private:
+	bool WaitInternal(u32 forMS, bool thenRelease)
 	{
 		if (IsPassed())
 		{
@@ -75,7 +93,6 @@ public:
 		}
 		return result;
 	}
-private:
 	friend DX12SyncPointPool;
 	u32 mHandle = 0;
 };

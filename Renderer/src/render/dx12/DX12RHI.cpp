@@ -46,6 +46,7 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 
 	DX12SyncPointPool::Create(mDevice.Get());
 	mSimpleAllocator = MakeOwning<DX12Allocator>(mDevice.Get());
+	mReadbackAllocator = MakeOwning<DX12Allocator>(mDevice.Get(), D3D12_HEAP_TYPE_READBACK);
 
 	mFenceEvent = CreateEventW(nullptr, false, false, nullptr);
 	mCBPool = DX12CBPool(*this);
@@ -61,7 +62,7 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 	if (scene)
 	{
 		mScene = scene;
-		mContext = std::make_unique<DX12Context>(mCmdList.CmdList.Get());
+		mContext = std::make_unique<DX12Context>(mCmdList);
 		mViewport = std::make_unique<Viewport>(mContext.get(), scene, camera);
 		mViewport->Resize(width, height, mSwapchainBufferTextures[mBufferIndex]);
 	}
@@ -161,21 +162,10 @@ void DX12RHI::Tick()
 			mViewport->mRScene = RendererScene::Get(*mScene, mContext.get());
 		}
 		mViewport->SetBackbuffer(mSwapchainBufferTextures[mBufferIndex]);
-		GRenderController.BeginRenderFrame();
-		GRenderController.EndRenderFrame();
+		//GRenderController.BeginRenderFrame();
+		//GRenderController.EndRenderFrame();
 	}
-	{
-		//auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mRenderTargets[mBufferIndex].Get(),
-		//	D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		//cmd->ResourceBarrier(1, &barrier);
-		mSwapchainBufferTextures[mBufferIndex]->TransitionTo(cmd.Get(), D3D12_RESOURCE_STATE_PRESENT);
-	}
-	mRecordingCommands = false;
-	cmd->Close();
-	ID3D12CommandList* const cmdList = cmd.Get();
-	mQueues.Direct->ExecuteCommandLists(1, &cmdList);
-	mCmdList.Reset(mTest->mPSO.Get());
-	EndFrame();
+//	EndFrame();
 }
 
 u64 DX12RHI::GetCompletedFrame() const
@@ -218,6 +208,18 @@ void DX12RHI::StartFrame()
 
 void DX12RHI::EndFrame()
 {
+	{
+		//auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mRenderTargets[mBufferIndex].Get(),
+		//	D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		//cmd->ResourceBarrier(1, &barrier);
+		mSwapchainBufferTextures[mBufferIndex]->TransitionTo(mCmdList.CmdList.Get(), D3D12_RESOURCE_STATE_PRESENT);
+	}
+	mRecordingCommands = false;
+	mCmdList.CmdList->Close();
+	ID3D12CommandList* const cmdList = mCmdList.CmdList.Get();
+	mQueues.Direct->ExecuteCommandLists(1, &cmdList);
+	mCmdList.Reset(mTest->mPSO.Get());
+
 	HR_ERR_CHECK(mSwapChain->Present(1, 0));
 	mFenceValues[mFrameIndex] = mCurrentFrame;
 //	mCurrentFrame = mFenceValues[mFrameIndex];
@@ -233,7 +235,7 @@ void DX12RHI::WaitForGPU()
 {
 	DX12SyncPoint syncPoint = DX12SyncPointPool::Get()->Claim();
 	syncPoint.GPUSignal(mQueues.Direct.Get());
-	syncPoint.Wait();
+	syncPoint.WaitAndRelease();
 	//++mCurrentFenceValue;
 	//HR_ERR_CHECK(mCmdQueue->Signal(mFrameFence.Get(), mCurrentFenceValue));
 	//HR_ERR_CHECK(mFrameFence->SetEventOnCompletion(mCurrentFenceValue, mFenceEvent));
@@ -516,7 +518,7 @@ IDeviceTexture::Ref DX12RHI::CreateTexture2D(DeviceTextureDesc const& desc, Text
 		UpdateSubresources<1>(mCmdList.CmdList.Get(), result->GetTextureHandle<ID3D12Resource*>(), mUploadBuffer->GetCurrentBuffer(), alloc.Offset,
 			0u, desc.NumMips == 0 ? 1u : desc.NumMips, &srcData); // TODO mips
 		result->UpdateCurrentState(D3D12_RESOURCE_STATE_COPY_DEST);
-		GenerateMips(mCmdList.CmdList.Get(), result);
+		GenerateMips(mCmdList, result);
 	}
 	else // synchronous upload on copy queue for now
 	{
@@ -591,7 +593,21 @@ D3D12_CPU_DESCRIPTOR_HANDLE DX12RHI::AllocateDescriptor(EDescriptorType descType
 
 void DX12RHI::FreeDescriptor(EDescriptorType descType, D3D12_CPU_DESCRIPTOR_HANDLE descriptor)
 {
-	GetDescriptorAllocator(descType)->Free(descriptor);
+	if (IsValid(descriptor))
+	{
+		GetDescriptorAllocator(descType)->Free(descriptor);
+	}
+}
+
+DX12ReadbackBuffer DX12RHI::AllocateReadback(u64 size)
+{
+	auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
+	return { mReadbackAllocator->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr).Get(), 0};
+}
+
+void DX12RHI::FreeReadback(DX12ReadbackBuffer& buffer)
+{
+	buffer = {};// Should be safe to release it immediately...
 }
 
 DX12CommandAllocator DX12RHI::AcquireCommandAllocator(D3D12_COMMAND_LIST_TYPE type)
@@ -646,6 +662,11 @@ static void ApplyBlendState(EBlendState state, D3D12_BLEND_DESC& outDesc)
 	outDesc = CD3DX12_BLEND_DESC(CD3DX12_DEFAULT{});
 	if (state == (EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE))
 	{
+		return;
+	}
+	if (state == EBlendState::NONE)
+	{
+		rtb.BlendEnable = false;
 		return;
 	}
 
@@ -842,7 +863,7 @@ bool DX12RHI::IsCreated()
 	return sRHI != nullptr;
 }
 
-void DX12RHI::GenerateMips(ID3D12GraphicsCommandList_* cmdList, DX12Texture::Ref texture)
+void DX12RHI::GenerateMips(DX12CommandList& cmdList, DX12Texture::Ref texture)
 {
 	const bool srgb = texture->Desc.Format == ETextureFormat::RGBA8_Unorm_SRGB;
 	if (!srgb)
@@ -885,7 +906,7 @@ void DX12RHI::GenerateMips(ID3D12GraphicsCommandList_* cmdList, DX12Texture::Ref
 			uavs.push_back({texture, i + lastGenerated});
 		}
 
-		DX12Context ctx(cmdList, true);
+		DX12Context ctx(mCmdList, true);
 		ctx.SetUAVs(EShaderType::Compute, uavs);
 		ctx.SetShaderResources(EShaderType::Compute, Single<ResourceView const>({texture, lastGenerated}));
 		DownsampleCS::Permutation perm;
@@ -909,6 +930,35 @@ void DX12RHI::GenerateMips(ID3D12GraphicsCommandList_* cmdList, DX12Texture::Ref
 	texture->UpdateCurrentState(D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	
 
+}
+
+void DX12RHI::ExecuteCommand(std::function<void(IRenderDeviceCtx&)>&& command, char const* name)
+{
+	DX12Context context(mCmdList);
+	command(context);
+}
+
+bool DX12RHI::GetImmediateContext(std::function<void(IRenderDeviceCtx&)> callback)
+{
+	DX12Context ctx(mCmdList);
+	callback(ctx);
+	return true;
+}
+
+void DX12RHI::Move_WndProc(int xPos, int yPos)
+{
+	mViewport->UpdatePos({xPos, yPos});
+}
+
+ID3D12PipelineState* DX12RHI::GetDefaultPSO()
+{
+	return mTest->mPSO.Get();
+}
+
+void DX12RHI::BeginFrame()
+{
+	IRenderDevice::BeginFrame();
+	Tick();
 }
 
 ID3D12Device_* GetD3D12Device()

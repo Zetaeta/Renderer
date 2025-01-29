@@ -10,7 +10,7 @@
 namespace rnd
 {
 
-void HighlightSelectedPass::Execute(RenderContext& renderCtx)
+void HighlightSelectedPass::Execute(IRenderDeviceCtx& deviceCtx)
 {
 	auto* selectedPrimComp = Cast<PrimitiveComponent>(Editor::Get()->GetSelectedComponent());
 

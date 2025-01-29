@@ -44,6 +44,10 @@ public:
 	{
 		return m_Texture.Get();
 	}
+	OpaqueData<8> GetRHIResource() const override
+	{
+		return m_Texture.Get();
+	}
 
 	OpaqueData<8> GetTextureHandle() const override { return GetSRV(); }
 

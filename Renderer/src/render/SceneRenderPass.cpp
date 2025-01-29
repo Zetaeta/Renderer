@@ -201,9 +201,9 @@ void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, m
 	return;
 }
 
-void SceneRenderPass::Execute(RenderContext& renderCtx)
+void SceneRenderPass::Execute(IRenderDeviceCtx& deviceCtx)
 {
-	RenderScene(renderCtx.GetScene());
+	RenderScene(mRCtx->GetScene());
 }
 
 }

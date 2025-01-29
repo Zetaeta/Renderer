@@ -63,10 +63,10 @@ DeferredShadingPass::DeferredShadingPass(RenderContext* rCtx, Camera::Ref camera
 	}
 }
 
-void DeferredShadingPass::Execute(RenderContext& renderCtx)
+void DeferredShadingPass::Execute(IRenderDeviceCtx& deviceCtx)
 {
 
-	auto context = DeviceCtx();
+	auto context = &deviceCtx;
 	context->SetRTAndDS(mRenderTarget, nullptr);
 //	context->ClearRenderTarget(mRenderTarget, )
 	context->SetBlendMode(EBlendState::COL_OVERWRITE);
@@ -84,12 +84,12 @@ void DeferredShadingPass::Execute(RenderContext& renderCtx)
 	cbuf.screen2World = mCamera->GetInverseProjWorld();
 	cbuf.screenSize = mRCtx->GetPrimaryRenderSize();
 	cbuf.cameraPos = mCamera->GetPosition();
-	auto cb =renderCtx.DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerInstance, sizeof(DeferredShadingPS::CBPerInst));
+	auto cb =deviceCtx.GetConstantBuffer(ECBFrequency::PS_PerInstance, sizeof(DeferredShadingPS::CBPerInst));
 	cb->WriteData(cbuf);
 	context->SetDepthMode(EDepthMode::Disabled);
 	context->SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
 
-	IConstantBuffer* cbs[2] = {renderCtx.DeviceCtx()->GetConstantBuffer(ECBFrequency::PS_PerFrame), cb};
+	IConstantBuffer* cbs[2] = {deviceCtx.GetConstantBuffer(ECBFrequency::PS_PerFrame), cb};
 	{
 		SetupShadingLayer(mRCtx, EShadingLayer::BASE, 0);
 		context->SetShaderResources(EShaderType::Pixel, srvs);

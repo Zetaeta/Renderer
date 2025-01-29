@@ -98,7 +98,15 @@ public:
 	void SetComputeShader(ComputeShader const* shader) override;
 	void Copy(DeviceResourceRef dst, DeviceResourceRef src) override;
 
-	void Wait(OwningPtr<GPUSyncPoint>&& syncPoint) override {}
+	void Wait(GPUSyncPoint* syncPoint) override {}
+
+	MappedResource Readback(DeviceResourceRef resource, u32 subresource, _Out_opt_ RefPtr<GPUSyncPoint>* completionSyncPoint) override;
+
+	bool GetImmediateContext(std::function<void(IRenderDeviceCtx&)> callback) override
+	{
+		callback(*this);
+		return true;
+	}
 
 	#if PROFILING
 	GPUTimer* CreateTimer(const wchar_t* Name);
@@ -134,6 +142,9 @@ public:
 
 	IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData) override;
 	IDeviceTexture::Ref CreateTexture2D(DeviceTextureDesc const& desc, TextureData initialData) override;
+	void				ExecuteCommand(std::function<void(IRenderDeviceCtx & )>&& command, char const* name);
+	void				BeginFrame() override;
+	void				EndFrame() override;
 
 
 	//constexpr static u32 const MAT_PLAIN = 0;

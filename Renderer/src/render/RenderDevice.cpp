@@ -28,7 +28,7 @@ void IRenderDevice::RenderFrame()
 	{
 		rScene->EndFrame();
 	}
-//	EndFrame();
+	EndFrame();
 }
 
 }

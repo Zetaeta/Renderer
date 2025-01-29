@@ -19,15 +19,15 @@ WavyEffectPPPass::WavyEffectPPPass(RenderContext* rCtx, RGRenderTargetRef dest, 
 }
 
 
-void WavyEffectPPPass::Execute(RenderContext& renderCtx)
+void WavyEffectPPPass::Execute(IRenderDeviceCtx& deviceCtx)
 {
 	u64 time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTime).count();
 	float timeMod1 = float(time % 1000) / 1000;
-	mCB = renderCtx.DeviceCtx()->CBPool->AcquireConstantBuffer(ECBLifetime::Dynamic, timeMod1);
-	renderCtx.DeviceCtx()->UpdateConstantBuffer(mCB, (float) timeMod1);
-	renderCtx.DeviceCtx()->SetConstantBuffers(EShaderType::Pixel, Span<CBHandle>(static_cast<CBHandle*>(&mCB), 1u));
-	PostProcessPass::Execute(renderCtx);
-	renderCtx.DeviceCtx()->CBPool->ReleaseConstantBuffer(mCB);
+	mCB = deviceCtx.CBPool->AcquireConstantBuffer(ECBLifetime::Dynamic, timeMod1);
+	deviceCtx.UpdateConstantBuffer(mCB, (float) timeMod1);
+	deviceCtx.SetConstantBuffers(EShaderType::Pixel, Span<CBHandle>(static_cast<CBHandle*>(&mCB), 1u));
+	PostProcessPass::Execute(deviceCtx);
+	deviceCtx.CBPool->ReleaseConstantBuffer(mCB);
 }
 
 }

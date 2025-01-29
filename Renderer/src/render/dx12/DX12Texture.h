@@ -2,6 +2,7 @@
 
 #include "SharedD3D12.h"
 #include "render/DeviceTexture.h"
+#include <variant>
 
 namespace rnd { namespace dx12 { class DX12UploadBuffer; } }
 
@@ -9,8 +10,54 @@ namespace rnd::dx12
 {
 class DX12RenderTarget;
 class DX12DepthStencil;
+struct EmptyStruct
+{
+};
 
-class DX12Texture : public IDeviceTexture
+
+class DX12DepthStencil : public IDepthStencil
+{
+public:
+	DX12DepthStencil(DepthStencilDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC const& dxDesc);
+	DX12DepthStencil(DX12DepthStencil&& other);
+	DX12DepthStencil& operator=(DX12DepthStencil&& other);
+	~DX12DepthStencil();
+
+	OpaqueData<8> GetData() const override { return mDesc[0]; }
+
+	D3D12_CPU_DESCRIPTOR_HANDLE GetHandle(u32 idx = 0) const
+	{
+		return mDesc[idx];
+	}
+
+	DX12Texture* BaseTex = nullptr;
+private:
+	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 6> mDesc{};
+//	ComPtr<ID3D12Resource> mResource;
+
+};
+
+class DX12RenderTarget : public IRenderTarget
+{
+public:
+	DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC const& dxDesc);
+	DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_CPU_DESCRIPTOR_HANDLE existingRtvDesc);
+	DX12RenderTarget(DX12RenderTarget&& other);
+	DX12RenderTarget& operator=(DX12RenderTarget&& other);
+	~DX12RenderTarget();
+	OpaqueData<8> GetRTData() override { return DescriptorHdl[0]; }
+	OpaqueData<8> GetData() const override { return DescriptorHdl[0]; }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetHandle(u32 idx = 0) const
+	{
+		return DescriptorHdl[idx];
+	}
+	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 6> DescriptorHdl{};
+//	ComPtr<ID3D12Resource> mResource;
+
+	DX12Texture* BaseTex = nullptr;
+};
+
+class DX12Texture : public IDeviceTexture, public std::enable_shared_from_this<DX12Texture>
 {
 public:
 	struct UploadTools
@@ -25,6 +72,10 @@ public:
 	DX12Texture(DeviceTextureDesc const& desc, ID3D12Resource_* resource, D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle);
 	~DX12Texture();
 
+	OpaqueData<8> GetRHIResource() const override
+	{
+		return mResource.Get();
+	}
 
 	using IDeviceTexture::GetTextureHandle;
 	OpaqueData<8> GetTextureHandle() const override;
@@ -57,53 +108,16 @@ private:
 
 	ComPtr<ID3D12Resource> mResource;
 	D3D12_CPU_DESCRIPTOR_HANDLE mSrvDesc{};
+	D3D12_CPU_DESCRIPTOR_HANDLE mStencilSrvDesc{};
 	D3D12_CPU_DESCRIPTOR_HANDLE mUavDesc{};
 	SmallVector<D3D12_CPU_DESCRIPTOR_HANDLE, 5> mAdditionalUAVs;
 	Vector<D3D12_CPU_DESCRIPTOR_HANDLE> mAdditionalSRVs;
 	D3D12_RESOURCE_STATES mLastState = D3D12_RESOURCE_STATE_COMMON;
-	IDepthStencil::Ref mDsv;
-	IRenderTarget::Ref mRtv;
+	//IDepthStencil::Ref mDsv;
+	//IRenderTarget::Ref mRtv;
+	std::variant<EmptyStruct, DX12DepthStencil, DX12RenderTarget> mRtvOrDsv;
 	u64 mResourceSize = 0;
 
 };
-
-class DX12DepthStencil : public IDepthStencil
-{
-public:
-	DX12DepthStencil(DepthStencilDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC const& dxDesc);
-	~DX12DepthStencil();
-
-	OpaqueData<8> GetData() const override { return mDesc[0]; }
-
-	D3D12_CPU_DESCRIPTOR_HANDLE GetHandle(u32 idx = 0) const
-	{
-		return mDesc[idx];
-	}
-
-	DX12Texture* BaseTex = nullptr;
-private:
-	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 6> mDesc{};
-	ComPtr<ID3D12Resource> mResource;
-
-};
-
-class DX12RenderTarget : public IRenderTarget
-{
-public:
-	DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC const& dxDesc);
-	DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_CPU_DESCRIPTOR_HANDLE existingRtvDesc);
-	~DX12RenderTarget();
-	OpaqueData<8> GetRTData() override { return DescriptorHdl[0]; }
-	OpaqueData<8> GetData() const override { return DescriptorHdl[0]; }
-	D3D12_CPU_DESCRIPTOR_HANDLE GetHandle(u32 idx = 0) const
-	{
-		return DescriptorHdl[idx];
-	}
-	std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 6> DescriptorHdl{};
-	ComPtr<ID3D12Resource> mResource;
-
-	DX12Texture* BaseTex = nullptr;
-};
-
 
 }

@@ -278,17 +278,17 @@ void DX12Context::SetViewport(float width, float height, float TopLeftX, float T
 	mCmdList->RSSetScissorRects(1, &scissor);
 }
 
-void DX12Context::Wait(OwningPtr<GPUSyncPoint>&& syncPoint)
+void DX12Context::Wait(GPUSyncPoint* syncPoint)
 {
 	if (syncPoint == nullptr)
 	{
 		return;
 	}
 
-//	static_cast<DX12SyncPoint*>(&syncPoint)->GPUWait(m)
+	static_cast<DX12SyncPoint*>(syncPoint)->GPUWait(GetRHI().CmdQueues().Direct);
 }
 
-DX12Context::DX12Context(ID3D12GraphicsCommandList_* cmdList, bool manualTransitioning)
+DX12Context::DX12Context(DX12CommandList& cmdList, bool manualTransitioning)
 	: mCmdList(cmdList), mManualTransitioning(manualTransitioning)
 {
 	Device = &GetRHI();
@@ -429,7 +429,7 @@ void DX12Context::BindAndTransition(Vector<ResourceView>& outBindings, Span<Reso
 	{
 		for (auto const& srv : inSRVs)
 		{
-			if (DX12Texture* tex = static_cast<DX12Texture*>(srv.Resource.get()); tex && (srv.ViewId & ((u32) -1)) == 0)
+			if (DX12Texture* tex = static_cast<DX12Texture*>(srv.Resource.get()))
 			{
 //				ZE_ASSERT(srv.ViewId == 0);
 				tex->TransitionTo(mCmdList, targetState);
@@ -443,5 +443,78 @@ void DX12Context::DispatchCompute(ComputeDispatch args)
 	FinalizeComputeState();
 	mCmdList->Dispatch(args.ThreadGroupsX, args.ThreadGroupsY, args.ThreadGroupsZ);
 }
+
+void DX12Context::ExecuteCommands()
+{
+	mCmdList->Close();
+	ID3D12CommandList* const cmdList = mCmdList.Get();
+	GetQueue()->ExecuteCommandLists(1, &cmdList);
+	mCmdList.Reset(GetRHI().GetDefaultPSO());
+}
+
+ID3D12CommandQueue* DX12Context::GetQueue()
+{
+	return GetRHI().CmdQueues().Direct;
+}
+
+void DX12Context::SetStencilState(StencilState stencil)
+{
+	mGraphicsState.UpdatePSO(mGraphicsState.PSOState.StencilMode, stencil.Mode);
+	mCmdList->OMSetStencilRef(stencil.WriteValue);
+}
+
+void DX12Context::SetGraphicsRootSignature(DX12GraphicsRootSignature const& rootSig)
+{
+	if (mGraphicsState.UpdatePSO(mGraphicsState.RootSig(), rootSig))
+	{
+		mCmdList->SetGraphicsRootSignature(rootSig.Get());
+	}
+}
+
+rnd::MappedResource DX12Context::Readback(DeviceResourceRef resource, u32 subresource, _Out_opt_ RefPtr<GPUSyncPoint>* completionSyncPoint)
+{
+	auto& rhi = GetRHI();
+	ID3D12Resource_* dxResource = resource->GetRHIResource().As<ID3D12Resource_*>();
+	auto desc = dxResource->GetDesc();
+	D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
+	MappedResource result;
+	u32 numRows;
+	u64 rowSize;
+	u64 totalBytes;
+	rhi.Device()->GetCopyableFootprints(&desc, subresource, 1, 0, &footprint, &numRows, &rowSize, &totalBytes);
+	result.RowPitch = footprint.Footprint.RowPitch;
+	auto readbackBuffer = rhi.AllocateReadback(totalBytes);
+	if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+	{
+		mCmdList->CopyBufferRegion(readbackBuffer.Resource.Get(), readbackBuffer.Offset, dxResource, footprint.Offset, footprint.Footprint.Width);
+	}
+	else
+	{
+		static_cast<DX12Texture*>(resource.get())->TransitionTo(mCmdList, D3D12_RESOURCE_STATE_COPY_SOURCE);
+		CD3DX12_TEXTURE_COPY_LOCATION const dst(readbackBuffer.Resource.Get(), footprint);
+		CD3DX12_TEXTURE_COPY_LOCATION const src(dxResource, subresource);
+		mCmdList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+	}
+	if (completionSyncPoint)
+	{
+		auto syncPoint = new DX12SyncPoint(DX12SyncPointPool::Get()->Claim());
+		*completionSyncPoint = syncPoint;
+		ExecuteCommands();
+		syncPoint->GPUSignal(GetQueue());
+	}
+	// else ???
+
+	DXCALL(readbackBuffer.Resource->Map(subresource, nullptr, &result.Data));
+	result.Release = [readbackBuffer, subresource] () mutable
+	{
+		readbackBuffer.Resource->Unmap(subresource, nullptr);
+		GetRHI().FreeReadback(readbackBuffer);
+	};
+	return result;
+}
+
+//void DX12Context::ReleaseReadback(MappedResource resource)
+//{
+//}
 
 }

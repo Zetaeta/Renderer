@@ -3,6 +3,8 @@
 #include "DX12RootSignature.h"
 #include "container/Vector.h"
 
+namespace rnd { namespace dx12 { struct DX12CommandList; } }
+
 namespace rnd { namespace dx12 { struct DescriptorTableLoc; } }
 
 namespace rnd::dx12
@@ -180,7 +182,7 @@ struct ComputePipelineStateCache
 class DX12Context : public IRenderDeviceCtx
 {
 public:
-	DX12Context(ID3D12GraphicsCommandList_* cmdList, bool manualTransitioning = false);
+	DX12Context(DX12CommandList& cmdList, bool manualTransitioning = false);
 
 	void SetRTAndDS(IRenderTarget::Ref rts, IDepthStencil::Ref ds, int RTArrayIdx, int DSArrayIdx) override;
 
@@ -204,11 +206,7 @@ public:
 	}
 
 
-	void SetStencilState(StencilState stencil) override
-	{
-		mGraphicsState.UpdatePSO(mGraphicsState.PSOState.StencilMode, stencil.Mode);
-		mCmdList->OMSetStencilRef(stencil.WriteValue);
-	}
+	void SetStencilState(StencilState stencil) override;
 
 
 	void SetBlendMode(EBlendState mode) override
@@ -361,15 +359,13 @@ public:
 		throw std::logic_error("The method or operation is not implemented.");
 	}
 
-	void SetGraphicsRootSignature(DX12GraphicsRootSignature const& rootSig)
-	{
-		if (mGraphicsState.UpdatePSO(mGraphicsState.RootSig(), rootSig))
-		{
-			mCmdList->SetGraphicsRootSignature(rootSig.Get());
-		}
-	}
+	MappedResource Readback(DeviceResourceRef resource, u32 subresource, _Out_opt_ RefPtr<GPUSyncPoint>* completionSyncPoint) override;
+//j	void		   ReleaseReadback(MappedResource resource) override;
 
-	void Wait(OwningPtr<GPUSyncPoint>&& syncPoint);
+	void SetGraphicsRootSignature(DX12GraphicsRootSignature const& rootSig);
+
+	void ExecuteCommands() override;
+	void Wait(GPUSyncPoint* syncPoint);
 
 	void SetGraphicsShader(EShaderType shaderType, Shader const* shader);
 
@@ -386,13 +382,15 @@ public:
 	void FinalizeGraphicsState();
 	void FinalizeComputeState();
 	void SetupDescriptorTable(ShaderBindingState const& bindings, u32 rootArgument, DescriptorTableLoc& inoutLocation, u32 numUAVs);
+
 protected:
+	ID3D12CommandQueue* GetQueue();
 	void BindAndTransition(Vector<UnorderedAccessView>& outBindings, Span<UnorderedAccessView const> inUAVs, u32 startIdx = 0);
 	void BindAndTransition(Vector<ResourceView>& outBindings, Span<ResourceView const> inSRVs,
 		D3D12_RESOURCE_STATES targetState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		u32 startIdx = 0);
 
-	ID3D12GraphicsCommandList_* mCmdList;
+	DX12CommandList& mCmdList;
 	GraphicsPipelineStateCache mGraphicsState;
 	ComputePipelineStateCache mComputeState;
 	EnumArray<ECBFrequency, DX12DynamicCB> mDynamicCBs;

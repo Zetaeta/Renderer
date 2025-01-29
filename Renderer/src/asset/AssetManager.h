@@ -8,6 +8,7 @@
 #include <queue>
 #include <condition_variable>
 #include <variant>
+#include "thread/CommandPipe.h"
 
 
 namespace std {
@@ -51,41 +52,6 @@ struct Locked
 private:
 	T m_Object;
 	std::mutex m_Mutex;
-};
-
-template<typename T>
-class MessageQueue
-{
-public:
-	template<typename TArg>
-	void push(TArg&& t)
-	{
-		{
-			std::lock_guard lock {m_Mutex};
-			m_Queue.push(t);
-		}
-		m_Cv.notify_one();
-	}
-
-	T pop()
-	{
-		std::unique_lock lock {m_Mutex};
-		m_Cv.wait(lock, [&] { return !m_Queue.empty(); });
-		T t = std::move(m_Queue.front());
-		m_Queue.pop();
-		return t;
-	}
-
-	bool IsEmpty()
-	{
-		std::lock_guard lock {m_Mutex};
-		return m_Queue.empty();
-	}
-		
-private:
-	std::mutex m_Mutex;
-	std::condition_variable m_Cv;
-	std::queue<T> m_Queue;
 };
 
 using AssetLoadCallback = std::function<void(AssetRef)>;

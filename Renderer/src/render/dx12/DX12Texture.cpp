@@ -38,7 +38,7 @@ DX12Texture::DX12Texture(DeviceTextureDesc const& desc, ID3D12Resource_* resourc
 	rtDesc.Height = Desc.Height;
 	rtDesc.Format = Desc.Format;
 	rtDesc.DebugName = Desc.DebugName + " RT";
-	mRtv = std::make_shared<DX12RenderTarget>(rtDesc, this, resource, rtvHandle);
+	mRtvOrDsv = DX12RenderTarget(rtDesc, this, resource, rtvHandle);
 }
 
 u64 DX12Texture::CreateResource(UploadTools* upload)
@@ -76,6 +76,26 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 		srvDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::SRV);
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		rhi.Device()->CreateShaderResourceView(mResource.Get(), &srvDesc, mSrvDesc);
+	}
+	if (!!(Desc.Flags & TF_StencilSRV))
+	{
+		mStencilSrvDesc = rhi.GetDescriptorAllocator(EDescriptorType::SRV)->Allocate(EDescriptorType::SRV);
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		if (Desc.ResourceType == EResourceType::Texture2D)
+		{
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MipLevels = Desc.NumMips <= 0 ? 1 : Desc.NumMips;
+			srvDesc.Texture2D.PlaneSlice = 1;
+		}
+		else
+		{
+			ZE_ASSERT(Desc.ResourceType == EResourceType::TextureCube);
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
+			srvDesc.TextureCube.MipLevels = Desc.NumMips <= 0 ? 1 : Desc.NumMips;
+		}
+		srvDesc.Format = GetDxgiFormat(Desc.Format, ETextureFormatContext::StencilSRV);
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		rhi.Device()->CreateShaderResourceView(mResource.Get(), &srvDesc, mStencilSrvDesc);
 	}
 	if (!!(Desc.Flags & TF_UAV))
 	{
@@ -119,7 +139,7 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 			dxDesc.Texture2DArray.MipSlice = 0;
 			rtDesc.Dimension = ETextureDimension::TEX_CUBE;
 		}
-		mRtv = std::make_shared<DX12RenderTarget>(rtDesc, this, mResource.Get(), dxDesc);
+		mRtvOrDsv = DX12RenderTarget(rtDesc, this, mResource.Get(), dxDesc);
 	}
 	if (!!(Desc.Flags & TF_DEPTH))
 	{
@@ -152,7 +172,7 @@ u64 DX12Texture::CreateResource(UploadTools* upload)
 			dxDesc.Texture2DArray.MipSlice = 0;
 			dsDesc.Dimension = ETextureDimension::TEX_CUBE;
 		}
-		mDsv = std::make_shared<DX12DepthStencil>(dsDesc, this, mResource.Get(), dxDesc);
+		mRtvOrDsv = DX12DepthStencil(dsDesc, this, mResource.Get(), dxDesc);
 	}
 
 	return 0;
@@ -204,12 +224,20 @@ OpaqueData<8> DX12Texture::GetData() const
 
 rnd::IRenderTarget::Ref DX12Texture::GetRT()
 {
-	return mRtv;
+	if (std::holds_alternative<DX12RenderTarget>(mRtvOrDsv))
+	{
+		return std::shared_ptr<IRenderTarget>(shared_from_this(), &std::get<DX12RenderTarget>(mRtvOrDsv));
+	}
+	return nullptr;
 }
 
 rnd::IDepthStencil::Ref DX12Texture::GetDS()
 {
-	return mDsv;
+	if (std::holds_alternative<DX12DepthStencil>(mRtvOrDsv))
+	{
+		return std::shared_ptr<IDepthStencil>(shared_from_this(), &std::get<DX12DepthStencil>(mRtvOrDsv));
+	}
+	return nullptr;
 }
 
 void DX12Texture::CreateSRV(u32 srvIndex)
@@ -263,6 +291,11 @@ void DX12Texture::Unmap(u32 subResource)
 
 CopyableMemory<8> DX12Texture::GetShaderResource(ShaderResourceId id /*= 0*/)
 {
+	if (id == SRV_StencilBuffer)
+	{
+		ZE_ASSERT(IsValid(mStencilSrvDesc));
+		return mStencilSrvDesc;
+	}
 	ZE_ASSERT(Desc.Flags & TF_SRV);
 	if ((id & u32(-1)) == 0)
 	{
@@ -306,9 +339,16 @@ void DX12Texture::TransitionTo(ID3D12GraphicsCommandList_* cmdList, D3D12_RESOUR
 DX12Texture::~DX12Texture()
 {
 	auto& rhi = GetRHI();
-	if (IsValid(mSrvDesc))
+	rhi.FreeDescriptor(EDescriptorType::SRV, mSrvDesc);
+//	rhi.FreeDescriptor(EDescriptorType::SRV, mStencilSrvDesc);
+	for (auto desc : mAdditionalSRVs)
 	{
-		rhi.FreeDescriptor(EDescriptorType::SRV, mSrvDesc);
+		rhi.FreeDescriptor(EDescriptorType::SRV, desc);
+	}
+	rhi.FreeDescriptor(EDescriptorType::UAV, mUavDesc);
+	for (auto desc : mAdditionalUAVs)
+	{
+		rhi.FreeDescriptor(EDescriptorType::UAV, desc);
 	}
 	rhi.DeferredRelease(mResource);
 
@@ -345,6 +385,10 @@ UavId DX12Texture::CreateUAV(u32 subresourceIdx)
 
 DX12RenderTarget::~DX12RenderTarget()
 {
+	if (!BaseTex)
+	{
+		return;
+	}
 	for (int i = 0; i < DescriptorHdl.size(); ++i)
 	{
 		if (IsValid(DescriptorHdl[i]))
@@ -355,7 +399,7 @@ DX12RenderTarget::~DX12RenderTarget()
 }
 
 DX12RenderTarget::DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC const& dxDesc)
-:IRenderTarget(desc), mResource(resource), BaseTex(tex)
+:IRenderTarget(desc), BaseTex(tex)
 {
 	auto& rhi = GetRHI();
 	if (dxDesc.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2DARRAY)
@@ -377,13 +421,30 @@ DX12RenderTarget::DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* te
 }
 
 DX12RenderTarget::DX12RenderTarget(RenderTargetDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_CPU_DESCRIPTOR_HANDLE existingRtvDesc)
-:IRenderTarget(desc), mResource(resource), BaseTex(tex)
+:IRenderTarget(desc), BaseTex(tex)
 {
 	DescriptorHdl[0] = existingRtvDesc;
 }
 
+DX12RenderTarget::DX12RenderTarget(DX12RenderTarget&& other)
+:IRenderTarget(other.Desc), BaseTex(other.BaseTex),DescriptorHdl(other.DescriptorHdl)
+{
+	other.BaseTex = nullptr;
+	other.DescriptorHdl = {};
+}
+
+DX12RenderTarget& DX12RenderTarget::operator=(DX12RenderTarget&& other)
+{
+	Desc = other.Desc;
+	BaseTex = other.BaseTex;
+	DescriptorHdl = other.DescriptorHdl;
+	other.BaseTex = nullptr;
+	other.DescriptorHdl = {};
+	return *this;
+}
+
 DX12DepthStencil::DX12DepthStencil(DepthStencilDesc const& desc, DX12Texture* tex, ID3D12Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC const& dxDesc)
-:IDepthStencil(desc), mResource(resource), BaseTex(tex)
+:IDepthStencil(desc), BaseTex(tex)
 {
 	auto& rhi = GetRHI();
 	if (dxDesc.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
@@ -404,8 +465,19 @@ DX12DepthStencil::DX12DepthStencil(DepthStencilDesc const& desc, DX12Texture* te
 	}
 }
 
+DX12DepthStencil::DX12DepthStencil(DX12DepthStencil&& other)
+	:IDepthStencil(other.Desc), BaseTex(other.BaseTex), mDesc(other.mDesc)
+{
+	other.BaseTex = nullptr;
+	other.mDesc = {};
+}
+
 DX12DepthStencil::~DX12DepthStencil()
 {
+	if (!BaseTex)
+	{
+		return;
+	}
 	for (u32 i = 0; i < mDesc.size(); ++i)
 	{
 		if (IsValid(mDesc[i]))
@@ -413,6 +485,16 @@ DX12DepthStencil::~DX12DepthStencil()
 			GetRHI().FreeDescriptor(EDescriptorType::DSV, mDesc[i]);
 		}
 	}
+}
+
+DX12DepthStencil& DX12DepthStencil::operator=(DX12DepthStencil&& other)
+{
+	Desc = other.Desc;
+	BaseTex = other.BaseTex;
+	mDesc = other.mDesc;
+	other.BaseTex = nullptr;
+	other.mDesc = {};
+	return *this;
 }
 
 }

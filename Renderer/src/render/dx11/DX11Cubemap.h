@@ -36,12 +36,18 @@ public:
 	}
 
 	ComPtr<ID3D11ShaderResourceView> srv;
+	ComPtr<ID3D11Texture2D> mTexture;
 	//Vector<ComPtr<ID3D11DepthStencilView>> m_DSVs;
 	DX11DepthStencil::Ref mDepthStencil;
 
 
 	IRenderTarget::Ref GetRT() override;
 	IDepthStencil::Ref GetDS() override;
+
+	OpaqueData<8> GetRHIResource() const override
+	{
+		return mTexture.Get();
+	}
 
 
 	 MappedResource Map(u32 subResource, ECpuAccessFlags flags) override;

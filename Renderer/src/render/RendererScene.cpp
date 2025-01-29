@@ -94,13 +94,13 @@ void RendererScene::UpdatePrimitives()
 
 void RendererScene::BeginFrame()
 {
-	mDataInterface->BeginFrame_RenderThread();
+//	mDataInterface->BeginFrame_RenderThread();
 	UpdatePrimitives();
 }
 
 void RendererScene::EndFrame()
 {
-	mDataInterface->EndFrame_RenderThread();
+//	mDataInterface->EndFrame_RenderThread();
 }
 
 RendererScene::RendererScene(IRenderDevice* device, Scene const& scene)

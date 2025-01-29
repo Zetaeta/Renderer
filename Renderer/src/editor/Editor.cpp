@@ -9,13 +9,14 @@
 DEFINE_LOG_CATEGORY_STATIC(LogEditor);
 
 
+Vector<Viewport*> Editor::mViewports;
 Editor* Editor::sSingleton;
 
 Editor::Editor(Input* input, RenderManager* rmg)
 	: mInput(input), mRmgr(rmg)
 {
 	mScene = &rmg->mScene;
-	mViewports.push_back(static_cast<rnd::dx11::DX11Renderer*>(rmg->Renderer())->GetViewport());
+//	mViewports.push_back(static_cast<rnd::dx11::DX11Renderer*>(rmg->Renderer())->GetViewport());
 	mLastSaved = std::chrono::system_clock::now();
 }
 
@@ -28,6 +29,17 @@ Editor* Editor::Create(Input* input, class RenderManager* rmg)
 void Editor::Destroy()
 {
 	delete sSingleton;
+	sSingleton = nullptr;
+}
+
+void Editor::RegisterViewpoert(Viewport* vp)
+{
+	mViewports.push_back(vp);
+}
+
+void Editor::UnegisterViewpoert(Viewport* vp)
+{
+	Remove(mViewports, vp);
 }
 
 void Editor::OnClickPoint(ivec2 position)
@@ -38,6 +50,7 @@ void Editor::OnClickPoint(ivec2 position)
 	{
 		return;
 	}
+	viewport->OnClick(position);
 
 	printf("Click(%d,%d)\n", position.x, position.y);
 	CreateScreenIdTex(viewport->GetWidth(), viewport->GetHeight());
@@ -61,8 +74,17 @@ void Editor::OnClickPoint(ivec2 position)
 
 void Editor::OnLeftClick()
 {
-	vec2 mousePos = mInput->GetWindowMousePos();
-	OnClickPoint({NumCast<int>(mousePos.x), NumCast<int>(mousePos.y)});
+	ivec2 mousePos = mInput->GetAbsoluteMousePos();
+	for (Viewport* vp : mViewports)
+	{
+		ivec2 vpPos = vp->GetPos();
+		ivec2 delta = mousePos - vpPos;
+		if (delta.x >= 0 && delta.y >= 0 && delta.x < vp->GetSize().x && delta.y < vp->GetSize().y)
+		{
+			vp->OnClick(delta);
+		}
+	}
+	//OnClickPoint({NumCast<int>(mousePos.x), NumCast<int>(mousePos.y)});
 }
 
 void Editor::OnEndLeftClick()
@@ -72,6 +94,7 @@ void Editor::OnEndLeftClick()
 
 void Editor::OnRightClick()
 {
+	return;
 	vec2 mousePos = mInput->GetWindowMousePos();
 	Viewport* viewport = GetViewportAt(mousePos);
 	viewport->DebugPixel({NumCast<int>(mousePos.x), NumCast<int>(mousePos.y)});
@@ -175,7 +198,6 @@ void Editor::Tick(float dt)
 	for (auto& vp : mViewports)
 	{
 		CreateScreenIdTex(vp->GetWidth(), vp->GetHeight());
-		vp->GetRenderContext()->RunSinglePass<rnd::RenderScreenIds>("ScreenIds", vp->mCamera, mScreenIdTex->GetRT());
 	}
 	DrawControls();
 	bool isMouseDown = mInput->IsMouseDown(Input::MouseButton::LEFT);

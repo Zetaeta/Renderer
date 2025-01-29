@@ -17,7 +17,7 @@ public:
 	RenderPass(RenderContext* rCtx, String&& name = "");
 	virtual ~RenderPass() {}
 
-	void ExecuteWithProfiling(RenderContext& renderCtx)
+	void ExecuteWithProfiling(IRenderDeviceCtx& deviceCtx)
 #if PROFILING
 	;
 #else
@@ -25,7 +25,7 @@ public:
 		Execute(renderCtx);
 	}
 #endif
-	virtual void Execute(RenderContext& renderCtx) = 0;
+	virtual void Execute(IRenderDeviceCtx& deviceCtx) = 0;
 	virtual void Build(RGBuilder& builder) {}
 	bool IsEnabled() const
 	{

@@ -9,7 +9,7 @@ class SsrPass : public RenderPass
 {
 public:
 	SsrPass(RenderContext* rCtx, RGShaderResources&& srvs, RGRenderTargetRef renderTarget);
-	void Execute(RenderContext& renderCtx) override;
+	void Execute(IRenderDeviceCtx& deviceCtx) override;
 	void Build(RGBuilder& builder) override;
 
 	void AddControls() override;

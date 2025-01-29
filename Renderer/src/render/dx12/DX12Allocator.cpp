@@ -14,14 +14,14 @@ DX12ResourceVal DX12Allocator::Allocate(D3D12_RESOURCE_DESC const& inDesc, D3D12
 	{
 		desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 	}
-	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+	CD3DX12_HEAP_PROPERTIES heapProps(mHeapType);
 	ComPtr<ID3D12Resource> resource;
 	DXCALL(mDevice->CreateCommittedResource(&heapProps, mFlags, &desc, initialState, clearVal, IID_PPV_ARGS(&resource)));
 	return resource;
 }
 
-DX12Allocator::DX12Allocator(ID3D12Device_* device)
-:mDevice(device)
+DX12Allocator::DX12Allocator(ID3D12Device_* device, D3D12_HEAP_TYPE type)
+	: mDevice(device), mHeapType(type)
 {
 }
 

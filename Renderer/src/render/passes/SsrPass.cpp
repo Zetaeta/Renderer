@@ -41,8 +41,9 @@ SsrPass::SsrPass(RenderContext* rCtx, RGShaderResources&& srvs, RGRenderTargetRe
 {
 }
 
-void SsrPass::Execute(RenderContext& renderCtx)
+void SsrPass::Execute(IRenderDeviceCtx& deviceCtx)
 {
+	auto& renderCtx = *mRCtx;
 	SSRParameters cb;
 	cb.projWorld = renderCtx.GetCamera().GetProjWorld();
 	cb.screen2World = renderCtx.GetCamera().GetInverseProjWorld();
@@ -54,7 +55,7 @@ void SsrPass::Execute(RenderContext& renderCtx)
 	cb.debugPixel = renderCtx.Settings.DebugPixel;
 
 	ScopedCBClaim cbv(renderCtx.GetCBPool(), cb);
-	IRenderDeviceCtx* context = renderCtx.DeviceCtx();
+	IRenderDeviceCtx* context = &deviceCtx;
 //	uint2 screenSize = renderCtx.GetPrimaryRenderSize();
 
 //	constexpr uint3 numThreads(8,8,1);

@@ -12,7 +12,7 @@ class PostProcessPass : public RenderPass
 public:
 	PostProcessPass(RenderContext* rCtx, PixelShader const* shader, RGRenderTargetRef dest, RGShaderResources&& resources, String&& name = "Postprocessing");
 
-	virtual void Execute(RenderContext& renderCtx) override;
+	virtual void Execute(IRenderDeviceCtx& deviceCtx) override;
 
 	void Build(RGBuilder& builder) override;
 

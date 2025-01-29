@@ -16,7 +16,7 @@ public:
 	DeferredShadingPass(RenderContext* rCtx, Camera::Ref camera, IRenderTarget::Ref dest, SRVType sceneColour,
 						SRVType sceneNormal, SRVType sceneEmissive, SRVType sceneDepth, SRVType ambientOcclusion);
 
-	void Execute(RenderContext& renderCtx) override;
+	void Execute(IRenderDeviceCtx& deviceCtx) override;
 	void Build(RGBuilder& builder) override;
 private:
 	std::array<RefPtr<const PixelShader>, Denum(EShadingLayer::SHADING_COUNT)> mPixelShader;

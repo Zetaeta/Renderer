@@ -6,8 +6,8 @@
 namespace rnd::dx12
 {
 
-DX12UploadBuffer::DX12UploadBuffer(size_t startSize)
-:FrameIndexedRingBuffer(startSize)
+DX12UploadBuffer::DX12UploadBuffer(size_t startSize, D3D12_HEAP_TYPE type)
+	: FrameIndexedRingBuffer(startSize), mType(type)
 {
 	CreateHeap(startSize);
 }
@@ -16,7 +16,7 @@ void DX12UploadBuffer::CreateHeap(size_t size)
 {
 	ID3D12Device_* device = GetD3D12Device();
 
-	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_UPLOAD);
+	CD3DX12_HEAP_PROPERTIES heapProps(mType);
 	auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(size);
 	DXCALL(device->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&mUploadHeap)));
 	CD3DX12_RANGE range(0, 0);

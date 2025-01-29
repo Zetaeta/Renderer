@@ -15,15 +15,15 @@ RenderCubemap::RenderCubemap(RenderContext* renderCtx, EFlatRenderMode mode, Str
 	SetEnabled(texture != nullptr);
 }
 
-void RenderCubemap::Execute(RenderContext& renderCtx)
+void RenderCubemap::Execute(IRenderDeviceCtx& deviceCtx)
 {
 	if (mCubemap == nullptr)
 	{
 		return;
 	}
-	auto context = renderCtx.DeviceCtx();
-	renderCtx.DeviceCtx()->SetDepthStencilMode(mMode == EFlatRenderMode::BACK ? EDepthMode::Less : EDepthMode::Disabled);
-	renderCtx.DeviceCtx()->SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
+	auto context = &deviceCtx;
+	deviceCtx.SetDepthStencilMode(mMode == EFlatRenderMode::BACK ? EDepthMode::Less : EDepthMode::Disabled);
+	deviceCtx.SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
 //	renderCtx.DeviceCtx()->DrawCubemap(mCubemap);
 	std::shared_ptr<void> dummy;
 	DeviceTextureRef	  sp(dummy, mCubemap);

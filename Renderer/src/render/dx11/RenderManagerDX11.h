@@ -1,6 +1,7 @@
 #pragma once
 #include "ImageRenderMgrDX11.h"
 #include "render/dx12/DX12RHI.h"
+#include "render/RenderController.h"
 
 namespace rnd
 {
@@ -31,18 +32,7 @@ public:
 //		m_hardwareRenderer->DrawControls();
 	}
 
-	void OnRenderStart() override {
-		Super::OnRenderStart();
-		m_Camera.Tick(m_FrameTime);
-		m_HwTimer.Reset();
-		mScene.DataInterface().FlipBuffer_MainThread();
-		m_hardwareRenderer->Render(mScene);
-		m_HwFrame = m_HwTimer.ElapsedMillis();
-		if (dx12Win)
-		{
-			dx12Win->Tick();
-		}
-	}
+	void OnRenderStart() override;
 
 	void Resize(u32 width, u32 height)
 	{

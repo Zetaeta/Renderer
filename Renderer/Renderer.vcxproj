@@ -233,9 +233,11 @@
     <ClInclude Include="src\render\dx12\DX12DescriptorAllocator.h" />
     <ClInclude Include="src\render\dx12\DX12DescriptorHeap.h" />
     <ClInclude Include="src\render\dx12\DX12DescriptorTableAllocator.h" />
+    <ClInclude Include="src\render\dx12\DX12ReadbackBuffer.h" />
     <ClInclude Include="src\render\dx12\DX12RHI.h" />
     <ClInclude Include="src\render\dx12\DX12RootSignature.h" />
     <ClInclude Include="src\render\dx12\DX12ShaderCompiler.h" />
+    <ClInclude Include="src\render\dx12\DX12SwapChain.h" />
     <ClInclude Include="src\render\dx12\DX12SyncPoint.h" />
     <ClInclude Include="src\render\dx12\DX12Texture.h" />
     <ClInclude Include="src\render\dx12\DX12Upload.h" />
@@ -265,6 +267,7 @@
     <ClInclude Include="src\render\RenderDevice.h" />
     <ClInclude Include="src\render\RenderDeviceCtx.h" />
     <ClInclude Include="src\render\RenderGraph.h" />
+    <ClInclude Include="src\render\RenderingThread.h" />
     <ClInclude Include="src\render\RenderMaterial.h" />
     <ClInclude Include="src\render\RenderPass.h" />
     <ClInclude Include="src\render\RenderResourceManager.h" />
@@ -307,6 +310,7 @@
     <ClInclude Include="src\scene\Scene.h" />
     <ClInclude Include="src\scene\SceneComponent.h" />
     <ClInclude Include="src\scene\SceneObject.h" />
+    <ClInclude Include="src\thread\CommandPipe.h" />
     <ClInclude Include="src\thread\MPSCMessageQueue.h" />
     <ClInclude Include="src\thread\RWLock.h" />
     <ClInclude Include="src\thread\ThreadUtils.h" />
@@ -421,6 +425,7 @@
     <ClCompile Include="src\render\BasicMeshes.cpp" />
     <ClCompile Include="src\render\ConstantBuffer.cpp" />
     <ClCompile Include="src\render\DataLayout.cpp" />
+    <ClCompile Include="src\render\DeviceResource.cpp" />
     <ClCompile Include="src\render\DeviceTexture.cpp" />
     <ClCompile Include="src\render\dx11\DX11ConstantBuffer.cpp" />
     <ClCompile Include="src\render\dx11\DX11Device.cpp" />
@@ -436,6 +441,7 @@
     <ClCompile Include="src\render\dx12\DX12DescriptorTableAllocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12RootSignature.cpp" />
     <ClCompile Include="src\render\dx12\DX12ShaderCompiler.cpp" />
+    <ClCompile Include="src\render\dx12\DX12SwapChain.cpp" />
     <ClCompile Include="src\render\dx12\DX12SyncPoint.cpp" />
     <ClCompile Include="src\render\dx12\DX12Texture.cpp" />
     <ClCompile Include="src\render\dx12\DX12Upload.cpp" />
@@ -443,6 +449,7 @@
     <ClCompile Include="src\render\dx12\DX12RHI.cpp" />
     <ClCompile Include="src\render\dx12\DX12Window.cpp" />
     <ClCompile Include="src\render\dx12\FrameIndexedRingBuffer.cpp" />
+    <ClCompile Include="src\render\dx12\SharedD3D12.cpp" />
     <ClCompile Include="src\render\dxcommon\DXGIUtils.cpp" />
     <ClCompile Include="src\render\dxcommon\DXShaderCompiler.cpp" />
     <ClCompile Include="src\render\ForwardRenderPass.cpp" />
@@ -457,6 +464,7 @@
     <ClCompile Include="src\render\RenderCubemap.cpp" />
     <ClCompile Include="src\render\RenderDevice.cpp" />
     <ClCompile Include="src\render\RenderGraph.cpp" />
+    <ClCompile Include="src\render\RenderingThread.cpp" />
     <ClCompile Include="src\render\RenderMaterial.cpp" />
     <ClCompile Include="src\render\RenderPass.cpp" />
     <ClCompile Include="src\render\RenderResourceManager.cpp" />

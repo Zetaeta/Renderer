@@ -8,7 +8,7 @@ class WavyEffectPPPass : public PostProcessPass
 {
 public:
 	WavyEffectPPPass(RenderContext* rCtx, RGRenderTargetRef dest, RGShaderResources&& resources);
-	virtual void Execute(RenderContext& renderCtx) override;
+	virtual void Execute(IRenderDeviceCtx& deviceCtx) override;
 
 	PooledCBHandle mCB;
 };

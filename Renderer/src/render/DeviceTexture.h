@@ -18,11 +18,6 @@ enum class ETextureDimension : u8
 	TEX_CUBE
 };
 
-struct DeviceChildDesc
-{
-	String DebugName;
-};
-
 struct DepthStencilDesc : DeviceChildDesc
 {
 	ETextureDimension Dimension = ETextureDimension::TEX_2D;
@@ -137,11 +132,6 @@ enum ETextureFlags
 FLAG_ENUM(ETextureFlags);
 
 //constexpr ETextureFlags TF_DEPTH_STENCIL = TF_DEPTH | TF_Stencil;
-
-struct DeviceResourceDesc : public DeviceChildDesc
-{
-	EResourceType ResourceType;
-};
 
 
 struct DeviceTextureDesc : public DeviceResourceDesc

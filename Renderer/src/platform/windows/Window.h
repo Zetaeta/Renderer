@@ -14,6 +14,7 @@ public:
 	virtual void Tick();
 
 	virtual void Resize_WndProc(u32 resizeWidth, u32 resizeHeight);
+	virtual void Move_WndProc(int posX, int posY) {}
 	virtual void OnDestroy_WndProc();
 protected:
 	HWND mHwnd = (HWND) 0;

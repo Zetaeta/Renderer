@@ -36,6 +36,7 @@ static ComPtr<ID3D11Device>		   g_pd3dDevice = nullptr;
 static ID3D11DeviceContext*	   g_pContext = nullptr;
 static IDXGISwapChain*		   g_pSwapChain = nullptr;
 static UINT					   g_ResizeWidth = 0, g_ResizeHeight = 0;
+static INT					   g_WindowPosX = 0, g_WindowPosY = 0;
 static UINT					   g_CurrWidth = 0, g_CurrHeight = 0;
 static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
 
@@ -341,6 +342,7 @@ int MainDX11(int argc, char** argv)
 		//g_pContext->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
 		if (g_CurrHeight && g_CurrWidth) {
+			renderMgr.m_hardwareRenderer->GetViewport()->UpdatePos({g_WindowPosX, g_WindowPosY});
 			static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
 			// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
@@ -619,6 +621,10 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			g_ResizeWidth = (UINT)LOWORD(lParam); // Queue resize
 			g_ResizeHeight = (UINT)HIWORD(lParam);
 			return 0;
+		case WM_MOVE:
+			g_WindowPosX = (INT)(short)LOWORD(lParam); // Queue resize
+			g_WindowPosY = (INT)(short)HIWORD(lParam);
+			break;
 		case WM_SYSCOMMAND:
 			if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
 				return 0;

@@ -14,7 +14,7 @@ class DX12UploadBuffer : FrameIndexedRingBuffer
 {
 public:
 	DX12UploadBuffer() = default;
-	DX12UploadBuffer(size_t startSize);
+	DX12UploadBuffer(size_t startSize, D3D12_HEAP_TYPE type = D3D12_HEAP_TYPE_UPLOAD);
 	~DX12UploadBuffer();
 	RCOPY_PROTECT(DX12UploadBuffer);
 	RMOVE_DEFAULT(DX12UploadBuffer);
@@ -52,15 +52,8 @@ protected:
 //	bool TryReserve(u64 size, u64 alignment, u64& outStart);
 	ComPtr<ID3D12Resource> mUploadHeap;
 
-	//struct FrameWindow
-	//{
-	//	u64 Frame;
-	//	u64 Start;
-	//	u64 End;
-	//};
-	//std::queue<FrameWindow> mFrames;
-	//u64 mSize = 0;
 	u8* mHeapData = nullptr;
+	D3D12_HEAP_TYPE mType = D3D12_HEAP_TYPE_UPLOAD;
 };
 
 }

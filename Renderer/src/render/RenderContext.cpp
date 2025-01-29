@@ -179,7 +179,7 @@ void RenderContext::SetupPostProcess()
 	{
 		if (pass->IsEnabled())
 		{
-			pass->ExecuteWithProfiling(*this);
+			pass->ExecuteWithProfiling(*mDeviceCtx);
 		}
 	}
 
@@ -232,7 +232,7 @@ void RenderContext::Postprocessing()
 	{
 		if (pass->IsEnabled())
 		{
-			pass->ExecuteWithProfiling(*this);
+			pass->ExecuteWithProfiling(*mDeviceCtx);
 		}
 	}
 

@@ -117,3 +117,10 @@ T* Find(Range& range, T const& value)
 	}
 	return nullptr;
 }
+
+template<typename Range, typename SizeType>
+void RemoveSwapIndex(Range& range, SizeType index)
+{
+	std::swap(range.back(), range[index]);
+	range.erase(range.end() - 1);
+}

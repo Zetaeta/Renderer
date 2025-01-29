@@ -22,6 +22,13 @@ static LRESULT WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 		break;
+	case WM_MOVE:
+		if (auto it = sHwndToWindow.find(hWnd); it != sHwndToWindow.end())
+		{
+			it->second->Move_WndProc((int) LOWORD(lParam), (int) HIWORD(lParam));
+			return 0;
+		}
+		break;
 	case WM_DESTROY:
 		if (auto it = sHwndToWindow.find(hWnd); it != sHwndToWindow.end())
 		{

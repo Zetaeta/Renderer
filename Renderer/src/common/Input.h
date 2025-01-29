@@ -32,6 +32,9 @@ public:
 	virtual bool IsKeyDown(Key key) = 0;
 	virtual vec2 GetMousePosition() = 0;
 	virtual vec2 GetWindowMousePos(){ return GetMousePosition(); };
+	virtual ivec2 GetAbsoluteMousePos() = 0;
 	virtual bool IsMouseDown(MouseButton mb) = 0;
 	virtual void SetCursorMode(CursorMode mm) = 0;
+
+	virtual bool IsAnyWindowFocused() const = 0;
 };

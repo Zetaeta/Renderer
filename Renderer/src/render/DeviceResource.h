@@ -25,6 +25,8 @@ struct MappedResource
 	void* Data;
 	u32 RowPitch;
 	u32 DepthPitch;
+	u32 Handle;
+	std::function<void()> Release;
 };
 
 using ShaderResourceId = u64;
@@ -60,6 +62,16 @@ enum class EResourceType : u8
 	VertexBuffer = 0x20
 };
 
+struct DeviceChildDesc
+{
+	String DebugName;
+};
+
+struct DeviceResourceDesc : public DeviceChildDesc
+{
+	EResourceType ResourceType;
+};
+
 class IDeviceResource
 {
 public:
@@ -67,12 +79,17 @@ public:
 	virtual MappedResource Map(u32 subResource, ECpuAccessFlags flags) = 0;
 	virtual void		   Unmap(u32 subResource) = 0;
 
+	EResourceType GetResourceType();
+
 	virtual CopyableMemory<8> GetShaderResource(ShaderResourceId id = 0) = 0;
 	template <typename T>
 	T GetShaderResource(ShaderResourceId id = 0)
 	{
 		return GetShaderResource(id).As<T>();
 	}
+
+	// eg ID3D12Resource*, ID3D11Texture*
+	virtual OpaqueData<8> GetRHIResource() const = 0;
 
 	virtual OpaqueData<8> GetUAV(UavId id = {}) = 0;
 	template <typename T>

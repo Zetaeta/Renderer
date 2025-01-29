@@ -23,6 +23,15 @@ public:
 	class ScreenObject* GetObjectAt(ivec2 pos);
 
 	void Resize(u32 width, u32 height, rnd::IDeviceTexture::Ref backbuffer);
+	void UpdatePos(ivec2 pos)
+	{
+		mPos = pos;
+	}
+
+	uvec2 GetPos() const
+	{
+		return mPos;
+	}
 
 	void SetBackbuffer(rnd::IDeviceTexture::Ref backbuffer);
 
@@ -30,6 +39,8 @@ public:
 	void SetScene(Scene* scene);
 
 	void Draw();
+
+	void OnClick(ivec2 position);
 
 	rnd::RenderContext* GetRenderContext()
 	{
@@ -58,17 +69,23 @@ public:
 		return mRScene;
 	}
 
+	ivec2 GetSize()
+	{
+		return {mWidth, mHeight};
+	}
+
 
 public:
 	u32 mWidth = 0;
 	u32 mHeight = 0;
+	uvec2 mPos {0};
 	OwningPtr<rnd::RenderContext> mRCtx = nullptr;
 	Camera* mCamera = nullptr;
 	Scene* mScene = nullptr;
 	rnd::RendererScene* mRScene = nullptr;
 	rnd::IRenderDeviceCtx* mDeviceCtx = nullptr;
 #if HIT_TESTING
-	rnd::DeviceTextureRef mScreenIdTex;
+//	rnd::DeviceTextureRef mScreenIdTex;
 #endif
 };
  

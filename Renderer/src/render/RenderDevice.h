@@ -14,6 +14,7 @@
 
 struct CompoundMesh;
 class Viewport;
+namespace rnd { class RenderingThread; }
 
 namespace rnd { class ShaderManager; }
 
@@ -104,6 +105,9 @@ public:
 
 	virtual SamplerHandle GetSampler(SamplerDesc const& desc) = 0;
 
+	// returns false if an immediate context could not be created for any reason
+	virtual bool GetImmediateContext(std::function<void(IRenderDeviceCtx&)> callback) = 0;
+
 	void Teardown()
 	{
 		MatMgr.Release();
@@ -126,12 +130,15 @@ public:
 	}
 
 
+	virtual void ExecuteCommand(std::function<void(IRenderDeviceCtx&)>&& command, char const* name) = 0;
+
 	ShaderManager ShaderMgr;
 
 	BasicMeshFactory BasicMeshes;
 	BasicTextureMgr BasicTextures;
 	MaterialManager MatMgr;
 	RenderResourceMgr ResourceMgr;
+	RenderingThread* MainThread = nullptr;
 
 	void AddViewport(Viewport* viewport)
 	{

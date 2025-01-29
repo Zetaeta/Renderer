@@ -11,7 +11,7 @@ class SSAOPass : public RenderPass
 public:
 	SSAOPass(RenderContext* rCtx, RGShaderResources&& srvs, RGUnorderedAccessViews&& uavs);
 	~SSAOPass();
-	void Execute(RenderContext& renderCtx) override;
+	void Execute(IRenderDeviceCtx& deviceCtx) override;
 	void Build(RGBuilder& builder) override;
 
 	void AddControls() override;

@@ -86,11 +86,12 @@ SSAOPass::~SSAOPass()
 {
 }
 
-void SSAOPass::Execute(RenderContext& renderCtx)
+void SSAOPass::Execute(IRenderDeviceCtx& deviceCtx)
 {
 //	Rerandomize();
 
-	IRenderDeviceCtx* context = renderCtx.DeviceCtx();
+	IRenderDeviceCtx* context = &deviceCtx;
+	auto& renderCtx = *mRCtx;
 	context->ClearResourceBindings();
 	bool doPixelDebug = mDebugPixel && renderCtx.Settings.EnablePixelDebug;
 	UnorderedAccessView uavs[] = {mAOTextureUav, doPixelDebug ? renderCtx.GetPixelDebugUav() : UnorderedAccessView{}};
@@ -124,7 +125,7 @@ void SSAOPass::Execute(RenderContext& renderCtx)
 		const ComputeDispatch threadGroups = {DivideRoundUp(cb.screenSize.x, numThreads.x), DivideRoundUp(cb.screenSize.y, numThreads.y), 1};
 		{
 			ScopedCBClaim ssaoCB(mRCtx->GetCBPool(), cb);
-			renderCtx.DeviceCtx()->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(ssaoCB));
+			context->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(ssaoCB));
 			context->SetComputeShader(doPixelDebug ? mDebugShader : mShader);
 
 			context->DispatchCompute(threadGroups);
@@ -142,7 +143,7 @@ void SSAOPass::Execute(RenderContext& renderCtx)
 			blurData.direction = {0, 1};
 			{
 				ScopedCBClaim blurCB1(renderCtx.GetCBPool(), blurData);
-				renderCtx.DeviceCtx()->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(blurCB1));
+				context->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(blurCB1));
 				context->DispatchCompute(threadGroups);
 			}
 //			mCB = renderCtx.GetCBPool()->AcquireConstantBuffer(ECBLifetime::Dynamic, blurData);
@@ -153,7 +154,7 @@ void SSAOPass::Execute(RenderContext& renderCtx)
 			blurData.direction = {1, 0};
 			{
 				ScopedCBClaim blurCB(renderCtx.GetCBPool(), blurData);
-				renderCtx.DeviceCtx()->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(blurCB));
+				context->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(blurCB));
 				context->DispatchCompute(threadGroups);
 			}
 

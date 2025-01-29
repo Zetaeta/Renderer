@@ -10,7 +10,7 @@ class HighlightSelectedPass : public RenderPass
 public:
 	HighlightSelectedPass(RenderContext* rCtx)
 		: RenderPass(rCtx) {}
-	void Execute(RenderContext& renderCtx) override;
+	void Execute(IRenderDeviceCtx& deviceCtx) override;
 	void DrawPrimitive(const PrimitiveComponent* primComp);
 };
 

@@ -12,7 +12,6 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 	: DX11TextureBase(ctx, desc)
 {
 	
-	ComPtr<ID3D11Texture2D> cubeTex;
 
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	u32			faceWidth = static_cast<u32>(desc.Width);
@@ -46,9 +45,9 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 		srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 	}
 
-	HR_ERR_CHECK(ctx.pDevice->CreateTexture2D(&texDesc, initData, &cubeTex));
-	SetResourceName(cubeTex, desc.DebugName);
-	HR_ERR_CHECK(ctx.pDevice->CreateShaderResourceView(cubeTex.Get(), &srvDesc, &srv));
+	HR_ERR_CHECK(ctx.pDevice->CreateTexture2D(&texDesc, initData, &mTexture));
+	SetResourceName(mTexture, desc.DebugName);
+	HR_ERR_CHECK(ctx.pDevice->CreateShaderResourceView(mTexture.Get(), &srvDesc, &srv));
 	SetResourceName(srv, desc.DebugName);
 	if (desc.Flags & TF_DEPTH)
 	{
@@ -66,7 +65,7 @@ DX11Cubemap::DX11Cubemap(DX11Ctx& ctx, DeviceTextureDesc const& desc, D3D11_SUBR
 			dsvDesc.Texture2DArray.FirstArraySlice = i;
 			dsvDesc.Texture2DArray.ArraySize = 1;
 			dsvDesc.Texture2DArray.MipSlice = 0;
-			HR_ERR_CHECK(ctx.pDevice->CreateDepthStencilView(cubeTex.Get(), &dsvDesc, &dsv));
+			HR_ERR_CHECK(ctx.pDevice->CreateDepthStencilView(mTexture.Get(), &dsvDesc, &dsv));
 			mDepthStencil->DepthStencils.emplace_back(std::move(dsv));
 		}
 	}
@@ -93,7 +92,6 @@ DX11Cubemap DX11Cubemap::FoldUp(DX11Ctx& ctx, TextureRef tex)
 	constexpr u32 const startPos[6] = {
 		6, 4, 1, 9, 5, 7
 	};
-	ComPtr<ID3D11Texture2D> cubeTex;
 
 	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	u32			faceWidth = static_cast<u32>(tex->width / 4);
@@ -126,8 +124,8 @@ DX11Cubemap DX11Cubemap::FoldUp(DX11Ctx& ctx, TextureRef tex)
 		sData[i].SysMemPitch = u32(tex->width) * sizeof(u32);
 		sData[i].SysMemSlicePitch = 0;
 	}
-	HR_ERR_CHECK(device->CreateTexture2D(&texDesc, &sData[0], &cubeTex));
-	HR_ERR_CHECK(device->CreateShaderResourceView(cubeTex.Get(), &srvDesc, &res.srv));
+	HR_ERR_CHECK(device->CreateTexture2D(&texDesc, &sData[0], &res.mTexture));
+	HR_ERR_CHECK(device->CreateShaderResourceView(res.mTexture.Get(), &srvDesc, &res.srv));
 
 	return res;
 }

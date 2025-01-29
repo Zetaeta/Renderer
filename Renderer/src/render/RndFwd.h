@@ -7,14 +7,19 @@ using MaterialID = int;
 namespace rnd
 {
 class IDeviceTexture;
+class IDeviceMesh;
+class IRenderDevice;
+class IRenderDeviceCtx;
+class IConstantBuffer;
+class GPUSyncPoint;
 
 using DeviceTextureRef = std::shared_ptr<IDeviceTexture>;
 
-class IDeviceMesh;
 
 using DeviceMeshRef = RefPtr<IDeviceMesh>;
 
 using VertAttDescHandle = s64;
+
 
 }
 

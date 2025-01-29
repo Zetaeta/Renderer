@@ -479,6 +479,10 @@
     <ClInclude Include="src\3rd\imgui\imstb_truetype.h" />
     <ClInclude Include="src\3rd\imgui\misc\cpp\imgui_stdlib.h" />
     <ClInclude Include="src\render\dx12\DX12CommandAllocatorPool.h" />
+    <ClInclude Include="src\thread\CommandPipe.h" />
+    <ClInclude Include="src\render\RenderingThread.h" />
+    <ClInclude Include="src\render\dx12\DX12ReadbackBuffer.h" />
+    <ClInclude Include="src\render\dx12\DX12SwapChain.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -746,6 +750,10 @@
     <ClCompile Include="src\3rd\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\3rd\imgui\misc\cpp\imgui_stdlib.cpp" />
     <ClCompile Include="src\render\dx12\DX12CommandAllocatorPool.cpp" />
+    <ClCompile Include="src\render\RenderingThread.cpp" />
+    <ClCompile Include="src\render\dx12\SharedD3D12.cpp" />
+    <ClCompile Include="src\render\DeviceResource.cpp" />
+    <ClCompile Include="src\render\dx12\DX12SwapChain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

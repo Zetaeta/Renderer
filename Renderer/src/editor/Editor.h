@@ -43,6 +43,9 @@ public:
 
 	static void Destroy();
 
+	static void RegisterViewpoert(Viewport* vp);
+	static void UnegisterViewpoert(Viewport* vp);
+
 	void SelectComponent(class SceneComponent* Component);
 
 	void ClickComponent(class SceneComponent* Component);
@@ -61,12 +64,12 @@ public:
 
 	void SelectObject(const SceneObject* Obj);
 
+	static Vector<Viewport*> mViewports;
 private:
 	bool mWasRightMouseDown = false;
 	bool mWasMouseDown = false;
 	Input* mInput;
 
-	Vector<Viewport*> mViewports;
 	Scene* mScene = nullptr;
 	rnd::IDeviceTexture::Ref mScreenIdTex;
 

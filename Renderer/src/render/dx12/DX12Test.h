@@ -102,12 +102,12 @@ void DX12Test::Render(ID3D12GraphicsCommandList_& cmdList)
 	auto cbHandle = GetRHI().GetCBPool().AcquireConstantBuffer(ECBLifetime::Dynamic, cbData);
 	cmdList.SetGraphicsRootSignature(mRootSig.Get());
 	cmdList.SetGraphicsRootConstantBufferView(mRootSig.RootCBVIndices[EShaderType::Pixel], cbHandle.UserData.As<D3D12_GPU_VIRTUAL_ADDRESS>());
-	DX12Context context{&cmdList};
-	context.SetGraphicsRootSignature(mRootSig);
-	context.SetShaderResources(EShaderType::Pixel, Single<const ResourceView>(ResourceView(mTexture)));
-	cmdList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	cmdList.IASetVertexBuffers(0, 1, &static_cast<DX12DirectMesh*>(mMesh.Get())->View);
-	cmdList.DrawInstanced(3, 1, 0, 0);
+	//DX12Context context{&cmdList};
+	//context.SetGraphicsRootSignature(mRootSig);
+	//context.SetShaderResources(EShaderType::Pixel, Single<const ResourceView>(ResourceView(mTexture)));
+	//cmdList.IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//cmdList.IASetVertexBuffers(0, 1, &static_cast<DX12DirectMesh*>(mMesh.Get())->View);
+	//cmdList.DrawInstanced(3, 1, 0, 0);
 
 //	commandList->RSSet
 }

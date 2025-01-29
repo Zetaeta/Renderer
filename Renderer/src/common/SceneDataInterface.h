@@ -19,6 +19,7 @@ constexpr PrimitiveId InvalidPrimId()
 }
 
 
+
 /**
  * 
  */
@@ -26,6 +27,11 @@ class SceneDataInterface
 {
 public:
 	SceneDataInterface();
+	~SceneDataInterface();
+	SceneDataInterface& operator=(SceneDataInterface&& other) = default;
+	SceneDataInterface(SceneDataInterface&& other) = default;
+
+	static Span<SceneDataInterface*> GetAll();
 	/**
 	 * 1 = rendering on main thread.
 	 * Assuming separate render thread(s), 2 buffers means the main and render thread have to synchronize

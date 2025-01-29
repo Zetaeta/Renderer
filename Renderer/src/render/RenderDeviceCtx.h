@@ -10,9 +10,6 @@
 
 
 struct MeshPart;
-class GPUSyncPoint;
-namespace rnd { class IConstantBuffer; }
-namespace rnd { class IRenderDevice; }
 
 enum class EShadingLayer : u8;
 
@@ -131,6 +128,9 @@ public:
 	virtual void			 SetConstantBuffers(EShaderType shaderType, Span<IConstantBuffer* const> buffers) = 0;
 	virtual void			 SetConstantBuffers(EShaderType shaderType, std::span<CBHandle const>) = 0;
 
+	virtual MappedResource Readback(DeviceResourceRef resource, u32 subresource, _Out_opt_ RefPtr<GPUSyncPoint>* completionSyncPoint) = 0;
+//	void				   ReleaseReadback(MappedResource resource) = 0;
+
 	virtual void	 UpdateConstantBuffer(CBHandle handle, std::span<const byte> data) = 0;
 	template<typename T>
 	void UpdateConstantBuffer(CBHandle handle, T const& data)
@@ -148,7 +148,8 @@ public:
 	virtual void SetUAVs(EShaderType shader, Span<UnorderedAccessView const> uavs, u32 startIdx = 0) = 0;
 	virtual void UnbindUAVs(EShaderType shader, u32 clearNum, u32 startIdx = 0) = 0;
 	virtual void SetSamplers(EShaderType shader, Span<SamplerHandle const> samplers, u32 startSlot = 0) = 0;
-	virtual void Wait(OwningPtr<GPUSyncPoint>&& syncPoint) = 0;
+	virtual void Wait(GPUSyncPoint* syncPoint) = 0;
+	virtual void ExecuteCommands() {}
 
 #if PROFILING
 	virtual GPUTimer* CreateTimer(const wchar_t* Name) = 0;

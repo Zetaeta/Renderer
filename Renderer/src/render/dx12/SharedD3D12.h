@@ -5,6 +5,7 @@
 #include "core/Maths.h"
 #include "core/WinUtils.h"
 #include "render/dxcommon/SharedD3D.h"
+#include "render/DeviceResource.h"
 
 using ID3D12Device_ = ID3D12Device6;
 using ID3D12GraphicsCommandList_ = ID3D12GraphicsCommandList4;
@@ -23,6 +24,8 @@ constexpr bool IsValid(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
 {
 	return cpuHandle.ptr != 0;
 }
+
+ID3D12Resource_* GetD3D12Resource(IDeviceResource* resource);
 
 }
 

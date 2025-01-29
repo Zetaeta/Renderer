@@ -52,6 +52,18 @@ struct DX12CommandList
 	void							   Reset(ID3D12PipelineState* pso);
 	ComPtr<ID3D12CommandAllocator> Allocator;
 	D3D12_COMMAND_LIST_TYPE Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	ID3D12GraphicsCommandList_* Get() const
+	{
+		return CmdList.Get();
+	}
+	operator ID3D12GraphicsCommandList_* () const
+	{
+		return CmdList.Get();
+	}
+	ID3D12GraphicsCommandList_* operator->() const
+	{
+		return CmdList.Get();
+	}
 };
 struct DX12DirectMesh : public IDeviceMesh
 {
@@ -69,6 +81,12 @@ struct DX12IndexedMesh : public IDeviceIndexedMesh
 	D3D12_INDEX_BUFFER_VIEW IndBuffView;
 };
 
+struct DX12ReadbackBuffer
+{
+	ComPtr<ID3D12Resource_> Resource;
+	u64 Offset;
+};
+
 class DX12RHI : public wnd::Window, public IRenderDevice
 {
 public:
@@ -78,6 +96,7 @@ public:
 	DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers, Scene* scene = nullptr, Camera::Ref camera = nullptr);
 	~DX12RHI();
 
+	void BeginFrame() override;
 	void Tick() override;
 
 	u64 GetCompletedFrame() const;
@@ -112,6 +131,7 @@ public:
 		return mCBPool;
 	}
 
+	void ExecuteCommand(std::function<void(IRenderDeviceCtx & )>&& command, char const* name) override;
 
 	DX12CommandQueues& CmdQueues()
 	{
@@ -128,6 +148,9 @@ public:
 	{
 		return mSimpleAllocator.get();
 	}
+
+	DX12ReadbackBuffer AllocateReadback(u64 size);
+	void			   FreeReadback(DX12ReadbackBuffer& buffer);
 
 	bool ShouldDirectUpload(EResourceType resourceType, u64 size = (u64) -1);
 
@@ -191,7 +214,12 @@ public:
 
 	DX12CommandAllocatorPool* GetCommandAllocatorPool(D3D12_COMMAND_LIST_TYPE type);
 
-	void GenerateMips(ID3D12GraphicsCommandList_* cmdList, DX12TextureRef texture);
+	void GenerateMips(DX12CommandList& cmdList, DX12TextureRef texture);
+
+	bool GetImmediateContext(std::function<void(IRenderDeviceCtx&)> callback);
+
+	ID3D12PipelineState* GetDefaultPSO();
+
 
 private:
 	void WaitFence(u64 value);
@@ -201,6 +229,7 @@ private:
 	void WaitAndReleaseFrame(u64 frame);
 	void EndFrame();
 	void Resize_WndProc(u32 resizeWidth, u32 resizeHeight) override;
+	void Move_WndProc(int resizeWidth, int resizeHeight) override;
 	void OnDestroy_WndProc() override;
 
 	void CreateDeviceAndCmdQueue();
@@ -221,6 +250,7 @@ private:
 	std::array<u64, MaxSwapchainBufferCount> mFenceValues = {0,0,0};
 	OwningPtr<DX12Test> mTest;
 	OwningPtr<DX12Allocator> mSimpleAllocator;
+	OwningPtr<DX12Allocator> mReadbackAllocator;
 	OwningPtr<DX12UploadBuffer> mUploadBuffer;
 	OwningPtr<DX12DescriptorAllocator> mShaderResourceDescAlloc;
 	OwningPtr<DX12DescriptorAllocator> mRTVAlloc;

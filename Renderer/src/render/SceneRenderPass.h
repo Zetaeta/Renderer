@@ -44,7 +44,7 @@ public:
 
 	bool Accepts(SceneComponent const* sceneComp, MeshPart const* mesh) const;
 
-	virtual void Execute(RenderContext& renderCtx) override;
+	virtual void Execute(IRenderDeviceCtx& deviceCtx) override;
 	void RenderScene(RendererScene const& scene);
 
 	virtual void Accept(DrawData const& drawData);

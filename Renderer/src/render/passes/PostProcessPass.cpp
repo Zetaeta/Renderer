@@ -12,9 +12,9 @@ namespace rnd
 	 mVertexShader = rCtx->GetShader<PostProcessVS>();
  }
 
-void PostProcessPass::Execute(RenderContext& renderCtx)
+void PostProcessPass::Execute(IRenderDeviceCtx& deviceCtx)
 {
-	auto context = DeviceCtx();
+	auto context = &deviceCtx;
 	context->SetRTAndDS(mRenderTarget.ResolvedRT, nullptr);
 //	context->ClearRenderTarget(mRenderTarget, )
 	context->SetBlendMode(EBlendState::COL_OVERWRITE);

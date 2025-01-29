@@ -41,12 +41,11 @@ public:
 		return vec2(iv2.x, iv2.y);
 	}
 
-	bool IsMouseDown(MouseButton mb) override
-	{
-		return ImGui::IsMouseDown(mbs[(int)mb]);
-	}
+	bool IsMouseDown(MouseButton mb) override;
 
 	void GetCursorPosition(int* xpos, int* ypos);
+
+	ivec2 GetAbsoluteMousePos() override;
 
 	void SetCursorMode(CursorMode mm)
 	{
@@ -83,6 +82,8 @@ public:
 		ClientToScreen(m_Hwnd, (POINT*)&clipRect.right);
 		ClipCursor(&clipRect);
 	}
+
+	bool IsAnyWindowFocused() const override;
 
 
  vec2 GetWindowMousePos() override;
