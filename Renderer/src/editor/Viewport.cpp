@@ -7,8 +7,8 @@
 #include "Editor.h"
 
 
-Viewport::Viewport(rnd::IRenderDeviceCtx* rdc, Scene* scene, Camera::Ref camera)
-	: mScene(scene), mRScene(rnd::RendererScene::Get(*scene, rdc)), mCamera(camera), mDeviceCtx(rdc)
+Viewport::Viewport(rnd::IRenderDeviceCtx* rdc, Scene* scene, Camera::Ref camera, rnd::IDeviceSurface* parentSurface)
+	: mScene(scene), mRScene(rnd::RendererScene::Get(*scene, rdc)), mCamera(camera), mDeviceCtx(rdc), mSurface(parentSurface)
 {
 	rdc->Device->AddViewport(this);
 	if (auto ed = Editor::Get())
@@ -62,9 +62,9 @@ void Viewport::SetScene(Scene* scene)
 	mRScene = rnd::RendererScene::Get(*scene, mDeviceCtx);
 }
 
-void Viewport::Draw()
+void Viewport::Draw(rnd::IRenderDeviceCtx& ctx)
 {
-	mRCtx->RenderFrame();
+	mRCtx->RenderFrame(ctx);
 }
 
 void Viewport::OnClick(ivec2 position)
@@ -77,7 +77,7 @@ void Viewport::OnClick(ivec2 position)
 	desc.Format = ETextureFormat::R32_Uint;
 	desc.Width = mWidth;
 	desc.Height = mHeight;
-	auto screenIdTex = mRCtx->DeviceCtx()->Device->CreateTexture2D(desc);
+	auto				 screenIdTex = mRCtx->GetDevice()->CreateTexture2D(desc);
 	MappedResource mapped;
 	RefPtr<GPUSyncPoint> syncPt;
 	RenderCommand([&mapped, screenIdTex, this, &syncPt](IRenderDeviceCtx& ctx)
@@ -85,8 +85,8 @@ void Viewport::OnClick(ivec2 position)
 			mRCtx->RunSinglePass<rnd::RenderScreenIds>(ctx, "ScreenIds", mCamera, screenIdTex->GetRT());
 			mapped = ctx.Readback(screenIdTex, 0,&syncPt);
 		},
-		mRCtx->DeviceCtx()->Device);
-	FlushRenderCommands(mRCtx->DeviceCtx()->Device);
+		mRCtx->GetDevice());
+	FlushRenderCommands(mRCtx->GetDevice());
 
 	syncPt->Wait();
 

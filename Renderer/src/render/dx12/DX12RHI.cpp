@@ -162,8 +162,6 @@ void DX12RHI::Tick()
 			mViewport->mRScene = RendererScene::Get(*mScene, mContext.get());
 		}
 		mViewport->SetBackbuffer(mSwapchainBufferTextures[mBufferIndex]);
-		//GRenderController.BeginRenderFrame();
-		//GRenderController.EndRenderFrame();
 	}
 //	EndFrame();
 }
@@ -220,6 +218,10 @@ void DX12RHI::EndFrame()
 	mQueues.Direct->ExecuteCommandLists(1, &cmdList);
 	mCmdList.Reset(mTest->mPSO.Get());
 
+	for (auto const& swapChain : mSwapChains)
+	{
+		swapChain->Present();
+	}
 	HR_ERR_CHECK(mSwapChain->Present(1, 0));
 	mFenceValues[mFrameIndex] = mCurrentFrame;
 //	mCurrentFrame = mFenceValues[mFrameIndex];
@@ -260,6 +262,7 @@ void DX12RHI::ProcessDeferredRelease(u32 frameIndex)
 
 void DX12RHI::Resize_WndProc(u32 resizeWidth, u32 resizeHeight)
 {
+	Window::Resize_WndProc(resizeWidth, resizeHeight);
 	mResizeWidth = resizeWidth;
 	mResizeHeight = resizeHeight;
 }
@@ -286,12 +289,11 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 #endif
 
 
-	ComPtr<IDXGIFactory6> factory;
-	HR_ERR_CHECK(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
+	HR_ERR_CHECK(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&mFactory)));
 
 	ComPtr<IDXGIAdapter1> adapter;
 
-	for (u32 adapterIdx = 0; SUCCEEDED(factory->EnumAdapterByGpuPreference(adapterIdx, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter))); ++adapterIdx)
+	for (u32 adapterIdx = 0; SUCCEEDED(mFactory->EnumAdapterByGpuPreference(adapterIdx, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter))); ++adapterIdx)
 	{
 		DXGI_ADAPTER_DESC1 desc;
 		adapter->GetDesc1(&desc);
@@ -337,9 +339,9 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	ComPtr<IDXGISwapChain1> swapChain;
-	HR_ERR_CHECK(factory->CreateSwapChainForHwnd(mQueues.Direct, mHwnd, &swapChainDesc, nullptr, nullptr, &swapChain));
+	HR_ERR_CHECK(mFactory->CreateSwapChainForHwnd(mQueues.Direct, mHwnd, &swapChainDesc, nullptr, nullptr, &swapChain));
 	HR_ERR_CHECK(swapChain.As<IDXGISwapChain3>(&mSwapChain));
-	factory->MakeWindowAssociation(mHwnd, DXGI_MWA_NO_ALT_ENTER);
+	mFactory->MakeWindowAssociation(mHwnd, DXGI_MWA_NO_ALT_ENTER);
 
 	// Create command list + allocators
 	HR_ERR_CHECK(mDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&mCmdList.CmdList)));
@@ -818,6 +820,7 @@ ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc const& PSODesc)
 		desc.DSVFormat = PSODesc.DSVFormat;
 		desc.SampleDesc = PSODesc.SampleDesc;
 		desc.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT{});
+//		desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 		DXCALL(mDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
 	}
 
@@ -947,6 +950,7 @@ bool DX12RHI::GetImmediateContext(std::function<void(IRenderDeviceCtx&)> callbac
 
 void DX12RHI::Move_WndProc(int xPos, int yPos)
 {
+	Window::Move_WndProc(xPos, yPos);
 	mViewport->UpdatePos({xPos, yPos});
 }
 

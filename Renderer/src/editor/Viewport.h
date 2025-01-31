@@ -6,6 +6,7 @@
 #include <render/DeviceTexture.h>
 
 class Scene;
+namespace rnd { class IDeviceSurface; }
 namespace rnd { class RendererScene; }
 
 namespace rnd
@@ -17,7 +18,7 @@ class IRenderDeviceCtx;
 class Viewport
 {
 public:
-	Viewport(rnd::IRenderDeviceCtx* rdc, Scene* scene, Camera::Ref camera);
+	Viewport(rnd::IRenderDeviceCtx* rdc, Scene* scene, Camera::Ref camera, rnd::IDeviceSurface* parentSurface = nullptr);
 //	Viewport(Scene* scene, rnd::IRenderDeviceCtx* rdc, ivec2 size);
 	~Viewport();
 	class ScreenObject* GetObjectAt(ivec2 pos);
@@ -38,7 +39,7 @@ public:
 	void Reset();
 	void SetScene(Scene* scene);
 
-	void Draw();
+	void Draw(rnd::IRenderDeviceCtx& ctx);
 
 	void OnClick(ivec2 position);
 
@@ -84,6 +85,7 @@ public:
 	Scene* mScene = nullptr;
 	rnd::RendererScene* mRScene = nullptr;
 	rnd::IRenderDeviceCtx* mDeviceCtx = nullptr;
+	rnd::IDeviceSurface* mSurface = nullptr;
 #if HIT_TESTING
 //	rnd::DeviceTextureRef mScreenIdTex;
 #endif

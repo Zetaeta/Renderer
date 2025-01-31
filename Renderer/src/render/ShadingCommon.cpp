@@ -8,9 +8,9 @@ namespace rnd
 {
 
 
-void SetupShadingLayer(RenderContext* renderContext, EShadingLayer layer, u32 index)
+void SetupShadingLayer(RenderContext* renderContext, IRenderDeviceCtx& ctx, EShadingLayer layer, u32 index)
 {
-	IRenderDeviceCtx* deviceCtx = renderContext->DeviceCtx();
+	IRenderDeviceCtx* deviceCtx = &ctx;
 	RendererScene const& scene = renderContext->GetScene();
 	auto& PSPF = *deviceCtx->GetConstantBuffer(ECBFrequency::PS_PerFrame);
 

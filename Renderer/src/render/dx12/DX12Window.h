@@ -8,11 +8,10 @@ namespace rnd
 namespace dx12
 {
 
-class DX12Window : public wnd::Window, public IDeviceSurface
+class DX12Window : public wnd::Window
 {
 	DX12Window(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers);
 
-	void Present() override;
 
 };
 

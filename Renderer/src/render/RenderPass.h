@@ -59,6 +59,7 @@ public:
 protected:
 	String PassName;
 	RenderContext* mRCtx = nullptr;
+	IRenderDeviceCtx* mDeviceCtx = nullptr;
 	bool mEnabled = true;
 #if PROFILING
 	RefPtr<GPUTimer> mTimer;

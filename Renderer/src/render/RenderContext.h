@@ -118,7 +118,7 @@ public:
 
 	void SetupRenderTarget();
 	void SetupPasses();
-	void RenderFrame();
+	void RenderFrame(rnd::IRenderDeviceCtx& ctx);
 
 	void SetTarget(IDeviceTexture::Ref newTarget);
 
@@ -130,7 +130,7 @@ public:
 	void BuildGraph();
 	IDeviceTexture::Ref GetPrimaryRT();
 
-	void Postprocessing();
+	void Postprocessing(rnd::IRenderDeviceCtx& ctx);
 
 	template<typename T>
 	T const* GetShader(T::Permutation const& permutation = {})
@@ -155,6 +155,10 @@ public:
 	IRenderDeviceCtx* DeviceCtx() const
 	{
 		return mDeviceCtx;
+	}
+	IRenderDevice* GetDevice()
+	{
+		return mDevice;
 	}
 
 	MaterialManager* GetMaterialManager()
@@ -240,7 +244,7 @@ public:
 		return mPixDebugUav;
 	}
 
-	void ShowPixelDebug();
+	void ShowPixelDebug(rnd::IRenderDeviceCtx& ctx);
 
 	RenderTextureManager TextureManager;
 private:

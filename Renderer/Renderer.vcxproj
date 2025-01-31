@@ -223,6 +223,7 @@
     <ClInclude Include="src\render\dx11\DX11Device.h" />
     <ClInclude Include="src\render\dx11\DX11RenderTarget.h" />
     <ClInclude Include="src\render\dx11\DX11ShaderCompiler.h" />
+    <ClInclude Include="src\render\dx11\DX11Swapchain.h" />
     <ClInclude Include="src\render\dx11\DX11Timer.h" />
     <ClInclude Include="src\render\dx11\SharedD3D11.h" />
     <ClInclude Include="src\render\dx12\DX12Allocator.h" />
@@ -426,6 +427,7 @@
     <ClCompile Include="src\render\ConstantBuffer.cpp" />
     <ClCompile Include="src\render\DataLayout.cpp" />
     <ClCompile Include="src\render\DeviceResource.cpp" />
+    <ClCompile Include="src\render\DeviceSurface.cpp" />
     <ClCompile Include="src\render\DeviceTexture.cpp" />
     <ClCompile Include="src\render\dx11\DX11ConstantBuffer.cpp" />
     <ClCompile Include="src\render\dx11\DX11Device.cpp" />

@@ -1,6 +1,7 @@
 #include "Window.h"
 #include "unordered_map"
 #include "core/Utils.h"
+#include "render/DeviceSurface.h"
 namespace wnd
 {
 
@@ -71,7 +72,18 @@ void Window::Tick()
 
 void Window::Resize_WndProc(u32 resizeWidth, u32 resizeHeight)
 {
+	if (mSurface)
+	{
+		mSurface->RequestResize({resizeWidth, resizeHeight});
+	}
+}
 
+void Window::Move_WndProc(int posX, int posY)
+{
+	if (mSurface)
+	{
+		mSurface->OnMoved({posX, posY});
+	}
 }
 
 void Window::OnDestroy_WndProc()

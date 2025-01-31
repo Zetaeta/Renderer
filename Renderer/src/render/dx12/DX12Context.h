@@ -32,7 +32,7 @@ struct GraphicsPSODesc
 	VertexAttributeDesc::Handle VertexLayoutHdl;
 	u32 NumRTs = 0;
 	std::array<DXGI_FORMAT, 8> RTVFormats;
-	DXGI_FORMAT DSVFormat;
+	DXGI_FORMAT DSVFormat = DXGI_FORMAT_UNKNOWN;
 	DXGI_SAMPLE_DESC SampleDesc {1, 0};
 	EBlendState BlendState;
 	EDepthMode DepthMode;

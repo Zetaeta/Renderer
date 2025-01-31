@@ -483,6 +483,7 @@
     <ClInclude Include="src\render\RenderingThread.h" />
     <ClInclude Include="src\render\dx12\DX12ReadbackBuffer.h" />
     <ClInclude Include="src\render\dx12\DX12SwapChain.h" />
+    <ClInclude Include="src\render\dx11\DX11Swapchain.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -754,6 +755,7 @@
     <ClCompile Include="src\render\dx12\SharedD3D12.cpp" />
     <ClCompile Include="src\render\DeviceResource.cpp" />
     <ClCompile Include="src\render\dx12\DX12SwapChain.cpp" />
+    <ClCompile Include="src\render\DeviceSurface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

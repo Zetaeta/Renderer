@@ -168,29 +168,28 @@ void RenderContext::SetupPostProcess()
 }
 
 
- void RenderContext::RenderFrame()
+ void RenderContext::RenderFrame(rnd::IRenderDeviceCtx& ctx)
 {
 	SetupLightData();
 //	mDeviceCtx->ClearRenderTarget(mMainRT, { 0.45f, 0.55f, 0.60f, 1.00f });
-	mDeviceCtx->ClearRenderTarget(mMainRT, { 0.f, 0.f, 0.f, 0.00f });
-	mDeviceCtx->ClearDepthStencil(mMainDS, EDSClearMode::DEPTH_STENCIL, 1.f);
-	mDeviceCtx->ClearUAV(mPixDebugUav, vec4{0.f});
+	ctx.ClearRenderTarget(mMainRT, { 0.f, 0.f, 0.f, 0.00f });
+	ctx.ClearDepthStencil(mMainDS, EDSClearMode::DEPTH_STENCIL, 1.f);
+	ctx.ClearUAV(mPixDebugUav, vec4{0.f});
 	for (auto& pass : mPasses)
 	{
 		if (pass->IsEnabled())
 		{
-			pass->ExecuteWithProfiling(*mDeviceCtx);
+			pass->ExecuteWithProfiling(ctx);
 		}
 	}
 
-
 	if (mUseMSAA)
 	{
-		mDeviceCtx->ResolveMultisampled({ mPrimaryTarget }, {mMsaaTarget});
+		ctx.ResolveMultisampled({ mPrimaryTarget }, {mMsaaTarget});
 	}
 
-	Postprocessing();
-	mDeviceCtx->ClearResourceBindings();
+	Postprocessing(ctx);
+	ctx.ClearResourceBindings();
 }
 
  void RenderContext::SetTarget(IDeviceTexture::Ref newTarget)
@@ -226,28 +225,28 @@ rnd::IDeviceTexture::Ref RenderContext::GetPrimaryRT()
 	return mTarget;
 }
 
-void RenderContext::Postprocessing()
+void RenderContext::Postprocessing(rnd::IRenderDeviceCtx& ctx)
 {
 	for (auto& pass : mPPPasses)
 	{
 		if (pass->IsEnabled())
 		{
-			pass->ExecuteWithProfiling(*mDeviceCtx);
+			pass->ExecuteWithProfiling(ctx);
 		}
 	}
 
 	if (Settings.EnablePixelDebug)
 	{
-		ShowPixelDebug();
+		ShowPixelDebug(ctx);
 	}
 
 	if (static_cast<RGFlipFlop*>(mRGBuilder[mPingPongHandle])->IsOdd())
 	{
-		mDeviceCtx->Copy(mTarget, mPPTarget);
+		ctx.Copy(mTarget, mPPTarget);
 	}
 	else
 	{
-		mDeviceCtx->Copy(mTarget, mPrimaryTarget);
+		ctx.Copy(mTarget, mPrimaryTarget);
 	}
 }
 
@@ -545,24 +544,24 @@ IDepthStencil::Ref RenderContext::GetTempDepthStencilFor(IRenderTarget::Ref rt)
 	return tempDS;
 }
 
-void RenderContext::ShowPixelDebug()
+void RenderContext::ShowPixelDebug(rnd::IRenderDeviceCtx& ctx)
 {
-	mDeviceCtx->SetBlendMode(EBlendState::COL_OBSCURE_ALPHA | EBlendState::COL_BLEND_ALPHA | EBlendState::ALPHA_ADD);
-	mDeviceCtx->SetDepthMode(EDepthMode::Disabled);
+	ctx.SetBlendMode(EBlendState::COL_OBSCURE_ALPHA | EBlendState::COL_BLEND_ALPHA | EBlendState::ALPHA_ADD);
+	ctx.SetDepthMode(EDepthMode::Disabled);
 
 	PostProcessVS::Permutation perm;
 	perm.Set<PostProcessVS::UseUVs>(true);
 	static auto vs = GetShader<PostProcessVS>(perm);
 	static auto ps = GetShader<FlatPS>();
 
-	mDeviceCtx->SetPixelShader(ps);
-	mDeviceCtx->SetVertexShader(vs);
-	mDeviceCtx->SetShaderResources(EShaderType::Pixel, Single<ResourceView const>(mRGBuilder.GetSRV(mPixelDebugTex)));
+	ctx.SetPixelShader(ps);
+	ctx.SetVertexShader(vs);
+	ctx.SetShaderResources(EShaderType::Pixel, Single<ResourceView const>(mRGBuilder.GetSRV(mPixelDebugTex)));
 	auto tri = mDevice->BasicMeshes.GetFullScreenTri();
 	DeviceTextureRef lastRT, _;
 	mRGBuilder.GetFlipFlopState(mPingPongHandle, _, lastRT);
-	mDeviceCtx->SetRTAndDS(lastRT->GetRT(), IDepthStencil::Ref{});
-	mDeviceCtx->DrawMesh(tri);
+	ctx.SetRTAndDS(lastRT->GetRT(), IDepthStencil::Ref{});
+	ctx.DrawMesh(tri);
 }
 
 Camera::ConstRef LightRenderData::GetCamera() const

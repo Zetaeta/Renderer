@@ -175,6 +175,10 @@ public:
 
 
 	void DrawMesh(IDeviceMesh const* mesh) override;
+	IRenderDeviceCtx* GetPersistentCtx() override
+	{
+		return this;
+	}
 
  private:
 	template<typename TFunc>

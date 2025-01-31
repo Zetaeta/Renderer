@@ -91,7 +91,7 @@ void DeferredShadingPass::Execute(IRenderDeviceCtx& deviceCtx)
 
 	IConstantBuffer* cbs[2] = {deviceCtx.GetConstantBuffer(ECBFrequency::PS_PerFrame), cb};
 	{
-		SetupShadingLayer(mRCtx, EShadingLayer::BASE, 0);
+		SetupShadingLayer(mRCtx, *DeviceCtx(), EShadingLayer::BASE, 0);
 		context->SetShaderResources(EShaderType::Pixel, srvs);
 		context->SetPixelShader(mPixelShader[0]);
 		context->SetConstantBuffers(EShaderType::Pixel, cbs);
@@ -109,11 +109,11 @@ void DeferredShadingPass::Execute(IRenderDeviceCtx& deviceCtx)
 		{
 			for (int i = 0; i < mRCtx->GetLightData(lightType).size(); ++i)
 			{
-				SetupShadingLayer(mRCtx, layer, i);
+				SetupShadingLayer(mRCtx, *DeviceCtx(), layer, i);
 				LightRenderData const& lrd = mRCtx->GetLightData(GetLightFromLayer(layer), i);
 				srvs.back().Resource = lrd.mShadowMap;
 				context->SetShaderResources(EShaderType::Pixel, srvs);
-		context->SetConstantBuffers(EShaderType::Pixel, cbs);
+				context->SetConstantBuffers(EShaderType::Pixel, cbs);
 
 				context->DrawMesh(tri);
 			}

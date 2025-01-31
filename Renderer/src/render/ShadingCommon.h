@@ -69,6 +69,6 @@ struct PFPSSpotLight// : PerFramePSData
 	float metalnessMod = 0;
 };
 
-void SetupShadingLayer(RenderContext* renderContext, EShadingLayer lightType, u32 lightIdx);
+void SetupShadingLayer(RenderContext* renderContext, IRenderDeviceCtx& ctx, EShadingLayer lightType, u32 lightIdx);
 
 }

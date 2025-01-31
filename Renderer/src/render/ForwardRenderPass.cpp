@@ -32,7 +32,7 @@ void ForwardRenderPass::OnCollectFinished()
 			for (int i = 0; i < mRCtx->GetLightData(lightType).size(); ++i)
 			{
 				mLayer = layer;
-				SetupShadingLayer(mRCtx, layer, i);
+				SetupShadingLayer(mRCtx, *DeviceCtx(), layer, i);
 				ProcessBuffer();
 			}
 		}
@@ -43,7 +43,7 @@ void ForwardRenderPass::OnCollectFinished()
 void ForwardRenderPass::BeginRender()
 {
 	mLayer = EShadingLayer::BASE;
-	SetupShadingLayer(mRCtx, EShadingLayer::BASE, -1);
+	SetupShadingLayer(mRCtx, *DeviceCtx(), EShadingLayer::BASE, -1);
 	DeviceCtx()->SetDepthStencilMode(EDepthMode::Less, {EStencilMode::Disabled, 0});
 	Super::BeginRender();
 }

@@ -19,6 +19,9 @@
 #include "core/Hash.h"
 #include "DX12Context.h"
 #include "scene/Camera.h"
+#include "dxgi1_6.h"
+
+namespace rnd { namespace dx12 { class DX12SwapChain; } }
 
 namespace rnd { namespace dx12 { class DX12CommandAllocatorPool; } }
 
@@ -217,9 +220,17 @@ public:
 	void GenerateMips(DX12CommandList& cmdList, DX12TextureRef texture);
 
 	bool GetImmediateContext(std::function<void(IRenderDeviceCtx&)> callback);
+	IRenderDeviceCtx* GetPersistentCtx()
+	{
+		return mContext.get();
+	}
 
 	ID3D12PipelineState* GetDefaultPSO();
 
+	IDXGIFactory6* GetFactory() const
+	{
+		return mFactory.Get();
+	}
 
 private:
 	void WaitFence(u64 value);
@@ -278,6 +289,8 @@ private:
 	Scene* mScene = nullptr;
 
 	DX12CBPool mCBPool;
+	ComPtr<IDXGIFactory6> mFactory;
+	SmallVector<OwningPtr<DX12SwapChain>, 4> mSwapChains;
 };
 
 using DX12RHI = DX12RHI;

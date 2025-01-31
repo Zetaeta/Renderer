@@ -22,7 +22,10 @@ void IRenderDevice::RenderFrame()
 			scenes.push_back(rScene);
 			rScene->BeginFrame();
 		}
-		vp->Draw();
+		vp->Draw(*GetPersistentCtx());
+		//GetImmediateContext([vp](IRenderDeviceCtx& ctx) {
+		//	vp->Draw(ctx);
+		//});
 	}
 	for (RendererScene* rScene : scenes)
 	{

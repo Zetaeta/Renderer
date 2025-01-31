@@ -12,9 +12,4 @@ DX12Window::DX12Window(u32 width, u32 height, wchar_t const* name, ESwapchainBuf
 	}
 }
 
-void DX12Window::Present()
-{
-	throw std::logic_error("The method or operation is not implemented.");
-}
-
 }
