@@ -43,18 +43,6 @@ public:
 
 	void Render(const Scene& scene) override;
 
-	void LoadShaders(bool reload = false);
-
-	void PrepareBG();
-	void DrawCubemap(ID3D11ShaderResourceView* srv, bool depth = false);
-	void DrawCubemap(IDeviceTextureCube* cubemap);
-
-	//template<typename T>
-	//void CreateConstantBuffer(ComPtr<ID3D11Buffer>& buffer, T const& initialData = T {}, u32 size = sizeof(T));
-
-	//template<typename T>
-	//void WriteCBuffer(ComPtr<ID3D11Buffer>& buffer, T const& data);
-
 	void PrepareShadowMaps();
 
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size /* = 0 */) override;
@@ -66,8 +54,6 @@ public:
 	DX11ConstantBuffer& GetPerInstanceVSCB() { return m_VSPerInstanceBuff; }
 	
 	void DrawTexture(DX11Texture* tex, ivec2 pos = ivec2(0), ivec2 size = ivec2(-1));
-	void PrepareMesh(MeshPart const& mesh, DX11IndexedMesh& meshData);
-	void PrepareMaterial(MaterialID mid);
 	void SetBackbuffer(DX11Texture::Ref backBufferTex, u32 width, u32 height);
 
 	// Begin IRenderDeviceCtx overrides
@@ -147,15 +133,6 @@ public:
 	void				EndFrame() override;
 
 
-	//constexpr static u32 const MAT_PLAIN = 0;
-	//constexpr static u32 const MAT_TEX = 1;
-	//constexpr static u32 const MAT_BG = 2;
-	//constexpr static u32 const MAT_2D = 3;
-	//constexpr static u32 const MAT_POINT_SHADOW_DEPTH = 4;
-	//constexpr static u32 const MAT_COUNT = 5;
-
-	std::vector<std::unique_ptr<RenderMaterial>> m_Materials;
-
 	EnumArray<EShaderType, u32> mMaxShaderResources = {};
 	EnumArray<EShaderType, u32> mMaxUAVs = {};
 	DX11Ctx m_Ctx;
@@ -165,7 +142,6 @@ public:
 		return mViewport.get();
 	}
 
-	void DrawMesh(Primitive const& primitive) override;
 	void SetVertexLayout(VertAttDescHandle attDescHandle) override;
 	void UpdateInputLayout();
 
@@ -181,8 +157,6 @@ public:
 	}
 
  private:
-	template<typename TFunc>
-	void ForEachMesh(TFunc&& func);
 	DX11Texture::Ref PrepareTexture(Texture const& tex, bool sRGB = false);
 
 	RenderContext* mRCtx = nullptr;
@@ -194,8 +168,6 @@ public:
 protected:
 
 	ivec2 mViewerSize = {500, 500};
-
-	void CreateMatType2(String const& name, u32 index, const MaterialArchetypeDesc& typeDesc);
 
 	void CreateDepthStencilState(ComPtr<ID3D11DepthStencilState>& state, EDepthMode depth, StencilState stencil);
 
@@ -212,8 +184,6 @@ protected:
 	IDXGISwapChain* pSwapChain = nullptr;
 	DX11CBPool mCBPool;
 
-//	std::vector<DX11Mesh> m_MeshData;
-
 	DX11Texture::Ref m_EmptyTexture;
 
 	bool mRefactor = true;
@@ -222,15 +192,7 @@ protected:
 	DX11ConstantBuffer m_PSPerInstanceBuff;
 
 	DX11ConstantBuffer m_PSPerFrameBuff;
-//	ComPtr<ID3D11Buffer> m_VSPerFrameBuff;
 	DX11ConstantBuffer m_VSPerFrameBuff;
-	
-	ComPtr<ID3D11Buffer> m_ShadowMapCBuff;
-
-	ComPtr<ID3D11VertexShader> m_VertexShader;
-	ComPtr<ID3D11PixelShader> m_PlainPixelShader;
-	ComPtr<ID3D11PixelShader> m_TexPixelShader;
-	ComPtr<ID3D11InputLayout> m_InputLayout;
 
 	ComPtr<ID3D11SamplerState> m_Sampler;
 	ComPtr<ID3D11BlendState> m_BlendState;
@@ -248,8 +210,6 @@ protected:
 	Vector<DX11Cubemap*> m_CubemapRegistry;
 
 	OwningPtr<Viewport> mViewport;
-
-	ComPtr<ID3D11Buffer> m_BGVBuff;
 
 	ComPtr<ID3D11Buffer> m_2DVBuff;
 	DX11ConstantBuffer m_VS2DCBuff;
@@ -282,7 +242,6 @@ protected:
 	StencilState mStencilState;
 	EDepthMode mDepthMode = EDepthMode::Less;
 	
-	bool mUsePasses = true;
 
 };
 

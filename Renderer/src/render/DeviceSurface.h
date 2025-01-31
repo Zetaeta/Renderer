@@ -19,10 +19,7 @@ public:
 	virtual void RequestResize(uvec2 newSize) = 0;
 	virtual DeviceTextureRef GetBackbuffer() = 0;
 
-	virtual void OnMoved(ivec2 newPos)
-	{
-		mPos = newPos;
-	}
+	virtual void OnMoved(ivec2 newPos);
 
 	Viewport* CreateFullscreenViewport(Scene* scene, Camera* camera);
 

@@ -245,7 +245,6 @@ private:
 
 	void CreateDeviceAndCmdQueue();
 	bool ResizeSwapChains();
-	void GetSwapChainBuffers();
 
 	ComPtr<ID3D12Resource> CreateVertexBuffer(VertexBufferData data, ID3D12GraphicsCommandList_* uploadCmdList);
 
@@ -254,7 +253,6 @@ private:
 	DX12Uploader mUploader;
 	DX12CommandQueues mQueues;
 	ComPtr<ID3D12Device_> mDevice; 
-//	ComPtr<IDXGISwapChain3> mSwapChain; 
 	ComPtr<ID3D12Fence> mFrameFence;
 	HANDLE mFenceEvent{};
 	u64 mCurrentFrame = 0;
@@ -269,9 +267,6 @@ private:
 	OwningPtr<DX12DescriptorTableAllocator> mShaderResourceDescTables;
 	OwningPtr<DX12DescriptorTableAllocator> mSamplerDescTables;
 	std::array<OwningPtr<DX12CommandAllocatorPool>, 3> mCmdAllocatorPools;
-//	OwningPtr<DX12SyncPointPool> mSyncPoints;
-	//std::array<ComPtr<ID3D12Resource_>, MaxSwapchainBufferCount> mRenderTargets;
-	//std::array<std::shared_ptr<DX12Texture>, MaxSwapchainBufferCount> mSwapchainBufferTextures;
 	std::array<Vector<ComPtr<ID3D12Pageable>>, MaxSwapchainBufferCount> mDeferredReleaseResources;
 	std::unordered_map<GraphicsPSODesc, ComPtr<ID3D12PipelineState>, GenericHash<>> mPSOs;
 	std::unordered_map<ComputePSODesc, ComPtr<ID3D12PipelineState>, GenericHash<>> mComputePSOs;
@@ -281,7 +276,6 @@ private:
 	bool mClosed = false;
 	bool mRecordingCommands = false;
 	u32 mFrameIndex = 0;
-//	u32 mBufferIndex = 0;
 	u32 mResizeWidth = 0;
 	u32 mResizeHeight = 0;
 	Viewport* mViewport;

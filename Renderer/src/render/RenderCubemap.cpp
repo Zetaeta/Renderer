@@ -24,7 +24,6 @@ void RenderCubemap::Execute(IRenderDeviceCtx& deviceCtx)
 	auto context = &deviceCtx;
 	deviceCtx.SetDepthStencilMode(mMode == EFlatRenderMode::BACK ? EDepthMode::Less : EDepthMode::Disabled);
 	deviceCtx.SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
-//	renderCtx.DeviceCtx()->DrawCubemap(mCubemap);
 	std::shared_ptr<void> dummy;
 	DeviceTextureRef	  sp(dummy, mCubemap);
 	context->SetVertexShader(mRCtx->GetShader<CubemapVS>());

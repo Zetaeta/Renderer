@@ -63,36 +63,6 @@ struct PS2DCBuff
 	int renderMode = 0; // 1=depth, 2=uint
 };
 
-//template<typename T, typename... Args>
-//constexpr size_t MaxSize()
-//{
-//	return std::max(sizeof(T), MaxSize<Args...>());
-//}
-//
-//template<>
-//constexpr size_t MaxSize<>()
-//{
-//	return 0;
-//}
-
-
-//template <typename T>
-//void DX11Renderer::CreateConstantBuffer(ComPtr<ID3D11Buffer>& buffer, T const& initialData, u32 size)
-//{
-//	D3D11_BUFFER_DESC cbDesc;
-//	Zero(cbDesc);
-//	cbDesc.ByteWidth = size;
-//	cbDesc.Usage = D3D11_USAGE_DYNAMIC;
-//	cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-//	cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-//
-//	D3D11_SUBRESOURCE_DATA srData;
-//	Zero(srData);
-//	srData.pSysMem = Addr(initialData);
-//
-//	HR_ERR_CHECK(pDevice->CreateBuffer(&cbDesc, &srData,&buffer))
-//}
-
 
 void DX11Renderer::PrepareShadowMaps()
 {
@@ -121,26 +91,6 @@ void DX11Renderer::PrepareShadowMaps()
 	HR_ERR_CHECK(pDevice->CreateSamplerState(
 			&comparisonSamplerDesc,
 			&m_ShadowSampler));
-//	CreateConstantBuffer<ShadowMapCBuff>(m_ShadowMapCBuff);
-}
-
-template <typename TFunc>
-void DX11Renderer::ForEachMesh(TFunc&& func)
-{
-	m_Scene->ForEach<StaticMeshComponent>([&](StaticMeshComponent const& smc) {
-		auto cmesh = smc.GetMesh();
-		auto const&			trans = smc.GetWorldTransform();
-		if (!IsValid(cmesh))
-		{
-			return;
-		}
-
-		for (auto const& mesh : cmesh->components)
-		{
-			func(mesh, trans);
-		}
-	});
-			
 }
 
 DECLARE_CLASS_TYPEINFO(PerInstancePSData);
@@ -152,12 +102,10 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 	CBPool = &mCBPool;
 	Device = this;
 	myDevice = this;
-//	TextureManager = &m_Ctx.psTextures;
 	m_Ctx.pDevice = pDevice;
 	m_Ctx.pContext = pContext;
 	m_Ctx.m_Renderer = this;
 	Setup();
-//	MatManager = new MaterialManager(this);
 	mViewport = MakeOwning<Viewport>(this, scene, camera);
 
 	D3D11_QUERY_DESC disjointDesc {};
@@ -170,7 +118,6 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 	pContext->QueryInterface<ID3DUserDefinedAnnotation>(&mUserAnnotation);
 
 	GRenderController.AddRenderBackend(this);
-	//	mCurrVertexLayoutHdl = GetVertAttHdl<Vertex>();
 }
 
 DX11Renderer::~DX11Renderer()
@@ -180,9 +127,7 @@ DX11Renderer::~DX11Renderer()
 	IRenderDevice::Teardown();
 	ResourceMgr.Teardown();
 	MatMgr.Release();
-//	MatManager->Release();
 	mTextures.clear();
-	m_Materials.clear();
 	mRCtx = {};
 	m_EmptyTexture = nullptr;
  }
@@ -195,7 +140,6 @@ void DX11Renderer::DrawControls()
 	}
 	ImGui::Begin("Renderer");
 	ImGui::Text("GPU time %f", mFrameTimer->GPUTimeMs);
-	ImGui::Checkbox("Refactor", &mUsePasses);
 	static const char* layers[] = { "base",
 		"dirlight",
 		"pointlight",
@@ -205,13 +149,8 @@ void DX11Renderer::DrawControls()
 	{
 		ImGui::Checkbox(layers[i], &m_Ctx.mRCtx->Settings.LayersEnabled[i]);
 	}
-	if (ImGui::Button("Reload shaders"))
-	{
-		LoadShaders();
-	}
 	if (ImGui::Button("Full recompile shaders"))
 	{
-		LoadShaders(true);
 		ShaderMgr.RecompileAll(true);
 	}
 
@@ -279,15 +218,12 @@ void DX11Renderer::DrawControls()
 		//}
 	}
 
-	//ImGui::Selectable()
 
 	ImGui::End();
 }
 
 void DX11Renderer::Setup()
 {
-
-
 	//Setup matrix constant buffer
 	m_VSPerInstanceBuff = DX11ConstantBuffer::Create<PerInstanceVSData>(&m_Ctx);
 	m_VSPerFrameBuff = DX11ConstantBuffer::CreateWithLayout<PerFrameVertexData>(&m_Ctx);
@@ -296,10 +232,6 @@ void DX11Renderer::Setup()
 
 	m_PSPerFrameBuff = DX11ConstantBuffer(&m_Ctx, MaxSize<PFPSPointLight, PFPSSpotLight, PerFramePSData>());
 
-
-	LoadShaders();
-	//CreateMatType(MAT_PLAIN, "PlainVertexShader","PlainPixelShader",ied,Size(ied));
-	//CreateMatType(MAT_TEX, "TexVertexShader","TexPixelShader",ied,Size(ied));
 
 	u32 const empty = 0x00000000;
 	DeviceTextureDesc emptyDesc;
@@ -323,8 +255,6 @@ void DX11Renderer::Setup()
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 
 	pContext->PSSetSamplers(0, 2, samplers );
-
-	PrepareBG();
 
 	{
 		D3D11_BLEND_DESC blendDesc;
@@ -401,37 +331,12 @@ void DX11Renderer::Setup()
 	}
 
 }
-void DX11Renderer::PrepareBG()
-{
-	float const Z = 0.9999f;
-	FlatVert const verts[3] = {
-		{ {-1,-1.f, Z}, {0,2} },
-		{ {-1,3.f, Z}, {0,0} },
-		{ {3,-1.f, Z}, {2,2} },
-	};
-	const UINT stride = Sizeof(verts[0]);
-	{
-		D3D11_BUFFER_DESC bd = {};
-		Zero(bd);
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		bd.Usage = D3D11_USAGE_DEFAULT;
-		bd.ByteWidth = Sizeof(verts);
-		bd.StructureByteStride = stride;
-		D3D11_SUBRESOURCE_DATA sd;
-		Zero(sd);
-		sd.pSysMem = Addr(verts);
-
-		HR_ERR_CHECK(pDevice->CreateBuffer(&bd, &sd, &m_BGVBuff));
-	}
-}
-
 void DX11Renderer::Render(const Scene& scene)
 {
 	ProcessTextureCreations();
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 
 	m_Scene = const_cast<Scene*>(&scene);
-	m_Materials.resize(scene.Materials().size());
 
 	ImVec4 clear_color = ImVec4();
 
@@ -458,47 +363,6 @@ void DX11Renderer::Render(const Scene& scene)
 
 	mRCtx->TextureManager.UnBind(this);
 //	mViewport->mRScene->EndFrame();
-}
-
-
-void DX11Renderer::DrawCubemap(ID3D11ShaderResourceView* srv, bool depth)
-{
-	const UINT stride = sizeof(FlatVert);
-	const UINT offset = 0;
-	pContext->IASetVertexBuffers(0, 1, m_BGVBuff.GetAddressOf(), &stride, &offset);
-	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	ID3D11Buffer* vbuffs[] = { m_VSPerFrameBuff.Get() };
-
-	if (depth)
-	{
-		MatMgr.MatTypes()[MAT_CUBE_DEPTH].Bind(*mRCtx, EShadingLayer::BASE, E_MT_OPAQUE);
-	}
-	else
-	{
-		MatMgr.MatTypes()[MAT_BG].Bind(*mRCtx, EShadingLayer::BASE, E_MT_OPAQUE);
-	}
-	SetVertexLayout(GetVertAttHdl<FlatVert>());
-	pContext->VSSetConstantBuffers(0, Size(vbuffs), vbuffs);
-	//WriteCBuffer(m_VSPerFrameBuff)
-
-	pContext->PSSetShaderResources(0, 1, &srv);
-
-//	pContext->Draw(3,0);
-	DrawMesh(BasicMeshes.GetFullScreenTri());
-}
-
-void DX11Renderer::DrawCubemap(IDeviceTextureCube* cubemap)
-{
-//	DrawCubemap(cubemap->GetTextureHandle<ID3D11ShaderResourceView*>(), cubemap->IsDepthStencil());
-	std::shared_ptr<void> dummy;
-	DeviceTextureRef	  sp(dummy, cubemap);
-	SetVertexShader(mRCtx->GetShader<CubemapVS>());
-	SetPixelShader(mRCtx->GetShader<CubemapPS>());
-	ResourceView srv {sp};
-	SetShaderResources(EShaderType::Pixel, Single<ResourceView>(srv));
-	SetConstantBuffers(EShaderType::Vertex, Single<IConstantBuffer* const>(&m_VSPerFrameBuff));
-	SetVertexLayout(GetVertAttHdl<FlatVert>());
-	DrawMesh(BasicMeshes.GetFullScreenTri());
 }
 
 void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
@@ -671,88 +535,6 @@ IConstantBuffer* DX11Renderer::GetConstantBuffer(ECBFrequency freq, size_t size 
 	return result;
 }
 
-void DX11Renderer::PrepareMesh(MeshPart const& mesh, DX11IndexedMesh& meshData)
-{
-//	printf("Creating buffers for mesh %s\n", mesh.name.ToString().c_str());
-	const UINT stride = Sizeof(mesh.vertices[0]);
-	{
-		D3D11_BUFFER_DESC bd = {};
-		Zero(bd);
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		bd.Usage = D3D11_USAGE_DEFAULT;
-		bd.ByteWidth = Sizeof(mesh.vertices);
-		bd.StructureByteStride = stride;
-		D3D11_SUBRESOURCE_DATA sd;
-		Zero(sd);
-		sd.pSysMem = Addr(mesh.vertices);
-
-		HR_ERR_CHECK(pDevice->CreateBuffer(&bd, &sd, &meshData.vBuff));
-	}
-	const UINT offset = 0;
-
-	ComPtr<ID3D11Buffer> iBuffer;
-
-	{
-		D3D11_BUFFER_DESC bd = {};
-		Zero(bd);
-		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		bd.Usage = D3D11_USAGE_DEFAULT;
-		bd.ByteWidth = Sizeof(mesh.triangles);
-		bd.StructureByteStride = Sizeof(mesh.triangles[0]);
-		D3D11_SUBRESOURCE_DATA sd;
-		Zero(sd);
-		sd.pSysMem = Addr(mesh.triangles);
-
-		HR_ERR_CHECK(pDevice->CreateBuffer(&bd, &sd, &meshData.iBuff));
-	}
-
-	meshData.IndexCount = mesh.GetTriCount() * 3;
-	meshData.VertexCount = mesh.GetVertCount();
-}
-
-void DX11Renderer::PrepareMaterial(MaterialID mid)
-{
-	Material&					  mat = m_Scene->GetMaterial(mid);
-	std::lock_guard lock{ mat.GetUpdateMutex() };
-	std::unique_ptr<RenderMaterial>& result = m_Materials[mid];
-	if (mat.albedo->IsValid())
-	{
-		auto texMat = std::make_unique<TexturedRenderMaterial>(&MatMgr.MatTypes()[MAT_TEX], mat.GetMatType(), mat.Props);
-		if (mat.albedo.IsValid())
-		{
-			texMat->m_Albedo = PrepareTexture(*mat.albedo, true);
-		}
-		if (mat.normal.IsValid())
-		{
-			texMat->m_Normal = PrepareTexture(*mat.normal);
-//			mat.normal.Clear();
-		}
-		if (mat.emissiveMap.IsValid())
-		{
-			texMat->m_Emissive = PrepareTexture(*mat.emissiveMap);
-//			mat.emissive.Clear();
-		}
-		else
-		{
-			texMat->m_Emissive = m_EmptyTexture;
-		}
-		if (mat.roughnessMap.IsValid())
-		{
-			texMat->m_Roughness = PrepareTexture(*mat.roughnessMap);
-		}
-		else
-		{
-			texMat->m_Roughness = m_EmptyTexture;
-		}
-		result = std::move(texMat);
-	}
-	else
-	{
-		result = std::make_unique<RenderMaterial>(&MatMgr.MatTypes()[MAT_PLAIN], mat.GetMatType(), mat.Props);
-	}
-	mat.DeviceMat = result.get();
-}
-
 void DX11Renderer::SetBackbuffer(DX11Texture::Ref backBufferTex, u32 width, u32 height)
 {
 	m_MainRenderTarget = static_pointer_cast<DX11RenderTarget>(backBufferTex->GetRT().RT);
@@ -814,27 +596,12 @@ MappedResource DX11Renderer::MapResource(ID3D11Resource* resource, u32 subResour
 
 DX11Texture::Ref DX11Renderer::PrepareTexture(Texture const& tex, bool sRGB /*= false*/)
 {
-	//if (auto* )
-	//{
-	//	return std::static_pointer_cast<DX11Texture>(tex.GetDeviceTexture());
-	//}
 	auto result = GetRenderTexture(&tex);
 	if (!result)
 	{
 		return m_EmptyTexture;
 	}
 	return result;
-//	DeviceTextureDesc desc;
-//	desc.Flags = (sRGB ? TF_SRGB : TF_NONE) | TF_SRV;
-//	desc.Width = tex.width;
-//	desc.Height = tex.height;
-//	desc.NumMips = 0;
-//	desc.DebugName = tex.GetName();
-//	desc.Format = ETextureFormat::RGBA8_Unorm;
-//	auto			result = std::make_shared<DX11Texture>(m_Ctx, desc, tex.GetData());
-////	auto result = DX11Texture::Create(&m_Ctx, tex.width, tex.height, , );
-//	tex.SetDeviceTexture(result);
-//	return result;
 }
 
 void DX11Renderer::ProcessTimers()
@@ -1009,10 +776,8 @@ void DX11Renderer::SetUAVs(EShaderType shader, Span<UnorderedAccessView const> u
 	}
 }
 
-
 void DX11Renderer::UnbindUAVs(EShaderType shader, u32 clearNum, u32 startIdx /* = 0 */)
 {
-
 	pContext->CSSetUnorderedAccessViews(startIdx, clearNum, reinterpret_cast<ID3D11UnorderedAccessView* const*>(ZerosArray), nullptr);
 }
 
@@ -1090,7 +855,6 @@ void DX11Renderer::StartTimer(GPUTimer* timer)
 
 void DX11Renderer::StopTimer(GPUTimer* timer)
 {
-
 	u32 currFrameIdx = NumCast<u32>(mFrameNum % DX11Timer::BufferSize);
 	pContext->End(static_cast<DX11Timer*>(timer)->Queries[currFrameIdx].End.Get());
 	if (mUserAnnotation)
@@ -1126,24 +890,6 @@ void DX11Renderer::SetComputeShader(ComputeShader const* shader)
 {
 	DX11ComputeShader* dx11Shader = shader ? static_cast<DX11ComputeShader*>(shader->GetDeviceShader()) : nullptr;
 	pContext->CSSetShader(dx11Shader ? dx11Shader->GetShader() : nullptr, nullptr, 0);
-}
-
-void DX11Renderer::DrawMesh(Primitive const& primitive)
-{
-	auto& meshData = m_MeshData[&primitive];
-	if (!meshData.vBuff)
-	{
-		PrepareMesh(primitive, meshData);
-	}
-	assert(meshData.iBuff);
-
-	const UINT stride = Sizeof(primitive.vertices[0]);
-	const UINT offset = 0;
-
-	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	pContext->IASetVertexBuffers(0, 1, meshData.vBuff.GetAddressOf(), &stride, &offset);
-	pContext->IASetIndexBuffer(meshData.iBuff.Get(),DXGI_FORMAT_R16_UINT, 0);
-	pContext->DrawIndexed(Size(primitive.triangles) * 3,0,0);
 }
 
 void DX11Renderer::SetVertexLayout(VertAttDescHandle attDescHandle)
@@ -1533,133 +1279,6 @@ u64 Hash(ID3DBlob* blob)
 	return result;
 }
 
-
-int GetCompiledShaderVariants(const String& shaderName, char const* name, ShaderVariant* variants, u32 numVars, char const* shaderType,
-	bool reload = false)
-{
-	static fs::path const srcDir{ "src\\shaders" };
-	static fs::path const outDir{ "generated\\shaders" };
-	fs::create_directories(outDir);
-	auto srcName = std::format("{}.hlsl", name);
-	fs::path src = srcDir / srcName;
-	auto lastWrite = fs::last_write_time(src);
-	ComPtr<ID3DBlob> errBlob;
-	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(DEBUG) || defined(_DEBUG)
-//	flags |= D3DCOMPILE_DEBUG;
-#endif
-	for (u32 i=0; i<numVars; ++i)
-	{
-		ShaderVariant& var = variants[i];
-		auto csoName = std::format("{}_{}.cso", shaderName, var.m_Name);
-		fs::path cso = outDir / csoName;
-		if (reload || var.m_Dirty || !fs::exists(cso) || fs::last_write_time(cso) < lastWrite)
-		{
-			printf("Compiling shader in file %s\n", src.string().c_str());
-			ID3DBlob* output;
-			HRESULT hr = D3DCompileFromFile(src.wstring().c_str(), Addr(var.m_Defines), D3D_COMPILE_STANDARD_FILE_INCLUDE, "main", shaderType, flags, 0, &output, &errBlob);
-			if (SUCCEEDED(hr))
-			{
-				if (reload && var.m_Blob)
-				{
-					if(output->GetBufferSize() != var.m_Blob->GetBufferSize() ||
-						memcmp(output->GetBufferPointer(), var.m_Blob->GetBufferPointer(), output->GetBufferSize()) != 0)
-					{
-						fprintf(stderr, "%s HAS CHANGED (hash before %llu, hash after %llu)\n", cso.string().c_str(), Hash(var.m_Blob.Get()), Hash(output));
-					}
-				}
-				var.m_Blob = output;
-				printf("Saving to file %s\n", cso.string().c_str());
-				HR_ERR_CHECK(D3DWriteBlobToFile(var.m_Blob.Get(), cso.c_str(), true));
-//				#define BLOB_DEBUG
-				#ifdef BLOB_DEBUG
-				{
-					ComPtr<ID3DBlob> saved;
-					HR_ERR_CHECK(D3DReadFileToBlob(cso.c_str(), &saved));
-					ZE_ASSERT(saved->GetBufferSize() == var.m_Blob->GetBufferSize() &&
-						memcmp(saved->GetBufferPointer(), var.m_Blob->GetBufferPointer(), saved->GetBufferSize()) == 0);
-					printf("Hash: %llu\n", Hash(var.m_Blob.Get()));
-
-				}
-				#endif
-			}
-			else
-			{
-				LPTSTR errorText = NULL;
-				FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM
-							| FORMAT_MESSAGE_ALLOCATE_BUFFER
-							| FORMAT_MESSAGE_IGNORE_INSERTS,
-							NULL, hr, 0, (LPTSTR) & errorText, 0, NULL);
-				wprintf(L"Compile error: %s", errorText);
-				if (errBlob != nullptr && errBlob->GetBufferPointer() != nullptr)
-				{
-					printf("Output: %s\n", (const char*) errBlob->GetBufferPointer());
-				}
-				ZE_ASSERT(false);
-				return i;
-			}
-		}
-		else
-		{
-			printf("Reading precompiled shader %s from %s\n", name, cso.string().c_str());
-			HR_ERR_CHECK(D3DReadFileToBlob(cso.c_str(), &var.m_Blob));
-			printf("Hash: %llu\n", Hash(var.m_Blob.Get()));
-		}
-	}
-	return numVars;
-}
-
-
-void GetCBInfo(ID3DBlob* shaderCode, RenderMaterialType& matType, ECBFrequency perFrame, ECBFrequency perInst)
-{
-	ComPtr<ID3D11ShaderReflection> reflection;
-	HR_ERR_CHECK(D3DReflect(shaderCode->GetBufferPointer(), shaderCode->GetBufferSize(), IID_ID3D11ShaderReflection, &reflection))
-	D3D11_SHADER_DESC desc;
-	reflection->GetDesc(&desc);
-	for (u32 i = 0; i < desc.ConstantBuffers; ++i)
-	{
-		ID3D11ShaderReflectionConstantBuffer* cBuffer = reflection->GetConstantBufferByIndex(i);
-		D3D11_SHADER_BUFFER_DESC			  cbDesc;
-		cBuffer->GetDesc(&cbDesc);
-		ECBFrequency freq = ECBFrequency::Count;
-		printf("Found cb %s\n", cbDesc.Name);
-		if (FindIgnoreCase(cbDesc.Name, "instance"))
-		{
-			freq = perInst;
-		}
-		else if (FindIgnoreCase(cbDesc.Name, "frame"))
-		{
-			freq = perFrame;
-		}
-
-		if (freq != ECBFrequency::Count)
-		{
-			matType.GetCBData(freq).IsUsed = true;
-		}
-	}
-}
-
-
-void DX11Renderer::LoadShaders(bool reload)
-{
-	CreateMatType2("Plain", MAT_PLAIN, PlainMat);
-	CreateMatType2("Textured", MAT_TEX, TexturedMat);
-	CreateMatType2("PointShadow", MAT_POINT_SHADOW_DEPTH, PointShadow);
-	CreateMatType2("ScreenId", MAT_SCREEN_ID, ScreenId);
-	static DataLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
-	MatMgr.MatTypes()[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;
-
-	CreateMatType2("2D", MAT_2D, Mat2D);
-	CreateMatType2("2D_Uint", MAT_2D_UINT, Mat2DUint);
-	CreateMatType2("Cubemap", MAT_BG, MatCube);
-	CreateMatType2("Cubedepth", MAT_CUBE_DEPTH, MatCubeDepth);
-}
-
-void DX11Renderer::CreateMatType2(String const& name, u32 index, const MaterialArchetypeDesc& typeDesc)
-{
-	RenderMaterialType& matType = MatMgr.MatTypes()[index];
-	matType = RenderMaterialType(typeDesc);
-}
 
 }
 }

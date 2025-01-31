@@ -14,10 +14,20 @@ IDeviceSurface::IDeviceSurface(IRenderDevice* device, wnd::Window* window)
 		mPos = {rect.left, rect.top};
 		mSize = { NumCast<u32>(rect.right - rect.left), NumCast<u32>(rect.bottom - rect.top) };
 	}
+	window->SetSurface(this);
 }
 
 IDeviceSurface::~IDeviceSurface()
 {
+}
+
+void IDeviceSurface::OnMoved(ivec2 newPos)
+{
+	mPos = newPos;
+	if (mViewports.size() == 1)
+	{
+		mViewports[0]->UpdatePos(mPos);
+	}
 }
 
 Viewport* IDeviceSurface::CreateFullscreenViewport(Scene* scene, Camera* camera)

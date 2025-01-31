@@ -120,8 +120,7 @@ public:
 	virtual void ClearRenderTarget(IRenderTarget::Ref rt, col4 clearColour) = 0;
 	virtual void ClearUAV(UnorderedAccessView uav, uint4 clearValues) = 0;
 	virtual void ClearUAV(UnorderedAccessView uav, vec4 clearValues) = 0;
-	virtual void DrawCubemap(IDeviceTextureCube* cubemap) = 0;
-	virtual void DrawMesh(Primitive const& primitive) = 0;
+//	virtual void DrawMesh(Primitive const& primitive) = 0;
 	virtual void DrawMesh(IDeviceMesh const* mesh) = 0;
 	virtual void DispatchCompute(ComputeDispatch args) = 0;
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) = 0; 
@@ -163,8 +162,6 @@ public:
 	virtual void SetComputeShader(ComputeShader const* shader) = 0;
 
 	virtual void SetVertexLayout(VertAttDescHandle attDescHandle) = 0;
-
-	virtual void PrepareMaterial(MaterialID mid) = 0;
 
 	virtual ~IRenderDeviceCtx() {}
 

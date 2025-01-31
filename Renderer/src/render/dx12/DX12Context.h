@@ -233,19 +233,6 @@ public:
 	}
 
 
-	void DrawCubemap(IDeviceTextureCube* cubemap) override
-	{
-		FinalizeGraphicsState();
-//		throw std::logic_error("The method or operation is not implemented.");
-	}
-
-
-
-	void DrawMesh(Primitive const& primitive) override
-	{
-		FinalizeGraphicsState();
-//		throw std::logic_error("The method or operation is not implemented.");
-	}
 
 
 	void DrawMesh(IDeviceMesh const* mesh) override;
@@ -353,11 +340,6 @@ public:
 		mGraphicsState.UpdatePSO(mGraphicsState.PSOState.VertexLayoutHdl, attDescHandle);
 	}
 
-
-	void PrepareMaterial(MaterialID mid) override
-	{
-		throw std::logic_error("The method or operation is not implemented.");
-	}
 
 	MappedResource Readback(DeviceResourceRef resource, u32 subresource, _Out_opt_ RefPtr<GPUSyncPoint>* completionSyncPoint) override;
 //j	void		   ReleaseReadback(MappedResource resource) override;
