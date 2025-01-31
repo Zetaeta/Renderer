@@ -197,7 +197,7 @@ void Editor::Tick(float dt)
 {
 	for (auto& vp : mViewports)
 	{
-		CreateScreenIdTex(vp->GetWidth(), vp->GetHeight());
+		//CreateScreenIdTex(vp->GetWidth(), vp->GetHeight());
 	}
 	DrawControls();
 	bool isMouseDown = mInput->IsMouseDown(Input::MouseButton::LEFT);

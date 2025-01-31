@@ -19,6 +19,7 @@
 #include "render/RendererScene.h"
 #include "imgui.h"
 #include "DX12CommandAllocatorPool.h"
+#include "DX12SwapChain.h"
 #include "render/shaders/ShaderDeclarations.h"
 
 #pragma comment(lib, "d3d12.lib")
@@ -59,12 +60,15 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 	mShaderResourceDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	mSamplerDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
+	mSwapChains.push_back(MakeOwning<DX12SwapChain>(this, (u32)mNumBuffers, uvec2{width, height}));
+
 	if (scene)
 	{
 		mScene = scene;
 		mContext = std::make_unique<DX12Context>(mCmdList);
-		mViewport = std::make_unique<Viewport>(mContext.get(), scene, camera);
-		mViewport->Resize(width, height, mSwapchainBufferTextures[mBufferIndex]);
+		//mViewport = std::make_unique<Viewport>(mContext.get(), scene, camera);
+		//mViewport->Resize(width, height, mSwapChains[0]->GetCurrentBuffer());
+		mViewport = mSwapChains[0]->CreateFullscreenViewport(mScene, camera);
 	}
 	{
 		mTest = MakeOwning<DX12Test>(mDevice.Get());
@@ -78,9 +82,10 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 
 DX12RHI::~DX12RHI()
 {
+	mSwapChains.clear();
 	mViewport = nullptr;
 	mContext = nullptr;
-	mSwapchainBufferTextures = {};
+		//	mSwapchainBufferTextures = {};
 	ResourceMgr.Teardown();
 	MatMgr.Release();
 	BasicTextures.Teardown();
@@ -110,12 +115,9 @@ void DX12RHI::Tick()
 	{
 		return;
 	}
-	if (mResizeHeight != 0)
-	{
-		ResizeSwapChain();
-	}
+	ResizeSwapChains();
 
-	if (mViewport)
+	if (mViewport && mViewport->mRCtx)
 	{
 		ImGui::Begin("DX12");
 		mViewport->mRCtx->DrawControls();
@@ -138,31 +140,37 @@ void DX12RHI::Tick()
 	CD3DX12_RECT scissor(0, 0, mWidth, mHeight);
 	cmd->RSSetScissorRects(1, &scissor);
 
+	for (auto& swapChain : mSwapChains)
 	{
 		//auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		//	mRenderTargets[mBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		//cmd->ResourceBarrier(1, &barrier);
-		mSwapchainBufferTextures[mBufferIndex]->TransitionTo(cmd.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+		swapChain->GetCurrentBuffer()->TransitionTo(cmd.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	}
 	
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv(mRTVHeap->GetCPUDescriptorHandleForHeapStart(), mBufferIndex, mRTVHeap.ElementSize);
-	cmd->OMSetRenderTargets(1, &rtv, false, nullptr);
-	float const clearColor[4] = {0.5f, 0.5f, 0.5f, 1.f};
-	cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
-
-	if (mTest)
+	if (!mSwapChains.empty())
 	{
-//		mTest->Render(*cmd.Get());
-	}
-	if (mViewport)
-	{
-		mContext->ClearRenderTarget(mSwapchainBufferTextures[mBufferIndex]->GetRT(), {0,0,0,0});
-		if (!mViewport->mRScene->IsInitialized())
+		
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv //(mRTVHeap->GetCPUDescriptorHandleForHeapStart(), mBufferIndex, mRTVHeap.ElementSize);
+			= mSwapChains[0]->GetCurrentBuffer()->GetRT()->GetData<D3D12_CPU_DESCRIPTOR_HANDLE>();
+		cmd->OMSetRenderTargets(1, &rtv, false, nullptr);
+		float const clearColor[4] = {0.5f, 0.5f, 0.5f, 1.f};
+		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+		if (mTest)
 		{
-			mViewport->mRScene = RendererScene::Get(*mScene, mContext.get());
+	//		mTest->Render(*cmd.Get());
 		}
-		mViewport->SetBackbuffer(mSwapchainBufferTextures[mBufferIndex]);
+		if (mViewport)
+		{
+			mContext->ClearRenderTarget(mSwapChains[0]->GetCurrentBuffer()->GetRT(), {0,0,0,0});
+			if (!mViewport->mRScene->IsInitialized())
+			{
+				mViewport->mRScene = RendererScene::Get(*mScene, mContext.get());
+			}
+			mViewport->SetBackbuffer(mSwapChains[0]->GetCurrentBuffer());
+		}
 	}
+
 //	EndFrame();
 }
 
@@ -206,11 +214,9 @@ void DX12RHI::StartFrame()
 
 void DX12RHI::EndFrame()
 {
+	for (auto const& swapChain : mSwapChains)
 	{
-		//auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(mRenderTargets[mBufferIndex].Get(),
-		//	D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		//cmd->ResourceBarrier(1, &barrier);
-		mSwapchainBufferTextures[mBufferIndex]->TransitionTo(mCmdList.CmdList.Get(), D3D12_RESOURCE_STATE_PRESENT);
+		swapChain->GetCurrentBuffer()->TransitionTo(mCmdList.CmdList.Get(), D3D12_RESOURCE_STATE_PRESENT);
 	}
 	mRecordingCommands = false;
 	mCmdList.CmdList->Close();
@@ -222,7 +228,7 @@ void DX12RHI::EndFrame()
 	{
 		swapChain->Present();
 	}
-	HR_ERR_CHECK(mSwapChain->Present(1, 0));
+//	HR_ERR_CHECK(mSwapChain->Present(1, 0));
 	mFenceValues[mFrameIndex] = mCurrentFrame;
 //	mCurrentFrame = mFenceValues[mFrameIndex];
 
@@ -230,7 +236,7 @@ void DX12RHI::EndFrame()
 	++mCurrentFrame;
 	mFrameIndex = (mCurrentFrame) % mNumBuffers;
 	WaitAndReleaseFrameIdx(mFrameIndex);
-	mBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
+//	mBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 }
 
 void DX12RHI::WaitForGPU()
@@ -327,21 +333,21 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 	mCmdAllocatorPools[1] = MakeOwning<DX12CommandAllocatorPool>(D3D12_COMMAND_LIST_TYPE_COMPUTE);
 	mCmdAllocatorPools[2] = MakeOwning<DX12CommandAllocatorPool>(D3D12_COMMAND_LIST_TYPE_COPY);
 
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
-	swapChainDesc.BufferCount = mNumBuffers;
-	swapChainDesc.Width = mWidth;
-	swapChainDesc.Height = mHeight;
-	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	//swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
-	//swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
-	swapChainDesc.SampleDesc.Count = 1;
-//	swapChainDesc.Windowed = true;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	ComPtr<IDXGISwapChain1> swapChain;
-	HR_ERR_CHECK(mFactory->CreateSwapChainForHwnd(mQueues.Direct, mHwnd, &swapChainDesc, nullptr, nullptr, &swapChain));
-	HR_ERR_CHECK(swapChain.As<IDXGISwapChain3>(&mSwapChain));
-	mFactory->MakeWindowAssociation(mHwnd, DXGI_MWA_NO_ALT_ENTER);
+//	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
+//	swapChainDesc.BufferCount = mNumBuffers;
+//	swapChainDesc.Width = mWidth;
+//	swapChainDesc.Height = mHeight;
+//	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+//	//swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
+//	//swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
+//	swapChainDesc.SampleDesc.Count = 1;
+////	swapChainDesc.Windowed = true;
+//	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+//	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+//	ComPtr<IDXGISwapChain1> swapChain;
+//	HR_ERR_CHECK(mFactory->CreateSwapChainForHwnd(mQueues.Direct, mHwnd, &swapChainDesc, nullptr, nullptr, &swapChain));
+//	HR_ERR_CHECK(swapChain.As<IDXGISwapChain3>(&mSwapChain));
+//	mFactory->MakeWindowAssociation(mHwnd, DXGI_MWA_NO_ALT_ENTER);
 
 	// Create command list + allocators
 	HR_ERR_CHECK(mDevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&mCmdList.CmdList)));
@@ -350,43 +356,65 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 		HR_ERR_CHECK(mDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&mCmdList.Allocator)));
 	}
 
-	GetSwapChainBuffers();
+//	GetSwapChainBuffers();
 
 	mDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mFrameFence));
 
 //	HR_ERR_CHECK(m)
 }
 
-void DX12RHI::ResizeSwapChain()
+bool DX12RHI::ResizeSwapChains()
 {
-	if (mViewport)
+	bool bResizeNeeded = false;
+	for (auto& swapChain : mSwapChains)
 	{
-		mViewport->Reset();
+		if (swapChain->IsResizeRequested())
+		{
+			bResizeNeeded = true;
+			swapChain->ReleaseResourcesPreResize();
+		}
 	}
-	mSwapchainBufferTextures = {};
+	if (!bResizeNeeded)
+	{
+		return false;
+	}
+	//if (mViewport)
+	//{
+	//	mViewport->Reset();
+	//}
 	WaitForGPU();
-	mDeferredReleaseResources = {};
 	mRTVHeap = {};
 	mWidth = mResizeWidth;
 	mHeight = mResizeHeight;
 	mResizeWidth = mResizeHeight = 0;
-	for (int i = 0; i < mNumBuffers; ++i)
+	//for (int i = 0; i < mNumBuffers; ++i)
+	//{
+	//	mRenderTargets[i] = nullptr;
+	//	mSwapchainBufferTextures[i] = nullptr;
+	//}
+	
+//	mSwapChains[0]->ReleaseResourcesPreResize();
+	mDeferredReleaseResources = {};
+	for (auto& swapChain : mSwapChains)
 	{
-		mRenderTargets[i] = nullptr;
-		mSwapchainBufferTextures[i] = nullptr;
+		if (swapChain->IsResizeRequested())
+		{
+			swapChain->Resize();
+		}
 	}
+	return true;
 
-	DXCALL(mSwapChain->ResizeBuffers(mNumBuffers, mWidth, mHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
-	GetSwapChainBuffers();
-	if (mViewport)
-	{
-		mViewport->Resize(mWidth, mHeight, mSwapchainBufferTextures[mBufferIndex]);
-	}
+	//DXCALL(mSwapChain->ResizeBuffers(mNumBuffers, mWidth, mHeight, DXGI_FORMAT_R8G8B8A8_UNORM, 0));
+	//GetSwapChainBuffers();
+	//if (mViewport)
+	//{
+	//	mViewport->Resize(mWidth, mHeight, mSwapchainBufferTextures[mBufferIndex]);
+	//}
 }
 
 void DX12RHI::GetSwapChainBuffers()
 {
-
+	/*
 	mBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
 	mRTVHeap = DX12DescriptorHeap(mDevice.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, mNumBuffers);
 	DeviceTextureDesc desc;
@@ -407,7 +435,7 @@ void DX12RHI::GetSwapChainBuffers()
 			mSwapchainBufferTextures[i] = std::make_shared<DX12Texture>(desc, mRenderTargets[i].Get(), rtvHandle);
 			rtvHandle.Offset(1, mRTVHeap.ElementSize);
 		}
-	}
+	}*/
 }
 
 ComPtr<ID3D12Resource> DX12RHI::CreateVertexBuffer(VertexBufferData data, ID3D12GraphicsCommandList_* uploadCmdList)

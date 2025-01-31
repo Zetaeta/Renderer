@@ -5,13 +5,14 @@
 class Scene;
 class Camera;
 class Viewport;
+namespace wnd { class Window; }
 
 namespace rnd
 {
 class IDeviceSurface
 {
 public:
-	IDeviceSurface(IRenderDevice* device);
+	IDeviceSurface(IRenderDevice* device, wnd::Window* window);
 	virtual ~IDeviceSurface();
 
 	virtual void Present() = 0;
@@ -27,8 +28,9 @@ public:
 
 
 protected:
-	ivec2 mPos;
-	uvec2 mSize;
+	ivec2 mPos{0};
+	uvec2 mSize{0};
+	wnd::Window* mWindow;
 	Vector<OwningPtr<Viewport>> mViewports;
 	IRenderDevice* mDevice;
 };

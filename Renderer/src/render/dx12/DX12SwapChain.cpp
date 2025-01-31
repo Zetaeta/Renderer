@@ -7,7 +7,7 @@ namespace rnd::dx12
 {
 
 DX12SwapChain::DX12SwapChain(wnd::Window* window, u32 numBuffers, uvec2 size)
-: IDeviceSurface(&GetRHI()), mNumBuffers(numBuffers), mSize(size)
+: IDeviceSurface(&GetRHI(), window), mNumBuffers(numBuffers), mSize(size)
 {
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
 	swapChainDesc.BufferCount = mNumBuffers;

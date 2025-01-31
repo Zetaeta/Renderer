@@ -21,8 +21,23 @@ public:
 
 	void GetBuffers();
 
+	std::shared_ptr<DX12Texture> GetCurrentBuffer() const
+	{
+		return mSwapchainBufferTextures[mBufferIndex];
+	}
+
+
+	DeviceTextureRef GetBackbuffer() override
+	{
+		return GetCurrentBuffer();
+	}
+
+	bool IsResizeRequested() const
+	{
+		return mResizeWidth != 0;
+	}
+
 protected:	
-	wnd::Window* mWindow;
 	uvec2 mSize;
 	u32 mBufferIndex = 0;
 	u32 mNumBuffers;
