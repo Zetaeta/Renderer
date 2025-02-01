@@ -14,7 +14,7 @@ packages/
 content/
 assets/
 saves/
-*imgui.ini
+imgui.ini
 *.aps
 *.rc
 
