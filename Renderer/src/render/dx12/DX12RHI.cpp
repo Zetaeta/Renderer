@@ -60,14 +60,8 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 	mShaderResourceDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	mSamplerDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-//	mSwapChains.push_back(MakeOwning<DX12SwapChain>(this, (u32)mNumBuffers));
-
-	if (scene)
-	{
-		mScene = scene;
-		mContext = std::make_unique<DX12Context>(mCmdList);
-//		mViewport = mSwapChains[0]->CreateFullscreenViewport(mScene, camera);
-	}
+	mContext = std::make_unique<DX12Context>(mCmdList);
+	mScene = scene;
 	{
 		mTest = MakeOwning<DX12Test>(mDevice.Get());
 	}
@@ -81,9 +75,7 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 DX12RHI::~DX12RHI()
 {
 	mSwapChains.clear();
-	mViewport = nullptr;
 	mContext = nullptr;
-		//	mSwapchainBufferTextures = {};
 	ResourceMgr.Teardown();
 	MatMgr.Release();
 	BasicTextures.Teardown();
@@ -115,28 +107,10 @@ void DX12RHI::Tick()
 	}
 	ResizeSwapChains();
 
-	//if (mViewport && mViewport->mRCtx)
-	//{
-	//	ImGui::Begin("DX12");
-	//	mViewport->mRCtx->DrawControls();
-	//	ImGui::End();
-	//}
-
 
 	StartFrame();
 	auto& cmd = mCmdList.CmdList;
-//	cmd->Reset(mCmdList.Allocators[mFrameIndex].Get(), );
 	mRecordingCommands = true;
-
-	//D3D12_VIEWPORT vp {};
-	//vp.Height = float(mHeight);
-	//vp.Width = float(mWidth);
-	//vp.TopLeftX = vp.TopLeftY = 0;
-	//vp.MaxDepth = 1;
-	//vp.MinDepth = 0;
-	//cmd->RSSetViewports(1, &vp);
-	//CD3DX12_RECT scissor(0, 0, mWidth, mHeight);
-	//cmd->RSSetScissorRects(1, &scissor);
 
 	for (auto& swapChain : mSwapChains)
 	{
@@ -151,22 +125,7 @@ void DX12RHI::Tick()
 		cmd->OMSetRenderTargets(1, &rtv, false, nullptr);
 		float const clearColor[4] = {0.5f, 0.5f, 0.5f, 1.f};
 		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
-		if (mTest)
-		{
-	//		mTest->Render(*cmd.Get());
-		}
-		if (mViewport)
-		{
-			mContext->ClearRenderTarget(mSwapChains[0]->GetCurrentBuffer()->GetRT(), {0,0,0,0});
-			if (!mViewport->mRScene->IsInitialized())
-			{
-				mViewport->mRScene = RendererScene::Get(*mScene, mContext.get());
-			}
-			mViewport->SetBackbuffer(mSwapChains[0]->GetCurrentBuffer());
-		}
 	}
-
-//	EndFrame();
 }
 
 u64 DX12RHI::GetCompletedFrame() const
@@ -253,19 +212,6 @@ void DX12RHI::ProcessDeferredRelease(u32 frameIndex)
 	}
 }
 
-//void DX12RHI::Resize_WndProc(u32 resizeWidth, u32 resizeHeight)
-//{
-//	Window::Resize_WndProc(resizeWidth, resizeHeight);
-//	mResizeWidth = resizeWidth;
-//	mResizeHeight = resizeHeight;
-//}
-
-//void DX12RHI::OnDestroy_WndProc()
-//{
-//	wnd::Window::OnDestroy_WndProc();
-//	mClosed = true;
-//}
-
 void DX12RHI::CreateDeviceAndCmdQueue()
 {
 	UINT dxgiFactoryFlags = 0;
@@ -341,9 +287,6 @@ bool DX12RHI::ResizeSwapChains()
 	}
 	WaitForGPU();
 	mRTVHeap = {};
-	//mWidth = mResizeWidth;
-	//mHeight = mResizeHeight;
-//	mResizeWidth = mResizeHeight = 0;
 	mDeferredReleaseResources = {};
 
 	for (auto& swapChain : mSwapChains)
@@ -388,9 +331,6 @@ DeviceMeshRef DX12RHI::CreateDirectMesh(EPrimitiveTopology topology, VertexBuffe
 	result->View.SizeInBytes = size;
 	result->View.StrideInBytes = data.VertSize;
 	uploadCtx.FinishUploadSynchronous();
-//	mDevice->create
-//	mUploader.
-//	UpdateSubresources()
 	return result;
 }
 
@@ -888,12 +828,6 @@ bool DX12RHI::GetImmediateContext(std::function<void(IRenderDeviceCtx&)> callbac
 	callback(ctx);
 	return true;
 }
-
-//void DX12RHI::Move_WndProc(int xPos, int yPos)
-//{
-//	Window::Move_WndProc(xPos, yPos);
-//	mViewport->UpdatePos({xPos, yPos});
-//}
 
 ID3D12PipelineState* DX12RHI::GetDefaultPSO()
 {

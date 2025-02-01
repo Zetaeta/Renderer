@@ -43,19 +43,24 @@ void UserCamera::Tick(float deltaTime)
 	if (!m_Input->IsMouseDown(Input::MouseButton::RIGHT))
 	{
 		m_Input->SetCursorMode(Input::CursorMode::NORMAL);
+		mMoving = false;
 	}
 	else
 	{
 		//printf("Last mouse: (%.0f,%.0f), curr mouse: (%.0f, %.0f)\n", m_LastMouse.x, m_LastMouse.y, mousePos.x, mousePos.y);
 		m_Input->SetCursorMode(Input::CursorMode::LOCKED);
-		float yaw = mouseMove.x;
-		float pitch = mouseMove.y;
-		if (yaw != 0.f || pitch != 0.f) {
-			m_ViewChanged = true;
-			mat3  deltaRot = eulerAngleXY(pitch, yaw);
-			Rotation =  Rotation * deltaRot;
-			ViewRotation = glm::inverse(Rotation);
+		if (mMoving)
+		{
+			float yaw = mouseMove.x;
+			float pitch = mouseMove.y;
+			if (yaw != 0.f || pitch != 0.f) {
+				m_ViewChanged = true;
+				mat3  deltaRot = eulerAngleXY(pitch, yaw);
+				Rotation =  Rotation * deltaRot;
+				ViewRotation = glm::inverse(Rotation);
+			}
 		}
+		mMoving = true;
 	}
 	Dirty = true;
 	m_LastMouse = mousePos;

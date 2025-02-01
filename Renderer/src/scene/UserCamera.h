@@ -34,6 +34,7 @@ public:
 private:
 	ivec2 m_LastMouse;
 	bool m_ViewChanged;
+	bool mMoving = false;
 	Input* m_Input;
 	wnd::Window* mWindow = nullptr;
 };

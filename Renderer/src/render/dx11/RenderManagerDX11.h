@@ -15,12 +15,7 @@ public:
 
 	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, bool createDx12 = false);
 	
-	virtual void DrawFrameData() override
-	{
-		Super::DrawFrameData();
-		ImGui::Text("DX11 frame time: %f", m_HwFrame);
-//		m_hardwareRenderer->DrawControls();
-	}
+	virtual void DrawFrameData() override;
 
 	void CreateIndependentViewport(rnd::IRenderDevice* device, wchar_t const* name);
 

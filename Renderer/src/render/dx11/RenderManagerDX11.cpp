@@ -22,7 +22,22 @@ RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* 
 void RenderManagerDX11::CreateIndependentViewport(rnd::IRenderDevice* device, wchar_t const* name)
 {
 	auto& win = mWindows.emplace_back(std::make_unique<wnd::Window>(1500, 900, name));
-	m_hardwareRenderer->CreateSurface(win.get())->CreateFullscreenViewport(&mScene, new UserCamera(mInput, win.get()));
+	device->CreateSurface(win.get())->CreateFullscreenViewport(&mScene, new UserCamera(mInput, win.get()));
+}
+
+void RenderManagerDX11::DrawFrameData()
+{
+	Super::DrawFrameData();
+	ImGui::Text("DX11 frame time: %f", m_HwFrame);
+	if (ImGui::Button("new dx11 window"))
+	{
+		CreateIndependentViewport(m_hardwareRenderer.get(), L"DX11");
+	}
+	if (ImGui::Button("new dx12 window"))
+	{
+		CreateIndependentViewport(dx12Win.get(), L"DX12");
+	}
+	//		m_hardwareRenderer->DrawControls();
 }
 
 void rnd::dx11::RenderManagerDX11::OnRenderStart()

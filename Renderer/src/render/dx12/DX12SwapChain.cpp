@@ -34,6 +34,10 @@ void DX12SwapChain::Present()
 {
 	mSwapChain->Present(1, 0);
 	mBufferIndex = mSwapChain->GetCurrentBackBufferIndex();
+	for (auto const& vp : mViewports)
+	{
+		vp->SetBackbuffer(GetBackbuffer());
+	}
 }
 
 void DX12SwapChain::RequestResize(uvec2 newSize)

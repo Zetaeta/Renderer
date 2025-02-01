@@ -242,9 +242,6 @@ private:
 	void WaitAndReleaseFrameIdx(u32 frameIdx);
 	void WaitAndReleaseFrame(u64 frame);
 	void EndFrame();
-	//void Resize_WndProc(u32 resizeWidth, u32 resizeHeight) override;
-	//void Move_WndProc(int resizeWidth, int resizeHeight) override;
-	//void OnDestroy_WndProc() override;
 
 	void CreateDeviceAndCmdQueue();
 	bool ResizeSwapChains();
@@ -279,9 +276,6 @@ private:
 	bool mClosed = false;
 	bool mRecordingCommands = false;
 	u32 mFrameIndex = 0;
-	u32 mResizeWidth = 0;
-	u32 mResizeHeight = 0;
-	Viewport* mViewport;
 	OwningPtr<DX12Context> mContext;
 	Scene* mScene = nullptr;
 

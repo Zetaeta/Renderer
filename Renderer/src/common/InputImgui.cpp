@@ -25,12 +25,10 @@ bool InputImgui::IsKeyDown(Key key)
 		return false;
 	}
 	return IsAnyWindowFocused() && (GetKeyState(sWinKeys[(int)key]) & 0x8000);
-//	return ImGui::IsKeyDown(keys[(int)key]);
 }
 
 bool InputImgui::IsMouseDown(MouseButton mb)
 {
-	//return ImGui::IsMouseDown(mbs[(int)mb]);
 	return IsAnyWindowFocused() && (GetKeyState(sWinMouse[(int)mb]) & 0x8000);
 }
 
