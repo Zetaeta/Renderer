@@ -22,6 +22,8 @@ public:
 //		m_hardwareRenderer->DrawControls();
 	}
 
+	void CreateIndependentViewport(rnd::IRenderDevice* device, wchar_t const* name);
+
 	void OnRenderStart() override;
 
 	void Resize(u32 width, u32 height)
@@ -37,7 +39,7 @@ public:
 	DX11Renderer* Renderer() override { return m_hardwareRenderer.get(); }
 
 	std::unique_ptr<DX11Renderer> m_hardwareRenderer;
-	std::unique_ptr<wnd::Window> mWin11;
+	Vector<std::unique_ptr<wnd::Window>> mWindows;
 protected:
 	Timer m_HwTimer;
 	float m_HwFrame = 0;

@@ -35,6 +35,8 @@ public:
 		return {mWidth, mHeight};
 	}
 
+	bool IsFocused() const;
+
 protected:
 	HWND mHwnd = (HWND) 0;
 	u32 mWidth = 0;

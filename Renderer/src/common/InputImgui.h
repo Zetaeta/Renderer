@@ -26,14 +26,7 @@ public:
 		//: m_RenderMgr(renderMgr)
 		{}
 
-	bool IsKeyDown(Key key) override
-	{
-		if (ImGui::IsAnyItemHovered())
-		{
-			return false;
-		}
-		return ImGui::IsKeyDown(keys[(int)key]);
-	}
+	bool IsKeyDown(Key key) override;
 
 	vec2 GetMousePosition() override
 	{

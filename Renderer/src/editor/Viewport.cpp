@@ -35,6 +35,8 @@ ScreenObject* Viewport::GetObjectAt(ivec2 pos)
 
 void Viewport::Resize(u32 width, u32 height, rnd::IDeviceTexture::Ref backbuffer)
 {
+	float scale = float(std::min(width, height));
+	mCamera->SetViewExtent(.5f * width / scale, .5f * height / scale);
 	rnd::RenderSettings settings;
 	if (mRCtx)
 	{

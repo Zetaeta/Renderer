@@ -90,7 +90,8 @@ struct DX12ReadbackBuffer
 	u64 Offset;
 };
 
-class DX12RHI : public wnd::Window, public IRenderDevice
+class DX12RHI : //public wnd::Window,
+public IRenderDevice
 {
 public:
 	static DX12RHI* InitRHI();
@@ -100,7 +101,7 @@ public:
 	~DX12RHI();
 
 	void BeginFrame() override;
-	void Tick() override;
+	void Tick();
 
 	u64 GetCompletedFrame() const;
 	u64 GetCurrentFrame() const
@@ -241,9 +242,9 @@ private:
 	void WaitAndReleaseFrameIdx(u32 frameIdx);
 	void WaitAndReleaseFrame(u64 frame);
 	void EndFrame();
-	void Resize_WndProc(u32 resizeWidth, u32 resizeHeight) override;
-	void Move_WndProc(int resizeWidth, int resizeHeight) override;
-	void OnDestroy_WndProc() override;
+	//void Resize_WndProc(u32 resizeWidth, u32 resizeHeight) override;
+	//void Move_WndProc(int resizeWidth, int resizeHeight) override;
+	//void OnDestroy_WndProc() override;
 
 	void CreateDeviceAndCmdQueue();
 	bool ResizeSwapChains();

@@ -34,7 +34,7 @@ namespace dx12
 static DX12RHI* sRHI = nullptr;
 
 DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers, Scene* scene, Camera::Ref camera)
-:Window(width, height, name), IRenderDevice(new DX12LegacyShaderCompiler), mNumBuffers(numBuffers)
+:IRenderDevice(new DX12LegacyShaderCompiler), mNumBuffers(numBuffers)
 {
 	GRenderController.AddRenderBackend(this);
 
@@ -60,13 +60,13 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 	mShaderResourceDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	mSamplerDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-	mSwapChains.push_back(MakeOwning<DX12SwapChain>(this, (u32)mNumBuffers));
+//	mSwapChains.push_back(MakeOwning<DX12SwapChain>(this, (u32)mNumBuffers));
 
 	if (scene)
 	{
 		mScene = scene;
 		mContext = std::make_unique<DX12Context>(mCmdList);
-		mViewport = mSwapChains[0]->CreateFullscreenViewport(mScene, camera);
+//		mViewport = mSwapChains[0]->CreateFullscreenViewport(mScene, camera);
 	}
 	{
 		mTest = MakeOwning<DX12Test>(mDevice.Get());
@@ -128,15 +128,15 @@ void DX12RHI::Tick()
 //	cmd->Reset(mCmdList.Allocators[mFrameIndex].Get(), );
 	mRecordingCommands = true;
 
-	D3D12_VIEWPORT vp {};
-	vp.Height = float(mHeight);
-	vp.Width = float(mWidth);
-	vp.TopLeftX = vp.TopLeftY = 0;
-	vp.MaxDepth = 1;
-	vp.MinDepth = 0;
-	cmd->RSSetViewports(1, &vp);
-	CD3DX12_RECT scissor(0, 0, mWidth, mHeight);
-	cmd->RSSetScissorRects(1, &scissor);
+	//D3D12_VIEWPORT vp {};
+	//vp.Height = float(mHeight);
+	//vp.Width = float(mWidth);
+	//vp.TopLeftX = vp.TopLeftY = 0;
+	//vp.MaxDepth = 1;
+	//vp.MinDepth = 0;
+	//cmd->RSSetViewports(1, &vp);
+	//CD3DX12_RECT scissor(0, 0, mWidth, mHeight);
+	//cmd->RSSetScissorRects(1, &scissor);
 
 	for (auto& swapChain : mSwapChains)
 	{
@@ -253,18 +253,18 @@ void DX12RHI::ProcessDeferredRelease(u32 frameIndex)
 	}
 }
 
-void DX12RHI::Resize_WndProc(u32 resizeWidth, u32 resizeHeight)
-{
-	Window::Resize_WndProc(resizeWidth, resizeHeight);
-	mResizeWidth = resizeWidth;
-	mResizeHeight = resizeHeight;
-}
+//void DX12RHI::Resize_WndProc(u32 resizeWidth, u32 resizeHeight)
+//{
+//	Window::Resize_WndProc(resizeWidth, resizeHeight);
+//	mResizeWidth = resizeWidth;
+//	mResizeHeight = resizeHeight;
+//}
 
-void DX12RHI::OnDestroy_WndProc()
-{
-	wnd::Window::OnDestroy_WndProc();
-	mClosed = true;
-}
+//void DX12RHI::OnDestroy_WndProc()
+//{
+//	wnd::Window::OnDestroy_WndProc();
+//	mClosed = true;
+//}
 
 void DX12RHI::CreateDeviceAndCmdQueue()
 {
@@ -341,9 +341,9 @@ bool DX12RHI::ResizeSwapChains()
 	}
 	WaitForGPU();
 	mRTVHeap = {};
-	mWidth = mResizeWidth;
-	mHeight = mResizeHeight;
-	mResizeWidth = mResizeHeight = 0;
+	//mWidth = mResizeWidth;
+	//mHeight = mResizeHeight;
+//	mResizeWidth = mResizeHeight = 0;
 	mDeferredReleaseResources = {};
 
 	for (auto& swapChain : mSwapChains)
@@ -889,11 +889,11 @@ bool DX12RHI::GetImmediateContext(std::function<void(IRenderDeviceCtx&)> callbac
 	return true;
 }
 
-void DX12RHI::Move_WndProc(int xPos, int yPos)
-{
-	Window::Move_WndProc(xPos, yPos);
-	mViewport->UpdatePos({xPos, yPos});
-}
+//void DX12RHI::Move_WndProc(int xPos, int yPos)
+//{
+//	Window::Move_WndProc(xPos, yPos);
+//	mViewport->UpdatePos({xPos, yPos});
+//}
 
 ID3D12PipelineState* DX12RHI::GetDefaultPSO()
 {

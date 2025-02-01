@@ -2,17 +2,36 @@
 #include "WinUser.h"
 
 
-static constexpr int sWinKeys[] =
+static constexpr int sWinMouse[] =
 {
 	VK_LBUTTON,
 	VK_MBUTTON,
 	VK_RBUTTON
 };
 
+constexpr static int const sWinKeys[] = {
+	0x57,
+	0x41,
+	0x53,
+	0x44,
+	0x51,
+	0x45,
+};
+
+bool InputImgui::IsKeyDown(Key key)
+{
+	if (ImGui::IsAnyItemHovered())
+	{
+		return false;
+	}
+	return IsAnyWindowFocused() && (GetKeyState(sWinKeys[(int)key]) & 0x8000);
+//	return ImGui::IsKeyDown(keys[(int)key]);
+}
+
 bool InputImgui::IsMouseDown(MouseButton mb)
 {
 	//return ImGui::IsMouseDown(mbs[(int)mb]);
-	return IsAnyWindowFocused() && (GetKeyState(sWinKeys[(int)mb]) & 0x8000);
+	return IsAnyWindowFocused() && (GetKeyState(sWinMouse[(int)mb]) & 0x8000);
 }
 
 void InputImgui::GetCursorPosition(int* xpos, int* ypos)

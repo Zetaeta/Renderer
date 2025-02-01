@@ -64,4 +64,5 @@ protected:
 	AssetManager m_AssMan;
 	float m_FrameTime = 0;
 	Timer m_Timer;
+	Input* mInput;
 };

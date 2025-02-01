@@ -1,13 +1,19 @@
 #include "scene/UserCamera.h"
 #include <glm/gtx/euler_angles.hpp>
 #include <iostream>
+#include "platform/windows/Window.h"
+#include "thread/ThreadUtils.h"
 
 
 void UserCamera::Tick(float deltaTime)
 {
-	vec2 mousePos = m_Input->GetMousePosition();
+	if (mWindow && !mWindow->IsFocused())
+	{
+		return;
+	}
+	ivec2 mousePos = m_Input->GetAbsoluteMousePos();
 	//std::cout << mousePos.x << ", " << mousePos.y << std::endl;
-	vec2 mouseMove = (mousePos - m_LastMouse) * deltaTime * turnspeed;
+	vec2 mouseMove = vec2(mousePos - m_LastMouse) * deltaTime * turnspeed;
 	vec3 cameraMove{0};
 
 	if (m_Input->IsKeyDown(Input::Key::W)) {
@@ -54,3 +60,25 @@ void UserCamera::Tick(float deltaTime)
 	Dirty = true;
 	m_LastMouse = mousePos;
 }
+
+Tickable::Tickable()
+{
+	ZE_ASSERT(IsInMainThread());
+	sTickables.push_back(this);
+}
+
+Tickable::~Tickable()
+{
+	ZE_ASSERT(IsInMainThread());
+	Remove(sTickables, this);
+}
+
+void Tickable::TickAll(float deltaTime)
+{
+	for (Tickable* t : sTickables)
+	{
+		t->Tick(deltaTime);
+	}
+}
+
+Vector<Tickable*> Tickable::sTickables;

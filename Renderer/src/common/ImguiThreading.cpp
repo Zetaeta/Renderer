@@ -80,7 +80,6 @@ static std::mutex sDrawDataMtx;
 
 void EndFrame()
 {
-	ImGui::End();
 	ImGui::Render();
 	{
 		std::lock_guard lock(sDrawDataMtx);	

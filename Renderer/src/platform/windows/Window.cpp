@@ -27,7 +27,7 @@ static LRESULT WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_MOVE:
 		if (auto it = sHwndToWindow.find(hWnd); it != sHwndToWindow.end())
 		{
-			it->second->Move_WndProc((int) LOWORD(lParam), (int) HIWORD(lParam));
+			it->second->Move_WndProc((int)(short) LOWORD(lParam), (int)(short) HIWORD(lParam));
 			return 0;
 		}
 		break;
@@ -94,6 +94,11 @@ void Window::Move_WndProc(int posX, int posY)
 void Window::OnDestroy_WndProc()
 {
 
+}
+
+bool Window::IsFocused() const
+{
+	return GetActiveWindow() == mHwnd;
 }
 
 }

@@ -218,7 +218,7 @@ int MainDX11(int argc, char** argv)
 	}
 
 	// Show the window
-	::ShowWindow(hwnd, SW_SHOWDEFAULT);
+	//::ShowWindow(hwnd, SW_SHOWDEFAULT);
 	::UpdateWindow(hwnd);
 	
 
@@ -344,7 +344,7 @@ int MainDX11(int argc, char** argv)
 		//g_pContext->ClearRenderTargetView(g_msaaRenderTargetView.Get(), clear_color_with_alpha);
 		//g_pContext->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-		if (g_CurrHeight && g_CurrWidth) {
+		//if (g_CurrHeight && g_CurrWidth) {
 			//renderMgr.m_hardwareRenderer->GetViewport()->UpdatePos({g_WindowPosX, g_WindowPosY});
 			static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
@@ -398,11 +398,12 @@ int MainDX11(int argc, char** argv)
 
 			editor->Tick(0);
 			renderMgr.DrawUI();
+			ImGui::End();
 
 			static float f = 0.0f;
 			static int	 counter = 0;
 
-		}
+		//}
 		ThreadImgui::EndFrame();
 
 //		auto rt = bbTex->GetRT()->GetData<ID3D11RenderTargetView>();

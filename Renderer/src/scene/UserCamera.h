@@ -4,13 +4,26 @@
 #include "core/Utils.h"
 #include "Camera.h"
 
-class UserCamera : public Camera
+namespace wnd { class Window; }
+
+class Tickable
 {
 public:
-	UserCamera(Input* input)
-	:Camera(ECameraType::PERSPECTIVE), m_Input(input){}
+	Tickable();
+	~Tickable();
+	static void TickAll(float deltaTime);
+	virtual void Tick(float deltaTime) = 0;
+private:
+	static Vector<Tickable*> sTickables;
+};
 
-	void Tick(float deltaTime);
+class UserCamera : public Camera, Tickable
+{
+public:
+	UserCamera(Input* input, wnd::Window* owningWindow = nullptr)
+	:Camera(ECameraType::PERSPECTIVE), m_Input(input), mWindow(owningWindow){}
+
+	void Tick(float deltaTime) override;
 
 	bool ViewChanged() { return m_ViewChanged; }
 	void CleanView() {m_ViewChanged = false;}
@@ -19,7 +32,8 @@ public:
 	float movespeed = .005f;
 	float turnspeed = .001f;
 private:
-	vec2 m_LastMouse;
+	ivec2 m_LastMouse;
 	bool m_ViewChanged;
 	Input* m_Input;
+	wnd::Window* mWindow = nullptr;
 };

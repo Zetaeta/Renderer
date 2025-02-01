@@ -14,7 +14,7 @@ using namespace rnd;
 TextureRef gDirt;
 
  RenderManager::RenderManager(Input* input)
-	: m_Camera(input), mScene(&m_AssMan)
+	: m_Camera(input), mScene(&m_AssMan), mInput(input)
 {
 
 	ObjReader objReader{ mScene.Materials() };
