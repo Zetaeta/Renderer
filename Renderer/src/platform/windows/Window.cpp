@@ -2,6 +2,7 @@
 #include "unordered_map"
 #include "core/Utils.h"
 #include "render/DeviceSurface.h"
+#include "common/Application.h"
 namespace wnd
 {
 
@@ -35,7 +36,11 @@ static LRESULT WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		{
 			it->second->OnDestroy_WndProc();
 		}
-		
+		::PostQuitMessage(0);
+		break;
+	case WM_QUIT:
+		App::RequestExit();
+		break;
 	default:
 		break;
 	}

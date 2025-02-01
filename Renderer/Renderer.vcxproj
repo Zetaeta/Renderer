@@ -150,7 +150,9 @@
     <ClInclude Include="src\3rd\imgui\imstb_truetype.h" />
     <ClInclude Include="src\3rd\imgui\misc\cpp\imgui_stdlib.h" />
     <ClInclude Include="src\3rd\stb_image.h" />
+    <ClInclude Include="src\common\Application.h" />
     <ClInclude Include="src\common\CommonEnums.h" />
+    <ClInclude Include="src\common\ImguiThreading.h" />
     <ClInclude Include="src\common\SceneDataInterface.h" />
     <ClInclude Include="src\container\EnumArray.h" />
     <ClInclude Include="src\container\MovableObjectPool.h" />
@@ -329,6 +331,8 @@
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
     </ClCompile>
     <ClCompile Include="src\asset\Asset.cpp" />
+    <ClCompile Include="src\common\Application.cpp" />
+    <ClCompile Include="src\common\ImguiThreading.cpp" />
     <ClCompile Include="src\common\InputImgui.cpp" />
     <ClCompile Include="src\common\SceneDataInterface.cpp" />
     <ClCompile Include="src\core\BaseSerialized.cpp" />
@@ -433,6 +437,7 @@
     <ClCompile Include="src\render\dx11\DX11Device.cpp" />
     <ClCompile Include="src\render\dx11\DX11RenderTarget.cpp" />
     <ClCompile Include="src\render\dx11\DX11ShaderCompiler.cpp" />
+    <ClCompile Include="src\render\dx11\DX11Swapchain.cpp" />
     <ClCompile Include="src\render\dx11\SharedD3D11.cpp" />
     <ClCompile Include="src\render\dx12\DX12Allocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12CBPool.cpp" />

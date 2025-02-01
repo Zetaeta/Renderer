@@ -1,6 +1,7 @@
 #include "DX11Device.h"
 #include "container/Vector.h"
 #include "asset/Texture.h"
+#include "DX11Swapchain.h"
 
 namespace rnd
 {
@@ -184,6 +185,25 @@ SamplerHandle DX11Device::GetSampler(SamplerDesc const& desc)
 		mDevice->CreateSamplerState(&desc11, &value);
 	}
 	return SamplerHandle(value.Get());
+}
+
+IDXGIFactory2* DX11Device::GetFactory()
+{
+	if (mFactory == nullptr)
+	{
+
+		ComPtr<IDXGIDevice2> dxgiDevice;
+		DXCALL(mDevice->QueryInterface(IID_PPV_ARGS(&dxgiDevice)));
+		ComPtr<IDXGIAdapter> adapter;
+		DXCALL(dxgiDevice->GetParent(IID_PPV_ARGS(&adapter)));
+		DXCALL(adapter->GetParent(IID_PPV_ARGS(&mFactory)));
+	}
+	return mFactory.Get();
+}
+
+IDeviceSurface* DX11Device::CreateSurface(wnd::Window* window)
+{
+	return mSwapChains.emplace_back(MakeOwning<DX11SwapChain>(this, window)).get();
 }
 
 }

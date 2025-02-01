@@ -160,6 +160,7 @@ MeshInstanceRef Scene::AddMesh(MeshRef mesh, Transform trans)
 
 void Scene::Initialize()
 {
+	rnd::RendererScene::InitializeScene(*this);
 	 for (auto const& obj : m_Objects)
 	 {
 		obj->SetScene(this);

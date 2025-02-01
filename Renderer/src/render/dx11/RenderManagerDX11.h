@@ -13,17 +13,7 @@ class RenderManagerDX11 : public RenderManager
 public:
 	using Super = RenderManager;
 
-
-	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, IDXGISwapChain* swapChain, bool createDx12 = false)
-		: Super(input)
-	{
-		m_hardwareRenderer = std::make_unique<DX11Renderer>(&mScene, &m_Camera, 0, 0, device, context, swapChain);
-		if (createDx12)
-		{
-			dx12Win = MakeOwning<dx12::DX12RHI>(1500, 900, L"DX12", TripleBuffered, &mScene, &m_Camera);
-			dx12LOR = dx12Win->GetLiveObjectReporter();
-		}
-	}
+	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, bool createDx12 = false);
 	
 	virtual void DrawFrameData() override
 	{
@@ -47,6 +37,7 @@ public:
 	DX11Renderer* Renderer() override { return m_hardwareRenderer.get(); }
 
 	std::unique_ptr<DX11Renderer> m_hardwareRenderer;
+	std::unique_ptr<wnd::Window> mWin11;
 protected:
 	Timer m_HwTimer;
 	float m_HwFrame = 0;

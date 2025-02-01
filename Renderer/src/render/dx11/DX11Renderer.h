@@ -33,7 +33,7 @@ using namespace rnd::dx11;
 class DX11Renderer : public IRenderer, public rnd::IRenderDeviceCtx, public DX11Device
 {
 public:
-	DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context, IDXGISwapChain* swapChain);
+	DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context);
 
 	~DX11Renderer();
 
@@ -105,7 +105,10 @@ public:
 
 	void Resize(u32 width, u32 height, u32* canvas = nullptr) override;
 
+	void ImGuiInit(wnd::Window* mainWindow);
 	void PreImgui();
+	void ImguiBeginFrame();
+	void ImguiEndFrame();
 
 
 	MappedResource MapResource(ID3D11Resource*, u32 subResource, ECpuAccessFlags flags);
@@ -181,7 +184,6 @@ protected:
 #endif
 	ID3D11Device*		   pDevice;
 	ID3D11DeviceContext*	   pContext;
-	IDXGISwapChain* pSwapChain = nullptr;
 	DX11CBPool mCBPool;
 
 	DX11Texture::Ref m_EmptyTexture;

@@ -27,6 +27,10 @@
 #include "render/RendererScene.h"
 #include "render/shaders/ShaderDeclarations.h"
 #include "render/RenderController.h"
+#include "backends/imgui_impl_dx11.h"
+#include "common/ImguiThreading.h"
+#include "DX11Swapchain.h"
+#include "platform/windows/Window.h"
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -95,8 +99,8 @@ void DX11Renderer::PrepareShadowMaps()
 
 DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 
- DX11Renderer::DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context, IDXGISwapChain* swapChain)
-	: DX11Device(device), m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context), m_Scene(scene), pSwapChain(swapChain), mCBPool(pDevice, this)
+ DX11Renderer::DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context)
+	: DX11Device(device), m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context), m_Scene(scene), mCBPool(pDevice, this)
 {
 	mCtx = &m_Ctx;
 	CBPool = &mCBPool;
@@ -106,7 +110,7 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 	m_Ctx.pContext = pContext;
 	m_Ctx.m_Renderer = this;
 	Setup();
-	mViewport = MakeOwning<Viewport>(this, scene, camera);
+	mViewport = nullptr; //MakeOwning<Viewport>(this, scene, camera);
 
 	D3D11_QUERY_DESC disjointDesc {};
 	disjointDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
@@ -122,6 +126,7 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 
 DX11Renderer::~DX11Renderer()
 {
+	mSwapChains.clear();
 	GRenderController.RemoveRenderBackend(this);
 	RendererScene::OnShutdownDevice(this);
 	IRenderDevice::Teardown();
@@ -340,12 +345,16 @@ void DX11Renderer::Render(const Scene& scene)
 
 	ImVec4 clear_color = ImVec4();
 
-	m_Scale = float(std::min(m_Width, m_Height));
-	m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
+	//m_Scale = float(std::min(m_Width, m_Height));
+	//m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
 
+	if (mViewport)
+	{
 	if (!mViewport->mRScene->IsInitialized())
 	{
 		mViewport->mRScene = RendererScene::Get(scene, this);
+	}
+
 	}
 
 
@@ -551,13 +560,14 @@ void DX11Renderer::SetBackbuffer(DX11Texture::Ref backBufferTex, u32 width, u32 
 void DX11Renderer::Resize(u32 width, u32 height, u32* canvas)
 {
 	m_MainRenderTarget = nullptr;
+	return;
 	mViewport->Reset();
-	pSwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+//	pSwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
 
 	if (width > 0 && height > 0)
 	{
 		ComPtr<ID3D11Texture2D> backBuffer;
-		pSwapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer));
+//		pSwapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer));
 		DeviceTextureDesc desc;
 		desc.Width = width;
 		desc.Height = height;
@@ -566,10 +576,35 @@ void DX11Renderer::Resize(u32 width, u32 height, u32* canvas)
 	}
 }
 
+void DX11Renderer::ImGuiInit(wnd::Window* mainWindow)
+{
+	ImGui_ImplWin32_Init(mainWindow->GetHwnd());
+	ImGui_ImplDX11_Init(m_Ctx.pDevice, m_Ctx.pContext);
+}
+
 void DX11Renderer::PreImgui()
 {
-	auto rt = m_MainRenderTarget->GetRTV();
-	pContext->OMSetRenderTargets(1, &rt, nullptr);
+	if (!mSwapChains.empty())
+	{
+		auto rt = mSwapChains[0]->GetBackbuffer()->GetRT()->GetData<ID3D11RenderTargetView*>();
+		pContext->OMSetRenderTargets(1, &rt, nullptr);
+	}
+}
+
+void DX11Renderer::ImguiBeginFrame()
+{
+	ImGui_ImplDX11_NewFrame();
+//	ThreadImgui::BeginFrame();
+}
+
+void DX11Renderer::ImguiEndFrame()
+{
+	//ImGui::End();
+	//ImGui::Render();
+//	ThreadImgui::EndFrame();
+	PreImgui();
+	ThreadImgui::ImDrawDataWrapper drawData = ThreadImgui::GetDrawData();
+	ImGui_ImplDX11_RenderDrawData(&drawData);
 }
 
 MappedResource DX11Renderer::MapResource(ID3D11Resource* resource, u32 subResource, ECpuAccessFlags flags)
@@ -703,16 +738,25 @@ void DX11Renderer::ExecuteCommand(std::function<void(IRenderDeviceCtx&)>&& comma
 
 void DX11Renderer::BeginFrame()
 {
+	ImguiBeginFrame();
 	++mFrameNum;
 	ProcessTimers();
+	for (auto& swapChain : mSwapChains)
+	{
+		if (swapChain->IsResizeRequested())
+		{
+			swapChain->Resize();
+		}
+	}
+
 	StartFrameTimer();
 
 	ProcessTextureCreations();
 
 	ImVec4 clear_color = ImVec4();
 
-	m_Scale = float(std::min(m_Width, m_Height));
-	m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
+	//m_Scale = float(std::min(m_Width, m_Height));
+	//m_Camera->SetViewExtent(.5f * m_Width / m_Scale, .5f * m_Height / m_Scale );
 
 	//if (!mViewport->mRScene->IsInitialized())
 	//{
@@ -723,6 +767,12 @@ void DX11Renderer::BeginFrame()
 void DX11Renderer::EndFrame()
 {
 	EndFrameTimer();
+	ImguiEndFrame();
+
+	for (auto& swapChain : mSwapChains)
+	{
+		swapChain->Present();
+	}
 }
 
 void DX11Renderer::SetShaderResources(EShaderType shader, Span<ResourceView const> srvs, u32 startIdx)
@@ -813,7 +863,7 @@ void DX11Renderer::DispatchCompute(ComputeDispatch args)
 
 void DX11Renderer::ClearResourceBindings()
 {
-	mRCtx->TextureManager.UnBind(this);
+//	mRCtx->TextureManager.UnBind(this);
 	ID3D11ShaderResourceView* const* dummyViews = reinterpret_cast<ID3D11ShaderResourceView* const*>(ZerosArray);
 	pContext->PSSetShaderResources(0, mMaxShaderResources[EShaderType::Pixel], dummyViews);
 	pContext->VSSetShaderResources(0, mMaxShaderResources[EShaderType::Vertex], dummyViews);

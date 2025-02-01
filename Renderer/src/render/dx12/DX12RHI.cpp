@@ -60,7 +60,7 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 	mShaderResourceDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	mSamplerDescTables = MakeOwning<DX12DescriptorTableAllocator>(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-	mSwapChains.push_back(MakeOwning<DX12SwapChain>(this, (u32)mNumBuffers, uvec2{width, height}));
+	mSwapChains.push_back(MakeOwning<DX12SwapChain>(this, (u32)mNumBuffers));
 
 	if (scene)
 	{
@@ -115,12 +115,12 @@ void DX12RHI::Tick()
 	}
 	ResizeSwapChains();
 
-	if (mViewport && mViewport->mRCtx)
-	{
-		ImGui::Begin("DX12");
-		mViewport->mRCtx->DrawControls();
-		ImGui::End();
-	}
+	//if (mViewport && mViewport->mRCtx)
+	//{
+	//	ImGui::Begin("DX12");
+	//	mViewport->mRCtx->DrawControls();
+	//	ImGui::End();
+	//}
 
 
 	StartFrame();
@@ -904,6 +904,11 @@ void DX12RHI::BeginFrame()
 {
 	IRenderDevice::BeginFrame();
 	Tick();
+}
+
+rnd::IDeviceSurface* DX12RHI::CreateSurface(wnd::Window* window)
+{
+	return mSwapChains.emplace_back(MakeOwning<DX12SwapChain>(window, mNumBuffers)).get();
 }
 
 ID3D12Device_* GetD3D12Device()

@@ -30,6 +30,11 @@ public:
 		mSurface = surface;
 	}
 
+	uvec2 GetSize() const
+	{
+		return {mWidth, mHeight};
+	}
+
 protected:
 	HWND mHwnd = (HWND) 0;
 	u32 mWidth = 0;

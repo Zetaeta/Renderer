@@ -6,7 +6,7 @@
 namespace rnd
 {
 
-static std::unordered_map<Scene const*, std::unordered_map<IRenderDevice const*, std::unique_ptr<RendererScene>>> sScenes;
+static std::unordered_map<Scene const*, std::unordered_map<IRenderDevice*, std::unique_ptr<RendererScene>>> sScenes;
 
 RendererScene* RendererScene::Get(Scene const& scene, IRenderDeviceCtx* deviceCtx)
 {
@@ -35,6 +35,17 @@ void RendererScene::DestroyScene(Scene const& scene)
 //		sScenes.erase(it);
 	}
 
+}
+
+void RendererScene::InitializeScene(Scene const& scene)
+{
+	if (auto it = sScenes.find(&scene); it != sScenes.end())
+	{
+		for (auto& [device, renderScene] : it->second)
+		{
+			*renderScene = RendererScene(device, scene);
+		}
+	}
 }
 
 void RendererScene::OnShutdownDevice(IRenderDevice* device)

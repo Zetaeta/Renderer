@@ -10,7 +10,7 @@ namespace rnd::dx12
 class DX12SwapChain : public IDeviceSurface
 {
 public:
-	DX12SwapChain(wnd::Window* window, u32 numBuffers, uvec2 size);
+	DX12SwapChain(wnd::Window* window, u32 numBuffers);
 	void Present() override;
 	void RequestResize(uvec2 newSize) override;
 

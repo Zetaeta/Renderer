@@ -28,6 +28,7 @@ public:
 	static RendererScene* Get(Scene const& scene, IRenderDeviceCtx* deviceCtx);
 
 	static void DestroyScene(Scene const& scene);
+	static void InitializeScene(Scene const& scene);
 
 	static void OnShutdownDevice(IRenderDevice* device);
 

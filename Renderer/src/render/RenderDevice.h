@@ -14,12 +14,17 @@
 
 struct CompoundMesh;
 class Viewport;
-namespace rnd { class RenderingThread; }
-
-namespace rnd { class ShaderManager; }
+namespace wnd
+{
+class Window;
+}
 
 namespace rnd
 {
+
+class IDeviceSurface;
+class RenderingThread;
+class ShaderManager;
 
 struct CBHandle
 {
@@ -137,6 +142,8 @@ public:
 
 
 	virtual void ExecuteCommand(std::function<void(IRenderDeviceCtx&)>&& command, char const* name) = 0;
+
+	virtual IDeviceSurface* CreateSurface(wnd::Window* window) = 0;
 
 	ShaderManager ShaderMgr;
 

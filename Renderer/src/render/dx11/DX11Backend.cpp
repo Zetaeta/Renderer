@@ -22,6 +22,8 @@
 #include "render/dx11/DX11Texture.h"
 #include "core/Logging.h"
 #include "render/dx12/DX12Window.h"
+#include "common/ImguiThreading.h"
+#include "common/Application.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -34,7 +36,7 @@ using namespace rnd::dx11;
 // Data
 static ComPtr<ID3D11Device>		   g_pd3dDevice = nullptr;
 static ID3D11DeviceContext*	   g_pContext = nullptr;
-static IDXGISwapChain*		   g_pSwapChain = nullptr;
+//static IDXGISwapChain*		   g_pSwapChain = nullptr;
 static UINT					   g_ResizeWidth = 0, g_ResizeHeight = 0;
 static INT					   g_WindowPosX = 0, g_WindowPosY = 0;
 static UINT					   g_CurrWidth = 0, g_CurrHeight = 0;
@@ -45,7 +47,7 @@ ComPtr<ID3D11RenderTargetView> g_msaaRenderTargetView;
 	ComPtr<ID3D11Texture2D> g_BackBuffer;
 
 // Forward declarations of helper functions
-bool		   CreateDeviceD3D(HWND hWnd);
+bool		   CreateDeviceD3D();
 void		   CleanupDeviceD3D();
 void		   CreateRenderTarget();
 void		   CleanupRenderTarget();
@@ -208,7 +210,7 @@ int MainDX11(int argc, char** argv)
 	HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui DirectX11 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
 	// Initialize Direct3D
-	if (!CreateDeviceD3D(hwnd))
+	if (!CreateDeviceD3D())
 	{
 		CleanupDeviceD3D();
 		::UnregisterClassW(wc.lpszClassName, wc.hInstance);
@@ -249,8 +251,8 @@ int MainDX11(int argc, char** argv)
 	}
 
 	// Setup Platform/Renderer backends
-	ImGui_ImplWin32_Init(hwnd);
-	ImGui_ImplDX11_Init(g_pd3dDevice.Get(), g_pContext);
+	//ImGui_ImplWin32_Init(hwnd);
+	//ImGui_ImplDX11_Init(g_pd3dDevice.Get(), g_pContext);
 
 	// Load Fonts
 	// - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -275,14 +277,14 @@ int MainDX11(int argc, char** argv)
 	InputImgui input;
 	{
 
-	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input, g_pSwapChain, HasArg("-dx12", argc, argv));
+	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input, HasArg("-dx12", argc, argv));
 	Editor*			  editor = Editor::Create(&input, &renderMgr);
 	renderMgr.CreateInitialScene();
 //	std::shared_ptr<rnd::dx11::DX11Texture> bbTex = nullptr;
 
 	// Main loop
 	bool done = false;
-	while (!done)
+	while (!done && !App::IsExitRequested())
 	{
 		// Poll and handle messages (inputs, window resize, etc.)
 		// See the WndProc() function below for our to dispatch events to the Win32 backend.
@@ -324,9 +326,10 @@ int MainDX11(int argc, char** argv)
 
 
 		// Start the Dear ImGui frame
-		ImGui_ImplDX11_NewFrame();
-		ImGui_ImplWin32_NewFrame();
-		ImGui::NewFrame();
+		//ImGui_ImplDX11_NewFrame();
+		//ImGui_ImplWin32_NewFrame();
+		//ImGui::NewFrame();
+		ThreadImgui::BeginFrame();
 
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 		if (show_demo_window)
@@ -342,7 +345,7 @@ int MainDX11(int argc, char** argv)
 		//g_pContext->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
 		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
 		if (g_CurrHeight && g_CurrWidth) {
-			renderMgr.m_hardwareRenderer->GetViewport()->UpdatePos({g_WindowPosX, g_WindowPosY});
+			//renderMgr.m_hardwareRenderer->GetViewport()->UpdatePos({g_WindowPosX, g_WindowPosY});
 			static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
 			// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
@@ -393,33 +396,21 @@ int MainDX11(int argc, char** argv)
 				}
 			}*/
 
-			renderMgr.DrawUI();
 			editor->Tick(0);
+			renderMgr.DrawUI();
 
-			ImGui::End();
 			static float f = 0.0f;
 			static int	 counter = 0;
 
 		}
-		//g_pContext->ResolveSubresource(g_BackBuffer.Get(), 0, g_msaaRenderTarget.Get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
-
-		// 3. Show another simple window.
-		if (show_another_window)
-		{
-			ImGui::Begin("Another Window", &show_another_window); // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-			ImGui::Text("Hello from another window!");
-			if (ImGui::Button("Close Me"))
-				show_another_window = false;
-			ImGui::End();
-		}
+		ThreadImgui::EndFrame();
 
 //		auto rt = bbTex->GetRT()->GetData<ID3D11RenderTargetView>();
 //		g_pContext->OMSetRenderTargets(1, &rt, nullptr);
 		// Rendering
-		renderMgr.m_hardwareRenderer->PreImgui();
-		ImGui::Render();
-		//DrawTri({ 0, 0, 0,1 }, { .5, 1, 0,1 }, {1,0,0,1});
-		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+//		renderMgr.m_hardwareRenderer->PreImgui();
+		//ImGui::Render();
+		//ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 		
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
@@ -427,7 +418,7 @@ int MainDX11(int argc, char** argv)
 			ImGui::RenderPlatformWindowsDefault();
 		}
 
-		g_pSwapChain->Present(1, 0); // Present with vsync
+//		g_pSwapChain->Present(1, 0); // Present with vsync
 									 // g_pSwapChain->Present(0, 0); // Present without vsync
 	}
 	Editor::Destroy();
@@ -451,24 +442,9 @@ int MainDX11(int argc, char** argv)
 
 // Helper functions
 
-bool CreateDeviceD3D(HWND hWnd)
+bool CreateDeviceD3D()
 {
 	// Setup swap chain
-	DXGI_SWAP_CHAIN_DESC sd;
-	ZeroMemory(&sd, sizeof(sd));
-	sd.BufferCount = 2;
-	sd.BufferDesc.Width = 0;
-	sd.BufferDesc.Height = 0;
-	sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	sd.BufferDesc.RefreshRate.Numerator = 60;
-	sd.BufferDesc.RefreshRate.Denominator = 1;
-	sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-	sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
-	sd.OutputWindow = hWnd;
-	sd.SampleDesc.Count = 1;
-	sd.SampleDesc.Quality = 0;
-	sd.Windowed = TRUE;
-	sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
 	UINT createDeviceFlags = 0;
 	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
@@ -477,9 +453,10 @@ bool CreateDeviceD3D(HWND hWnd)
 		D3D_FEATURE_LEVEL_11_0,
 		D3D_FEATURE_LEVEL_10_0,
 	};
-	HRESULT res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pContext);
-	if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
-		res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pContext);
+	HRESULT res = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &g_pd3dDevice, &featureLevel, &g_pContext);
+	DXCALL(res);
+	//if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
+	//	res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pContext);
 	if (res != S_OK)
 		return false;
 
@@ -509,11 +486,11 @@ bool CreateDeviceD3D(HWND hWnd)
 void CleanupDeviceD3D()
 {
 	CleanupRenderTarget();
-	if (g_pSwapChain)
-	{
-		g_pSwapChain->Release();
-		g_pSwapChain = nullptr;
-	}
+	//if (g_pSwapChain)
+	//{
+	//	g_pSwapChain->Release();
+	//	g_pSwapChain = nullptr;
+	//}
 	if (g_pContext)
 	{
 		g_pContext->Release();
@@ -532,62 +509,6 @@ void CleanupDeviceD3D()
 	}
 }
 
-
-void CreateRenderTarget()
-{
-	g_pSwapChain->GetBuffer(0, IID_PPV_ARGS(&g_BackBuffer));
-	return;
-	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-	Zero(rtvDesc);
-	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-
-	g_pd3dDevice->CreateRenderTargetView(g_BackBuffer.Get(), &rtvDesc, &g_mainRenderTargetView);
-
-	if (g_CurrWidth > 0 && g_CurrHeight > 0)
-	{
-		CD3D11_TEXTURE2D_DESC msaaRTDesc(DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-										g_CurrWidth, g_CurrHeight,
-										1,
-										1,
-										D3D11_BIND_RENDER_TARGET,
-										D3D11_USAGE_DEFAULT,
-										0,
-										4);
-		HR_ERR_CHECK(g_pd3dDevice->CreateTexture2D(&msaaRTDesc, nullptr, &g_msaaRenderTarget))
-		CD3D11_RENDER_TARGET_VIEW_DESC msaaRTVDesc(D3D11_RTV_DIMENSION_TEXTURE2DMS, msaaRTDesc.Format);
-		HR_ERR_CHECK(g_pd3dDevice->CreateRenderTargetView(g_msaaRenderTarget.Get(), &msaaRTVDesc, &g_msaaRenderTargetView))
-
-		//D3D11_DEPTH_STENCIL_DESC dsDesc;
-		//Zero(dsDesc);
-		//dsDesc.DepthEnable = TRUE;
-		//dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		//dsDesc.DepthFunc = D3D11_COMPARISON_LESS;
-		//ComPtr<ID3D11DepthStencilState> pDSState;
-		//HR_ERR_CHECK(g_pd3dDevice->CreateDepthStencilState(&dsDesc, &pDSState));
-		//g_pContext->OMSetDepthStencilState(pDSState.Get(),0);
-
-		ComPtr<ID3D11Texture2D> pDepthStencil;
-		D3D11_TEXTURE2D_DESC depthDesc;
-		Zero(depthDesc);
-		depthDesc.Width = g_CurrWidth;
-		depthDesc.Height = g_CurrHeight;
-		depthDesc.MipLevels = 1;
-		depthDesc.ArraySize = 1;
-		depthDesc.Format = DXGI_FORMAT_D32_FLOAT;
-		depthDesc.SampleDesc.Count = 4;
-		depthDesc.SampleDesc.Quality = 0;
-		depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-
-		HR_ERR_CHECK(g_pd3dDevice->CreateTexture2D(&depthDesc, nullptr, &pDepthStencil));
-
-		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-		Zero(dsvDesc);
-		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
-		dsvDesc.Texture2D.MipSlice = 0;
-		HR_ERR_CHECK(g_pd3dDevice->CreateDepthStencilView(pDepthStencil.Get(), &dsvDesc, &dsv));
-	}
-}
 
 void CleanupRenderTarget()
 {

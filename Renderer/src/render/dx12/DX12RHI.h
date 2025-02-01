@@ -232,6 +232,8 @@ public:
 		return mFactory.Get();
 	}
 
+	IDeviceSurface* CreateSurface(wnd::Window* window) override;
+
 private:
 	void WaitFence(u64 value);
 

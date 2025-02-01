@@ -7,6 +7,9 @@
 #include "core/BaseDefines.h"
 #include "SharedD3D11.h"
 #include "DX11Ctx.h"
+#include "dxgi1_2.h"
+
+namespace rnd { namespace dx11 { class DX11SwapChain; } }
 
 namespace rnd
 {
@@ -51,7 +54,18 @@ public:
 
 	std::unordered_map<TextureId, DX11TextureRef> mTextures;
 
+	DX11Ctx& GetDX11Ctx()
+	{
+		return *mCtx;
+	}
+	ID3D11Device* GetD3D11Device()
+	{
+		return mDevice;
+	}
 
+	IDXGIFactory2* GetFactory();
+
+	IDeviceSurface* CreateSurface(wnd::Window* window) override;
 
 protected:
 	std::unordered_map<SamplerDesc, ComPtr<ID3D11SamplerState>, GenericHash<>> mSamplers;
@@ -70,6 +84,9 @@ protected:
 	SmallMap<Name, VertexAttributeMask> mSemanticsToMask;
 
 	DX11Ctx* mCtx = nullptr;
+	ComPtr<IDXGIFactory2> mFactory;
+
+	Vector<OwningPtr<DX11SwapChain>> mSwapChains;
 private:
 
 };

@@ -6,18 +6,15 @@
 namespace rnd::dx12
 {
 
-DX12SwapChain::DX12SwapChain(wnd::Window* window, u32 numBuffers, uvec2 size)
-: IDeviceSurface(&GetRHI(), window), mNumBuffers(numBuffers), mSize(size)
+DX12SwapChain::DX12SwapChain(wnd::Window* window, u32 numBuffers)
+: IDeviceSurface(&GetRHI(), window), mNumBuffers(numBuffers), mSize(window->GetSize())
 {
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
 	swapChainDesc.BufferCount = mNumBuffers;
-	swapChainDesc.Width = size.x;
-	swapChainDesc.Height = size.y;
+	swapChainDesc.Width = mSize.x;
+	swapChainDesc.Height = mSize.y;
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	//swapChainDesc.BufferDesc.RefreshRate.Numerator = 60;
-	//swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 	swapChainDesc.SampleDesc.Count = 1;
-//	swapChainDesc.Windowed = true;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	ComPtr<IDXGISwapChain1> swapChain;
