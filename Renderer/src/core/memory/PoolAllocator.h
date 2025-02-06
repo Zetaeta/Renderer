@@ -5,7 +5,7 @@
 
 // Like GrowingImmobileObjectPool but destructs objects when released
 template<typename T, size_t PageSize = 256, bool ListUsed = false, typename SizeType = u32, typename Destructor = DefaultDestruct, typename Constructor = DefaultConstruct<T>>
-class GrowingImmobilePool : public PoolUsageTracker<ListUsed, SizeType>
+class PoolAllocator : public PoolUsageTracker<ListUsed, SizeType>
 {
 	static_assert(sizeof(T) >= sizeof(SizeType), "Free-list requires at least pointer size");
 	using PoolUsageTracker<ListUsed, SizeType>::TrackUsed;
@@ -14,12 +14,12 @@ class GrowingImmobilePool : public PoolUsageTracker<ListUsed, SizeType>
 
 	using EntryType = UninitializedMemory<T>;
 public:
-	GrowingImmobilePool(Destructor&& destructor = {}, Constructor&& construct = {})
+	PoolAllocator(Destructor&& destructor = {}, Constructor&& construct = {})
 		: mDestruct(std::move(destructor)), mConstruct(std::move(construct))
 	{
 	}
 
-	~GrowingImmobilePool()
+	~PoolAllocator()
 	{
 		ZE_ENSURE(mUsedSize == 0);
 	}
@@ -74,7 +74,7 @@ public:
 
 	T const& operator[](SizeType index) const
 	{
-		return const_cast<GrowingImmobilePool*>(this)->operator[](index);
+		return const_cast<PoolAllocator*>(this)->operator[](index);
 	}
 
 	void Release(T&& val)

@@ -151,6 +151,7 @@
     <ClInclude Include="src\3rd\imgui\misc\cpp\imgui_stdlib.h" />
     <ClInclude Include="src\3rd\stb_image.h" />
     <ClInclude Include="src\common\Application.h" />
+    <ClInclude Include="src\common\BroadcastInterface.h" />
     <ClInclude Include="src\common\CommonEnums.h" />
     <ClInclude Include="src\common\ImguiThreading.h" />
     <ClInclude Include="src\common\SceneDataInterface.h" />
@@ -167,13 +168,14 @@
     <ClInclude Include="src\core\memory\BaseUtils.h" />
     <ClInclude Include="src\core\memory\CopyableMemory.h" />
     <ClInclude Include="src\core\memory\GrowingImmobileObjectPool.h" />
-    <ClInclude Include="src\core\memory\GrowingImmobilePool.h" />
+    <ClInclude Include="src\core\memory\PoolAllocator.h" />
     <ClInclude Include="src\core\memory\InplaceObject.h" />
     <ClInclude Include="src\core\MovableContiguousAllocator.h" />
     <ClInclude Include="src\core\MovableContiguousBumpAllocator.h" />
     <ClInclude Include="src\core\Name.h" />
     <ClInclude Include="src\core\Random.h" />
     <ClInclude Include="src\core\RefCounted.h" />
+    <ClInclude Include="src\core\Timer.h" />
     <ClInclude Include="src\core\TypeInfoUtils.h" />
     <ClInclude Include="src\core\TypeTraits.h" />
     <ClInclude Include="src\core\WeakPtr.h" />
@@ -236,6 +238,8 @@
     <ClInclude Include="src\render\dx12\DX12DescriptorAllocator.h" />
     <ClInclude Include="src\render\dx12\DX12DescriptorHeap.h" />
     <ClInclude Include="src\render\dx12\DX12DescriptorTableAllocator.h" />
+    <ClInclude Include="src\render\dx12\DX12EndFrameInterface.h" />
+    <ClInclude Include="src\render\dx12\DX12QueryHeap.h" />
     <ClInclude Include="src\render\dx12\DX12ReadbackBuffer.h" />
     <ClInclude Include="src\render\dx12\DX12RHI.h" />
     <ClInclude Include="src\render\dx12\DX12RootSignature.h" />
@@ -446,6 +450,8 @@
     <ClCompile Include="src\render\dx12\DX12DescriptorAllocator.cpp" />
     <ClCompile Include="src\render\dx12\DX12DescriptorHeap.cpp" />
     <ClCompile Include="src\render\dx12\DX12DescriptorTableAllocator.cpp" />
+    <ClCompile Include="src\render\dx12\DX12EndFrameInterface.cpp" />
+    <ClCompile Include="src\render\dx12\DX12QueryHeap.cpp" />
     <ClCompile Include="src\render\dx12\DX12RootSignature.cpp" />
     <ClCompile Include="src\render\dx12\DX12ShaderCompiler.cpp" />
     <ClCompile Include="src\render\dx12\DX12SwapChain.cpp" />

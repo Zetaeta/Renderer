@@ -1,0 +1,34 @@
+#pragma once
+#include "container/Vector.h"
+
+#define DECLARE_BROADCAST_INTERFACE_COMMON(ClassName)
+
+#define DECLARE_BROADCAST_INTERFACE_ONEPARAM(ClassName, FuncName, ParamType, ParamName)\
+	class ClassName                                                                     \
+	{                                                                                   \
+		static Vector<ClassName*> sInstances;\
+	public:
+		ClassName();\
+		~ClassName();\
+		virtual void FuncName(ParamType ParamName) = 0;\
+		static void	 Broadcast##FuncName(ParamType ParamName);\
+	};
+
+#define DEFINE_BROADCAST_INTERFACE_ONEPARAM(ClassName, FuncName, ParamType, ParamName)\
+	Vector<ClassName*> ClassName::sInstances;\
+	ClassName::ClassName()                                                             \
+	{                                                                                  \
+		sInstances.push_back(this);                                                         \
+	}\
+	ClassName::~ClassName()                                                             \
+	{                                                                                  \
+		Remove(sInstances, this);                                                         \
+	}\
+	void			   ClassName::Broadcast##FuncName(ParamType ParamName)\
+	{\
+		for (auto* instance : sInstances)\
+		{\
+			instance->FuncName(std::forward<ParamType>(ParamName))\
+		}\
+	}
+

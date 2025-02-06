@@ -14,12 +14,14 @@
 #include "DX12CommandQueue.h"
 #include "DX12Upload.h"
 #include "render/ShaderManager.h"
-#include "core/memory/GrowingImmobilePool.h"
+#include "core/memory/PoolAllocator.h"
 #include "render/RenderDeviceCtx.h"
 #include "core/Hash.h"
 #include "DX12Context.h"
 #include "scene/Camera.h"
 #include "dxgi1_6.h"
+#include "DX12QueryHeap.h"
+#include "core/memory/GrowingImmobileObjectPool.h"
 
 namespace rnd { namespace dx12 { class DX12SwapChain; } }
 
@@ -102,6 +104,8 @@ public:
 
 	void BeginFrame() override;
 	void Tick();
+
+	void ProcessQueries(u32 frameIdx);
 
 	u64 GetCompletedFrame() const;
 	u64 GetCurrentFrame() const
@@ -248,8 +252,8 @@ private:
 
 	ComPtr<ID3D12Resource> CreateVertexBuffer(VertexBufferData data, ID3D12GraphicsCommandList_* uploadCmdList);
 
-	GrowingImmobilePool<DX12DirectMesh, 1024, true> mMeshes;
-	GrowingImmobilePool<DX12IndexedMesh, 2048, true> mIndexedMeshes;
+	PoolAllocator<DX12DirectMesh, 1024, true> mMeshes;
+	PoolAllocator<DX12IndexedMesh, 2048, true> mIndexedMeshes;
 	DX12Uploader mUploader;
 	DX12CommandQueues mQueues;
 	ComPtr<ID3D12Device_> mDevice; 
@@ -282,6 +286,8 @@ private:
 	DX12CBPool mCBPool;
 	ComPtr<IDXGIFactory6> mFactory;
 	SmallVector<OwningPtr<DX12SwapChain>, 4> mSwapChains;
+
+	GrowingImmobileObjectPool<DX12Timer, 256, true> mTimerPool;
 };
 
 using DX12RHI = DX12RHI;

@@ -153,7 +153,6 @@ void DX12RHI::WaitAndReleaseFrame(u64 frame)
 
 void DX12RHI::WaitAndReleaseFrameIdx(u32 frameIdx)
 {
-	
 	WaitFence(mFenceValues[frameIdx]);
 	ProcessDeferredRelease(frameIdx);
 }
@@ -184,6 +183,7 @@ void DX12RHI::EndFrame()
 	}
 	mFenceValues[mFrameIndex] = mCurrentFrame;
 
+	IDX12EndFrameInterface::BroadcastOnEndFrame(mCurrentFrame, mFrameIndex);
 	HR_ERR_CHECK(mQueues.Direct->Signal(mFrameFence.Get(), mCurrentFrame));
 	++mCurrentFrame;
 	mFrameIndex = (mCurrentFrame) % mNumBuffers;
@@ -843,6 +843,10 @@ void DX12RHI::BeginFrame()
 rnd::IDeviceSurface* DX12RHI::CreateSurface(wnd::Window* window)
 {
 	return mSwapChains.emplace_back(MakeOwning<DX12SwapChain>(window, mNumBuffers)).get();
+}
+
+void DX12RHI::ProcessQueries(u32 frameIdx)
+{
 }
 
 ID3D12Device_* GetD3D12Device()

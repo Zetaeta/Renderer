@@ -445,7 +445,7 @@
     <ClInclude Include="src\render\dx12\DX12Upload.h" />
     <ClInclude Include="src\render\dx12\DX12CommandQueue.h" />
     <ClInclude Include="src\render\dx12\DX12Allocator.h" />
-    <ClInclude Include="src\core\memory\GrowingImmobilePool.h" />
+    <ClInclude Include="src\core\memory\PoolAllocator.h" />
     <ClInclude Include="src\core\memory\BaseUtils.h" />
     <ClInclude Include="src\render\dx12\DX12Texture.h" />
     <ClInclude Include="src\thread\ThreadUtils.h" />
@@ -486,6 +486,10 @@
     <ClInclude Include="src\render\dx11\DX11Swapchain.h" />
     <ClInclude Include="src\common\ImguiThreading.h" />
     <ClInclude Include="src\common\Application.h" />
+    <ClInclude Include="src\render\dx12\DX12QueryHeap.h" />
+    <ClInclude Include="src\core\Timer.h" />
+    <ClInclude Include="src\common\BroadcastInterface.h" />
+    <ClInclude Include="src\render\dx12\DX12EndFrameInterface.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -761,6 +765,8 @@
     <ClCompile Include="src\common\ImguiThreading.cpp" />
     <ClCompile Include="src\render\dx11\DX11Swapchain.cpp" />
     <ClCompile Include="src\common\Application.cpp" />
+    <ClCompile Include="src\render\dx12\DX12QueryHeap.cpp" />
+    <ClCompile Include="src\render\dx12\DX12EndFrameInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">
