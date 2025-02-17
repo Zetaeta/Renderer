@@ -40,6 +40,7 @@ public:
 	//u8 PixelUAVTable = 0;
 	//u8 VertexUAVTable = 0;
 	static DX12GraphicsRootSignature MakeStandardRootSig(u32 numVertexCBs, u32 numPixelCBs, u32 vertexUAVs = 0, u32 pixelUAVs = 0);
+	static void						 ClearCache();
 };
 
 class DX12ComputeRootSignature : public DX12RootSignature
@@ -52,6 +53,7 @@ public:
 	constexpr static u32 SRVTableIndex = 0;
 	constexpr static u32 CBVStartIndex = 1;
 	static DX12ComputeRootSignature MakeStandardRootSig(u32 numCBs, u32 numUAVs = 0);
+	static void						 ClearCache();
 };
 
 }

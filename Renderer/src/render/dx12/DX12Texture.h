@@ -4,8 +4,6 @@
 #include "render/DeviceTexture.h"
 #include <variant>
 
-namespace rnd { namespace dx12 { class DX12UploadBuffer; } }
-
 namespace rnd::dx12
 {
 class DX12RenderTarget;

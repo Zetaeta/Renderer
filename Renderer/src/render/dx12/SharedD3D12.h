@@ -20,12 +20,21 @@ class DX12Allocator;
 class DX12Texture;
 	using DX12TextureRef=std::shared_ptr<DX12Texture>;
 
+class FrameIndexedRingBuffer;
+template<typename RingBufferBehavior>
+class TDX12RingBuffer;
+using DX12UploadBuffer = TDX12RingBuffer<FrameIndexedRingBuffer>;
+
 constexpr bool IsValid(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
 {
 	return cpuHandle.ptr != 0;
 }
 
 ID3D12Resource_* GetD3D12Resource(IDeviceResource* resource);
+
+ID3D12Device_* GetD3D12Device();
+DX12RHI&	   GetRHI();
+void		   DX12DeferredRelease(ComPtr<ID3D12Pageable>&& resource);
 
 }
 

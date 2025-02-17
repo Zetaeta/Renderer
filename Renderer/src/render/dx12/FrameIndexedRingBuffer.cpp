@@ -50,13 +50,15 @@ bool FrameIndexedRingBuffer::TryReserve(u64 size, u64 alignment, u64& outStart)
 		}
 	}
 
-	if (mFrames.empty())
+	if (mFrames.empty() || mFrames.Back().Frame != currFrame)
 	{
-		mFrames.Push({currFrame, 0, size});
-		outStart = 0;
-		return true;
+		mFrames.Push({currFrame, start, start + size});
 	}
-	mFrames.Back().End = start + size;
+	else
+	{
+		mFrames.Back().End = start + size;
+	}
+
 	outStart = start;
 	return true;
 }

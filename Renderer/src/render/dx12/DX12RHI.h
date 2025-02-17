@@ -23,13 +23,6 @@
 #include "DX12QueryHeap.h"
 #include "core/memory/GrowingImmobileObjectPool.h"
 
-namespace rnd { namespace dx12 { class DX12SwapChain; } }
-
-namespace rnd { namespace dx12 { class DX12CommandAllocatorPool; } }
-
-namespace rnd { namespace dx12 { class DX12Texture; } }
-
-namespace rnd { namespace dx12 { class DX12DescriptorTableAllocator; } }
 
 DECLARE_LOG_CATEGORY(LogDX12);
 
@@ -37,7 +30,11 @@ namespace rnd::dx12
 {
 class DX12Test;
 class DX12DescriptorAllocator;
-class DX12UploadBuffer;
+class DX12ReadbackBuffer;
+class DX12SwapChain;
+class DX12CommandAllocatorPool;
+class DX12Texture;
+class DX12DescriptorTableAllocator;
 enum class EDescriptorType : u8;
 
 struct DX12CommandAllocator
@@ -86,10 +83,11 @@ struct DX12IndexedMesh : public IDeviceIndexedMesh
 	D3D12_INDEX_BUFFER_VIEW IndBuffView;
 };
 
-struct DX12ReadbackBuffer
+struct DX12ReadbackAllocation
 {
 	ComPtr<ID3D12Resource_> Resource;
 	u64 Offset;
+	u64 Size;
 };
 
 class DX12RHI : //public wnd::Window,
@@ -157,8 +155,8 @@ public:
 		return mSimpleAllocator.get();
 	}
 
-	DX12ReadbackBuffer AllocateReadback(u64 size);
-	void			   FreeReadback(DX12ReadbackBuffer& buffer);
+	DX12ReadbackAllocation AllocateReadback(u64 size);
+	void			   FreeReadback(DX12ReadbackAllocation& buffer);
 
 	bool ShouldDirectUpload(EResourceType resourceType, u64 size = (u64) -1);
 
@@ -238,6 +236,13 @@ public:
 	}
 
 	IDeviceSurface* CreateSurface(wnd::Window* window) override;
+	GPUTimer*		CreateTimer(wchar_t const* name);
+	DX12QueryHeap* GetTimingQueries() const
+	{
+		return mTimingQueries.get();
+	}
+
+	void ProcessTimers();
 
 private:
 	void WaitFence(u64 value);
@@ -265,11 +270,13 @@ private:
 	OwningPtr<DX12Allocator> mSimpleAllocator;
 	OwningPtr<DX12Allocator> mReadbackAllocator;
 	OwningPtr<DX12UploadBuffer> mUploadBuffer;
+	OwningPtr<DX12ReadbackBuffer> mReadbackBuffer;
 	OwningPtr<DX12DescriptorAllocator> mShaderResourceDescAlloc;
 	OwningPtr<DX12DescriptorAllocator> mRTVAlloc;
 	OwningPtr<DX12DescriptorAllocator> mDSVAlloc;
 	OwningPtr<DX12DescriptorTableAllocator> mShaderResourceDescTables;
 	OwningPtr<DX12DescriptorTableAllocator> mSamplerDescTables;
+	OwningPtr<DX12QueryHeap> mTimingQueries;
 	std::array<OwningPtr<DX12CommandAllocatorPool>, 3> mCmdAllocatorPools;
 	std::array<Vector<ComPtr<ID3D12Pageable>>, MaxSwapchainBufferCount> mDeferredReleaseResources;
 	std::unordered_map<GraphicsPSODesc, ComPtr<ID3D12PipelineState>, GenericHash<>> mPSOs;
@@ -279,7 +286,8 @@ private:
 	ESwapchainBufferCount mNumBuffers;
 	bool mClosed = false;
 	bool mRecordingCommands = false;
-	u32 mFrameIndex = 0;
+	u8 mFrameIndex = 0;
+	u8 mStartedFrameIndex = 0;
 	OwningPtr<DX12Context> mContext;
 	Scene* mScene = nullptr;
 

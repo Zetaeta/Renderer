@@ -38,8 +38,8 @@ public:
 protected:
 	Timer m_HwTimer;
 	float m_HwFrame = 0;
-	OwningPtr<dx12::DX12RHI> dx12Win = nullptr;
 	OwningPtr<dx12::DX12RHI::LiveObjectReporter> dx12LOR;
+	OwningPtr<dx12::DX12RHI> dx12Win = nullptr;
 	//std::vector<ComPtr
 };
 

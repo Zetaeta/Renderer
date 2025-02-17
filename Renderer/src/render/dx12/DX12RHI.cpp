@@ -21,6 +21,7 @@
 #include "DX12CommandAllocatorPool.h"
 #include "DX12SwapChain.h"
 #include "render/shaders/ShaderDeclarations.h"
+#include "DX12ReadbackBuffer.h"
 
 #pragma comment(lib, "d3d12.lib")
 
@@ -66,9 +67,11 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 		mTest = MakeOwning<DX12Test>(mDevice.Get());
 	}
 	mCmdList.CmdList->Reset(mCmdList.Allocator.Get(), mTest->mPSO.Get());
+	mTimingQueries = MakeOwning<DX12QueryHeap>(D3D12_QUERY_HEAP_TYPE_TIMESTAMP, 512);
 
 	WaitForGPU();
 	ResourceMgr.OnDevicesReady();
+	mReadbackBuffer = MakeOwning<DX12ReadbackBuffer>(64 * 1024);
 
 }
 
@@ -84,11 +87,14 @@ DX12RHI::~DX12RHI()
 	RendererScene::OnShutdownDevice(this);
 	mTest = nullptr;
 	mUploadBuffer = nullptr;
+	mReadbackBuffer = nullptr;
 	mCBPool.ReleaseResources();
 	DX12SyncPointPool::Destroy();
 	mRTVAlloc = nullptr;
 	mDSVAlloc = nullptr;
 	mShaderResourceDescAlloc = nullptr;
+	DX12GraphicsRootSignature::ClearCache();
+	DX12ComputeRootSignature::ClearCache();
 
 	WaitFence(mCurrentFrame - 1);
 	for (auto& deferredReleases : mDeferredReleaseResources)
@@ -159,10 +165,9 @@ void DX12RHI::WaitAndReleaseFrameIdx(u32 frameIdx)
 
 void DX12RHI::StartFrame()
 {
-	//if (mFenceValue > 2)
-	//{
-
-	//}
+	ProcessTimers();
+	WaitAndReleaseFrameIdx(mFrameIndex);
+	mStartedFrameIndex = mFrameIndex;
 }
 
 void DX12RHI::EndFrame()
@@ -187,7 +192,6 @@ void DX12RHI::EndFrame()
 	HR_ERR_CHECK(mQueues.Direct->Signal(mFrameFence.Get(), mCurrentFrame));
 	++mCurrentFrame;
 	mFrameIndex = (mCurrentFrame) % mNumBuffers;
-	WaitAndReleaseFrameIdx(mFrameIndex);
 }
 
 void DX12RHI::WaitForGPU()
@@ -200,7 +204,7 @@ void DX12RHI::WaitForGPU()
 
 void DX12RHI::DeferredRelease(ComPtr<ID3D12Pageable>&& resource)
 {
-	mDeferredReleaseResources[mFrameIndex].emplace_back(std::move(resource));
+	mDeferredReleaseResources[mStartedFrameIndex].emplace_back(std::move(resource));
 }
 
 void DX12RHI::ProcessDeferredRelease(u32 frameIndex)
@@ -482,13 +486,13 @@ void DX12RHI::FreeDescriptor(EDescriptorType descType, D3D12_CPU_DESCRIPTOR_HAND
 	}
 }
 
-DX12ReadbackBuffer DX12RHI::AllocateReadback(u64 size)
+DX12ReadbackAllocation DX12RHI::AllocateReadback(u64 size)
 {
 	auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
-	return { mReadbackAllocator->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr).Get(), 0};
+	return { mReadbackAllocator->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr).Get(), 0, size};
 }
 
-void DX12RHI::FreeReadback(DX12ReadbackBuffer& buffer)
+void DX12RHI::FreeReadback(DX12ReadbackAllocation& buffer)
 {
 	buffer = {};// Should be safe to release it immediately...
 }
@@ -846,6 +850,19 @@ rnd::IDeviceSurface* DX12RHI::CreateSurface(wnd::Window* window)
 }
 
 void DX12RHI::ProcessQueries(u32 frameIdx)
+{
+}
+
+GPUTimer* DX12RHI::CreateTimer(wchar_t const* name)
+{
+	DX12Timer* timer;
+	u32 dontCare;
+	bool isNew = mTimerPool.Claim(dontCare, timer);
+	timer->Name = name;
+	return nullptr;
+}
+
+void DX12RHI::ProcessTimers()
 {
 }
 

@@ -6,6 +6,7 @@
 #include "render/dxcommon/DXGIUtils.h"
 #include "render/RenderContext.h"
 #include "render/ShadingCommon.h"
+#include "pix3.h"
 
 namespace rnd::dx12
 {
@@ -511,6 +512,41 @@ rnd::MappedResource DX12Context::Readback(DeviceResourceRef resource, u32 subres
 		GetRHI().FreeReadback(readbackBuffer);
 	};
 	return result;
+}
+
+rnd::GPUTimer* DX12Context::CreateTimer(const wchar_t* Name)
+{
+	return GetRHI().CreateTimer(Name);
+}
+
+void MarkTimer(ID3D12GraphicsCommandList_* cmdList, DX12TimingQuery& timer)
+{
+	auto query = GetRHI().GetTimingQueries()->GetQuery();
+	cmdList->EndQuery(query.Heap, D3D12_QUERY_TYPE_TIMESTAMP, query.Index);
+//	cmdList->ResolveQueryData(query.Heap, D3D12_QUERY_TYPE_TIMESTAMP, 
+}
+
+void DX12Context::StartTimer(GPUTimer* timer)
+{
+	if (!timer)
+	{
+		return;
+	}
+		//	mCmdList->BeginEvent()
+	auto myTimer = static_cast<DX12Timer*>(timer);
+	PIXBeginEvent(mCmdList.Get(), 0, myTimer->Name.c_str());
+	MarkTimer(mCmdList.Get(), myTimer->PerFrameData[GetRHI().GetCurrentFrameIndex()].Start);
+}
+
+void DX12Context::StopTimer(GPUTimer* timer)
+{
+	if (!timer)
+	{
+		return;
+	}
+	auto myTimer = static_cast<DX12Timer*>(timer);
+	MarkTimer(mCmdList.Get(), myTimer->PerFrameData[GetRHI().GetCurrentFrameIndex()].End);
+	PIXEndEvent(mCmdList.Get());
 }
 
 //void DX12Context::ReleaseReadback(MappedResource resource)

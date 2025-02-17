@@ -7,7 +7,7 @@ namespace rnd::dx12
 DX12QueryHeap::DX12QueryHeap(D3D12_QUERY_HEAP_TYPE type, u32 size)
 	:mType(type), mSize(size)
 {
-	D3D12_QUERY_HEAP_DESC desc;
+	D3D12_QUERY_HEAP_DESC desc{};
 	desc.Count = size;
 	desc.Type = type;
 	DXCALL(GetD3D12Device()->CreateQueryHeap(&desc, IID_PPV_ARGS(&mHeap)));
@@ -27,11 +27,19 @@ DX12QueryHeap::Query DX12QueryHeap::GetQuery()
 void DX12QueryHeap::Resize(u32 newSize)
 {
 	GetRHI().DeferredRelease(std::move(mHeap));
-	
+	//if (mReadbacks[GetRHI().GetCurrentFrameIndex()].Size < newSize)
+	//{
+	//	GetRHI().FreeReadback()
+	//}
 }
 
 void DX12QueryHeap::OnEndFrame(u64 frameNum, u32 frameIdx)
 {
+	//if (mReadbacks[frameIdx].Resource)
+	//{
+	//	GetRHI().FreeReadback(mReadbacks[frameIdx]);
+	//}
+	//mReadbacks[]
 	mCounter = 0;
 }
 

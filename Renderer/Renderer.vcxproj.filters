@@ -490,6 +490,7 @@
     <ClInclude Include="src\core\Timer.h" />
     <ClInclude Include="src\common\BroadcastInterface.h" />
     <ClInclude Include="src\render\dx12\DX12EndFrameInterface.h" />
+    <ClInclude Include="src\render\ManualRingBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">

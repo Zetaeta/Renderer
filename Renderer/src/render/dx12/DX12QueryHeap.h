@@ -6,6 +6,7 @@ namespace rnd::dx12
 {
 class DX12QueryHeap : public IDX12EndFrameInterface
 {
+public:
 	DX12QueryHeap(D3D12_QUERY_HEAP_TYPE type, u32 size);
 
 	struct Query
@@ -25,6 +26,7 @@ private:
 	u32 mSize;
 	u32 mCounter = 0; // TODO figure out how often to reuse queries. Currently single-use each frame. Might need only one per thread/cmdlist?
 	ComPtr<ID3D12QueryHeap> mHeap;
+//	std::array<DX12ReadbackAllocation, MaxSwapchainBufferCount> mReadbacks; 
 };
 
 struct DX12TimingQuery
@@ -33,7 +35,7 @@ struct DX12TimingQuery
 	u64 Offset = 0;
 };
 
-class DX12Timer
+struct DX12Timer : public GPUTimer
 {
 	struct IntervalData
 	{
@@ -41,6 +43,7 @@ class DX12Timer
 		DX12TimingQuery End;
 	};
 	std::array<IntervalData, MaxSwapchainBufferCount> PerFrameData;
+	std::wstring Name;
 };
 
 }

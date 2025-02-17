@@ -114,6 +114,11 @@ DX12GraphicsRootSignature::DX12GraphicsRootSignature()
 	}
 }
 
+void DX12GraphicsRootSignature::ClearCache()
+{
+	sRootSigs = {};
+}
+
 struct CRSSignature
 {
 	u32 numCBs;
@@ -181,6 +186,11 @@ DX12ComputeRootSignature DX12ComputeRootSignature::MakeStandardRootSig(u32 numCB
 		result.NumUAVs = numUAVs;
 	}
 	return result;
+}
+
+void DX12ComputeRootSignature::ClearCache()
+{
+	sComputeRootSigs = {};
 }
 
 }

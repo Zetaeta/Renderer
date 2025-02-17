@@ -295,22 +295,13 @@ public:
 	}
 
 
-	GPUTimer* CreateTimer(const wchar_t* Name) override
-	{
-		return nullptr;
-	}
+	GPUTimer* CreateTimer(const wchar_t* Name) override;
 
 
-	void StartTimer(GPUTimer* timer) override
-	{
-//		throw std::logic_error("The method or operation is not implemented.");
-	}
+	void StartTimer(GPUTimer* timer) override;
 
 
-	void StopTimer(GPUTimer* timer) override
-	{
-//		throw std::logic_error("The method or operation is not implemented.");
-	}
+	void StopTimer(GPUTimer* timer) override;
 
 
 	void SetPixelShader(PixelShader const* shader) override
