@@ -580,6 +580,7 @@ void DX11Renderer::ImGuiInit(wnd::Window* mainWindow)
 {
 	ImGui_ImplWin32_Init(mainWindow->GetHwnd());
 	ImGui_ImplDX11_Init(m_Ctx.pDevice, m_Ctx.pContext);
+	ThreadImgui::ImguiThreadInterface::Init();
 }
 
 void DX11Renderer::PreImgui()
@@ -603,8 +604,21 @@ void DX11Renderer::ImguiEndFrame()
 	//ImGui::Render();
 //	ThreadImgui::EndFrame();
 	PreImgui();
-	ThreadImgui::ImDrawDataWrapper drawData = ThreadImgui::GetDrawData();
+	ThreadImgui::ImDrawDataWrapper drawData = ThreadImgui::GetDrawData_RenderThread();
 	ImGui_ImplDX11_RenderDrawData(&drawData);
+    ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+	if (platformIO.Renderer_RenderWindow)
+	{
+		for (auto& Window : ThreadImgui::GetPlatformWindows_RenderThread())
+		{
+			if (Window.RendererUserData != nullptr && Window.DrawData != nullptr)
+			{
+				platformIO.Renderer_RenderWindow(&Window, nullptr);
+				if (platformIO.Renderer_SwapBuffers) platformIO.Renderer_SwapBuffers(&Window, nullptr);
+			}
+		}
+	}
+	ThreadImgui::DeferredDestroyWindows();
 }
 
 MappedResource DX11Renderer::MapResource(ID3D11Resource* resource, u32 subResource, ECpuAccessFlags flags)

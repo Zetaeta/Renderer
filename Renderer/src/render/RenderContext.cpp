@@ -18,6 +18,7 @@
 #include "scene/StaticMeshComponent.h"
 #include "RendererScene.h"
 #include "asset/AssetManager.h"
+#include "common/ImguiThreading.h"
 
 namespace rnd
 {
@@ -43,10 +44,20 @@ RenderContext::RenderContext(IRenderDeviceCtx* DeviceCtx, RendererScene* scene, 
 
 	SetupRenderTarget();
 	SetupPasses();
+
+	char const* deviceName = DeviceCtx->Device->GetName();
+	mImguiHandle = ThreadImgui::RegisterImguiFunc([this, deviceName]
+	{
+		ImGui::Begin(std::format("{} RenderContext", deviceName).c_str());
+		DrawControls();
+		ImGui::End();
+	}, mDestructionToken);
 }
 
- RenderContext::~RenderContext()
+RenderContext::~RenderContext()
 {
+	ThreadImgui::UnregisterImguiFunc(mImguiHandle);
+	mDestructionToken->Cancel();
 	mPasses.clear();
 	for (auto& lrds : mLightData)
 	{

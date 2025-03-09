@@ -337,7 +337,7 @@ int MainDX11(int argc, char** argv)
 
 
 
-		g_pContext->OMSetRenderTargets(1, g_msaaRenderTargetView.GetAddressOf(), dsv.Get());
+//a		g_pContext->OMSetRenderTargets(1, g_msaaRenderTargetView.GetAddressOf(), dsv.Get());
 		//g_pContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
 		//const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
 		//g_pContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
@@ -396,9 +396,9 @@ int MainDX11(int argc, char** argv)
 				}
 			}*/
 
+			ImGui::End();
 			editor->Tick(0);
 			renderMgr.DrawUI();
-			ImGui::End();
 
 			static float f = 0.0f;
 			static int	 counter = 0;
@@ -415,8 +415,8 @@ int MainDX11(int argc, char** argv)
 		
 		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 		{
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
+			//ImGui::UpdatePlatformWindows();
+			//ImGui::RenderPlatformWindowsDefault();
 		}
 
 //		g_pSwapChain->Present(1, 0); // Present with vsync
@@ -475,7 +475,7 @@ bool CreateDeviceD3D()
 			filter.DenyList.NumIDs = NumCast<u32>(std::size(hide));
 			filter.DenyList.pIDList = hide;
 			d3dInfoQueue->AddStorageFilterEntries(&filter);
-			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+//			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
 //			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, true);
 		}
 	}

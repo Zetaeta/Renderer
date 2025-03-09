@@ -12,7 +12,10 @@ public:
 	void Reset(u64 size)
 	{
 		mSize = size;
-		mFrames = {};
+		for (FrameWindow& frame : mFrames)
+		{
+			frame.Start = frame.End = 0;
+		}
 	}
 	bool TryReserve(u64 size, u64 alignment, u64& outStart);
 	struct FrameWindow

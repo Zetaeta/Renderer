@@ -81,7 +81,7 @@ class Scene : public BaseSerialized
 
 	MeshInstanceRef AddMesh(MeshRef mesh, Transform trans = Transform{});
 
-	RCOPY_PROTECT(Scene);
+	ZE_COPY_PROTECT(Scene);
 	RMOVE_DEFAULT(Scene);
 
 

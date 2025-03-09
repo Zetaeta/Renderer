@@ -491,6 +491,9 @@
     <ClInclude Include="src\common\BroadcastInterface.h" />
     <ClInclude Include="src\render\dx12\DX12EndFrameInterface.h" />
     <ClInclude Include="src\render\ManualRingBuffer.h" />
+    <ClInclude Include="src\core\Async.h" />
+    <ClInclude Include="src\common\BufferedRenderInterface.h" />
+    <ClInclude Include="src\container\HandledVector.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -768,6 +771,7 @@
     <ClCompile Include="src\common\Application.cpp" />
     <ClCompile Include="src\render\dx12\DX12QueryHeap.cpp" />
     <ClCompile Include="src\render\dx12\DX12EndFrameInterface.cpp" />
+    <ClCompile Include="src\common\BufferedRenderInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

@@ -1,24 +1,23 @@
 #include "SceneDataInterface.h"
 #include "scene/StaticMeshComponent.h"
 
-static Vector<SceneDataInterface*> sInterfaces;
+//static Vector<SceneDataInterface*> sInterfaces;
 std::mutex sInterfacesMtx;
 
 SceneDataInterface::SceneDataInterface()
-:mFrameGuards{std::binary_semaphore(1), std::binary_semaphore(1)}
 {
-	sInterfaces.push_back(this);
+//	sInterfaces.push_back(this);
 }
 
  SceneDataInterface::~SceneDataInterface()
 {
-	Remove(sInterfaces, this);
+//	Remove(sInterfaces, this);
 }
 
-Span<SceneDataInterface*> SceneDataInterface::GetAll()
-{
-	return sInterfaces;
-}
+//Span<SceneDataInterface*> SceneDataInterface::GetAll()
+//{
+//	return sInterfaces;
+//}
 
 PrimitiveId SceneDataInterface::AddPrimitive(PrimitiveComponent* component)
 {
@@ -64,7 +63,7 @@ void SceneDataInterface::RemovePrimitive(PrimitiveId id)
 	// TODO
 }
 
-void SceneDataInterface::CopyFrameData(u32 from, u32 to)
+void SceneDataInterface::FlipFrameBuffers(u32 from, u32 to)
 {
 	mData[to].Transforms = mData[from].Transforms;
 	//mData[to].Meshes = mData[from].Meshes;

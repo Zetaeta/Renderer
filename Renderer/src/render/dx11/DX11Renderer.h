@@ -158,6 +158,10 @@ public:
 	{
 		return this;
 	}
+	char const* GetName() const override
+	{
+		return "D3D11";
+	}
 
  private:
 	DX11Texture::Ref PrepareTexture(Texture const& tex, bool sRGB = false);

@@ -6,11 +6,11 @@
 
 #define Zero(x) memset(&x, 0, sizeof(x))
 
-#define RCOPY_PROTECT(ClassName) ClassName(ClassName const& other) = delete;\
+#define ZE_COPY_PROTECT(ClassName) ClassName(ClassName const& other) = delete;\
 								ClassName& operator=(ClassName const& other) = delete;
 #define ZE_MOVE_PROTECT(ClassName) ClassName(ClassName&& other) = delete;\
 								ClassName& operator=(ClassName&& other) = delete;
-#define RCOPY_MOVE_PROTECT(ClassName) RCOPY_PROTECT(ClassName) ZE_MOVE_PROTECT(ClassName)
+#define RCOPY_MOVE_PROTECT(ClassName) ZE_COPY_PROTECT(ClassName) ZE_MOVE_PROTECT(ClassName)
 
 #define RCOPY_DEFAULT(ClassName) ClassName(ClassName const& other) = default;\
 								ClassName& operator=(ClassName const& other) = default;

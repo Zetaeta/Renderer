@@ -152,14 +152,17 @@
     <ClInclude Include="src\3rd\stb_image.h" />
     <ClInclude Include="src\common\Application.h" />
     <ClInclude Include="src\common\BroadcastInterface.h" />
+    <ClInclude Include="src\common\BufferedRenderInterface.h" />
     <ClInclude Include="src\common\CommonEnums.h" />
     <ClInclude Include="src\common\ImguiThreading.h" />
     <ClInclude Include="src\common\SceneDataInterface.h" />
     <ClInclude Include="src\container\EnumArray.h" />
+    <ClInclude Include="src\container\HandledVector.h" />
     <ClInclude Include="src\container\MovableObjectPool.h" />
     <ClInclude Include="src\container\SmallMap.h" />
     <ClInclude Include="src\container\StaticQueue.h" />
     <ClInclude Include="src\container\Vector.h" />
+    <ClInclude Include="src\core\Async.h" />
     <ClInclude Include="src\core\BaseDefines.h" />
     <ClInclude Include="src\core\BaseSerialized.h" />
     <ClInclude Include="src\core\CoreTypes.h" />
@@ -337,6 +340,7 @@
     </ClCompile>
     <ClCompile Include="src\asset\Asset.cpp" />
     <ClCompile Include="src\common\Application.cpp" />
+    <ClCompile Include="src\common\BufferedRenderInterface.cpp" />
     <ClCompile Include="src\common\ImguiThreading.cpp" />
     <ClCompile Include="src\common\InputImgui.cpp" />
     <ClCompile Include="src\common\SceneDataInterface.cpp" />

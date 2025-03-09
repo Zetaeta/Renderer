@@ -10,7 +10,7 @@ namespace dx12
 class DX12CommandQueue
 {
 public:
-	RCOPY_PROTECT(DX12CommandQueue);
+	ZE_COPY_PROTECT(DX12CommandQueue);
 
 	DX12CommandQueue() = default;
 

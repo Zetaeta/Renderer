@@ -23,9 +23,6 @@ void IRenderDevice::RenderFrame()
 			rScene->BeginFrame();
 		}
 		vp->Draw(*GetPersistentCtx());
-		//GetImmediateContext([vp](IRenderDeviceCtx& ctx) {
-		//	vp->Draw(ctx);
-		//});
 	}
 	for (RendererScene* rScene : scenes)
 	{

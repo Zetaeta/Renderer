@@ -25,7 +25,7 @@ public:
 	DX12SyncPoint(DX12SyncData const& data, u32 handle)
 	:DX12SyncData(data), mHandle(handle) { }
 
-	RCOPY_PROTECT(DX12SyncPoint);
+	ZE_COPY_PROTECT(DX12SyncPoint);
 	RMOVE_DEFAULT(DX12SyncPoint);
 
 	~DX12SyncPoint()

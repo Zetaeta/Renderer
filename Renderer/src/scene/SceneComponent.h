@@ -22,7 +22,7 @@ public:
 	using Transform = RotTransform;
 	friend class SceneObject;
 
-	RCOPY_PROTECT(SceneComponent);
+	ZE_COPY_PROTECT(SceneComponent);
 
 	SceneComponent()
 	{}

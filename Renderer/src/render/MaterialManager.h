@@ -23,7 +23,7 @@ public:
 	MaterialManager() {}
 	MaterialManager(rnd::IRenderDevice* device);
 	~MaterialManager();
-	RCOPY_PROTECT(MaterialManager)
+	ZE_COPY_PROTECT(MaterialManager)
 	RMOVE_DEFAULT(MaterialManager)
 
 	void Release();

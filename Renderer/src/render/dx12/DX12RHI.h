@@ -90,6 +90,14 @@ struct DX12ReadbackAllocation
 	u64 Size;
 };
 
+struct DX12ReadbackBufferEntry
+{
+	ID3D12Resource_* Buffer;
+	u64 BufferOffset;
+	void const* Data;
+	u64 Size;
+};
+
 class DX12RHI : //public wnd::Window,
 public IRenderDevice
 {
@@ -99,6 +107,11 @@ public:
 	
 	DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers, Scene* scene = nullptr, Camera::Ref camera = nullptr);
 	~DX12RHI();
+
+	char const* GetName() const override
+	{
+		return "D3D12";
+	}
 
 	void BeginFrame() override;
 	void Tick();
@@ -155,7 +168,10 @@ public:
 		return mSimpleAllocator.get();
 	}
 
-	DX12ReadbackAllocation AllocateReadback(u64 size);
+	constexpr static u32 ReadbackCleanupDelay = 1;
+	// readbackDelay = number of frames to keep valid plus the usual num frames in flight
+	DX12ReadbackBufferEntry AllocateReadback(u64 size, u64 alignment, u32 readbackDelay);
+	DX12ReadbackAllocation AllocateReadbackBuffer(u64 size);
 	void			   FreeReadback(DX12ReadbackAllocation& buffer);
 
 	bool ShouldDirectUpload(EResourceType resourceType, u64 size = (u64) -1);

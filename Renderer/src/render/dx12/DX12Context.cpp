@@ -484,7 +484,7 @@ rnd::MappedResource DX12Context::Readback(DeviceResourceRef resource, u32 subres
 	u64 totalBytes;
 	rhi.Device()->GetCopyableFootprints(&desc, subresource, 1, 0, &footprint, &numRows, &rowSize, &totalBytes);
 	result.RowPitch = footprint.Footprint.RowPitch;
-	auto readbackBuffer = rhi.AllocateReadback(totalBytes);
+	auto readbackBuffer = rhi.AllocateReadbackBuffer(totalBytes);
 	if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 	{
 		mCmdList->CopyBufferRegion(readbackBuffer.Resource.Get(), readbackBuffer.Offset, dxResource, footprint.Offset, footprint.Footprint.Width);
@@ -523,7 +523,11 @@ void MarkTimer(ID3D12GraphicsCommandList_* cmdList, DX12TimingQuery& timer)
 {
 	auto query = GetRHI().GetTimingQueries()->GetQuery();
 	cmdList->EndQuery(query.Heap, D3D12_QUERY_TYPE_TIMESTAMP, query.Index);
-//	cmdList->ResolveQueryData(query.Heap, D3D12_QUERY_TYPE_TIMESTAMP, 
+	auto readbackAllocation = GetRHI().AllocateReadback(8, 8, 1);
+
+	// TODO: batch these at end of frame (issue is resizing query heap mid frame)
+	cmdList->ResolveQueryData(query.Heap, D3D12_QUERY_TYPE_TIMESTAMP, query.Index, 1, readbackAllocation.Buffer, readbackAllocation.BufferOffset); 
+	timer.Location = reinterpret_cast<u64 const*>(readbackAllocation.Data);
 }
 
 void DX12Context::StartTimer(GPUTimer* timer)

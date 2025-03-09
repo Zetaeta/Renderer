@@ -97,7 +97,91 @@ public:
 	{
 		return InCapacity;
 	}
+
+	template<bool IsConst>
+	class BaseIterator
+	{
+	public:
+		using Target = ApplyConst<T, IsConst>;
+		using Owner = ApplyConst<StaticQueue, IsConst>;
+		BaseIterator(Owner& owner, u32 position)
+			: mOwner(owner), mPosition(position)
+		{
+		}
+		BaseIterator& operator++()
+		{
+			if (++mPosition > InCapacity)
+			{
+				mPosition = 0;
+			}
+			return *this;
+		}
+
+		BaseIterator operator++(int)
+		{
+			auto result = *this;
+			++(*this);
+			return result;
+		}
+
+		Target& operator*() const
+		{
+			ZE_ASSERT(mOwner.IsValidIndex(mPosition));
+			return mOwner.mData[mPosition].Launder();
+		}
+
+		Target* operator->() const
+		{
+			return &(**this);
+		}
+
+		constexpr bool operator==(BaseIterator const& other) const
+		{
+			Assertf(mOwner == other.mOwner, "Comparing iterators belonging to different objects!");
+			return mPosition == other.mPosition;
+		}
+
+		constexpr bool operator!=(BaseIterator const& other) const
+		{
+			return !(mPosition == other.mPosition);
+		}
+
+	private:
+		Owner& mOwner;
+		u32 mPosition = 0;
+	};
+	template<bool IsConst>
+	friend class BaseIterator;
+
+	using Iterator = BaseIterator<false>;
+	using ConstIterator = BaseIterator<true>;
+
+	Iterator begin()
+	{
+		return Iterator(*this, mStart);
+	}
+
+	Iterator end()
+	{
+		return Iterator(*this, mStart + mSize % InCapacity);
+	}
+
+	ConstIterator begin() const
+	{
+		return ConstIterator(*this, mStart);
+	}
+
+	ConstIterator end() const
+	{
+		return ConstIterator(*this, mStart + mSize % InCapacity);
+	}
+	
 private:
+
+	bool IsValidIndex(u32 index) const
+	{
+		return (index >= mStart && index - mStart < mSize) || (mStart + mSize > InCapacity && index < mStart + mSize - InCapacity);
+	}
 	std::array<UninitializedMemory<T>, InCapacity> mData;
 	u32 mStart = 0;
 	u32 mSize = 0;

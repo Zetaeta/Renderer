@@ -26,7 +26,7 @@ public:
 	{
 		ClearBuffer();
 	}
-	RCOPY_PROTECT(TDX12RingBuffer);
+	ZE_COPY_PROTECT(TDX12RingBuffer);
 	RMOVE_DEFAULT(TDX12RingBuffer);
 
 	void ReleaseResources()
@@ -56,7 +56,7 @@ public:
 		ClearBuffer();
 
 		u64 newSize = RoundUpToPowerOf2(NumCast<u64>(max(size, this->mSize) * 1.5f));
-		FrameIndexedRingBuffer::Reset(newSize);
+		RingBufferType::Reset(newSize);
 		CreateBuffer(newSize);
 		CHECK_SUCCEEDED(RingBufferType::TryReserve(size, alignment, result));
 		return MakeAllocation(result);

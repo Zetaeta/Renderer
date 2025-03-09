@@ -21,6 +21,7 @@
 #define OBJECT_SELECTION ZE_BUILD_EDITOR
 #endif
 
+#define LIKELY(x) (x) [[likely]]
 
 #ifdef _DEBUG
 #define ZE_DEBUG_BUILD 1

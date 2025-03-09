@@ -113,6 +113,8 @@ public:
 	// returns false if an immediate context could not be created for any reason
 	virtual bool GetImmediateContext(std::function<void(IRenderDeviceCtx&)> callback) = 0;
 
+	virtual char const* GetName() const = 0;
+
 	// TODO refactor away
 	virtual IRenderDeviceCtx* GetPersistentCtx() = 0;
 #if PROFILING

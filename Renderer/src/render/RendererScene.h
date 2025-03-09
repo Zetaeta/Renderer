@@ -34,7 +34,7 @@ public:
 
 	RendererScene();
 	RendererScene(IRenderDevice* device, Scene const& scene);
-	RCOPY_PROTECT(RendererScene);
+	ZE_COPY_PROTECT(RendererScene);
 	RMOVE_DEFAULT(RendererScene);
 
 	~RendererScene();

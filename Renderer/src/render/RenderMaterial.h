@@ -38,7 +38,7 @@ public:
 	MaterialArchetype() = default;
 	MaterialArchetype(MaterialArchetypeDesc const& desc);
 	RMOVE_DEFAULT(MaterialArchetype)
-	RCOPY_PROTECT(MaterialArchetype)
+	ZE_COPY_PROTECT(MaterialArchetype)
 	~MaterialArchetype();
 
 //	virtual ~MaterialArchetype() {}

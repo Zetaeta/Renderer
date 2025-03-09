@@ -113,7 +113,7 @@ struct StandardMatProperties
 
 struct Material
 {
-	RCOPY_PROTECT(Material);
+	ZE_COPY_PROTECT(Material);
 
 	Material(Material&& other) noexcept;
 	Material(String debugName, col4 col, float specularity = 1, int spec = -1, float diffuseness = 1, TextureRef albedo = {})

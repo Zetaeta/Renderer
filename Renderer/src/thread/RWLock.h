@@ -8,12 +8,12 @@ using ReadLock = std::shared_lock<RWLock>;
 class RWLock : public std::shared_mutex
 {
 public:
-	WriteLock ScopedWriteLock()
+	[[nodiscard]] WriteLock ScopedWriteLock()
 	{
 		return WriteLock(*this);
 	}
 
-	ReadLock ScopedReadLock()
+	[[nodiscard]] ReadLock ScopedReadLock()
 	{
 		return ReadLock(*this);
 	}

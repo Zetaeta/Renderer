@@ -1,6 +1,38 @@
 #include "RenderManagerDX11.h"
 #include "editor/Viewport.h"
 #include "render/RendererScene.h"
+//
+// Usage: SetThreadName (-1, "MainThread");
+//
+#include <windows.h>
+const DWORD MS_VC_EXCEPTION = 0x406D1388;
+
+#pragma pack(push, 8)
+typedef struct tagTHREADNAME_INFO
+{
+	DWORD  dwType;	   // Must be 0x1000.
+	LPCSTR szName;	   // Pointer to name (in user addr space).
+	DWORD  dwThreadID; // Thread ID (-1=caller thread).
+	DWORD  dwFlags;	   // Reserved for future use, must be zero.
+} THREADNAME_INFO;
+#pragma pack(pop)
+
+void SetThreadName(DWORD dwThreadID, const char* threadName)
+{
+	THREADNAME_INFO info;
+	info.dwType = 0x1000;
+	info.szName = threadName;
+	info.dwThreadID = dwThreadID;
+	info.dwFlags = 0;
+
+	__try
+	{
+		RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), (ULONG_PTR*)&info);
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+	}
+}
 namespace  rnd::dx11
 {
 RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, bool createDx12 /*= false*/)
@@ -17,6 +49,15 @@ RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* 
 		dx12LOR = dx12Win->GetLiveObjectReporter();
 		CreateIndependentViewport(dx12Win.get(), L"DX12.1");
 	}
+	mRenderThread = std::thread([this]
+	{
+		SetThreadName(GetCurrentThreadId(), "Render thread");
+		while (!mExitRequested.load(std::memory_order_acquire))
+		{
+			GRenderController.BeginRenderFrame();
+			GRenderController.EndRenderFrame();
+		}
+	});
 }
 
 void RenderManagerDX11::CreateIndependentViewport(rnd::IRenderDevice* device, wchar_t const* name)
@@ -40,6 +81,13 @@ void RenderManagerDX11::DrawFrameData()
 	//		m_hardwareRenderer->DrawControls();
 }
 
+RenderManagerDX11::~RenderManagerDX11()
+{
+	mExitRequested = true;
+	GRenderController.RequestExit();
+	mRenderThread.join();
+}
+
 void rnd::dx11::RenderManagerDX11::OnRenderStart()
 {
 //	uvec2 size = mWindows[0]->GetSize();
@@ -49,15 +97,16 @@ void rnd::dx11::RenderManagerDX11::OnRenderStart()
 //	m_Camera.Tick(m_FrameTime);
 	Tickable::TickAll(m_FrameTime);
 	m_HwTimer.Reset();
-	mScene.DataInterface().FlipBuffer_MainThread();
+//	mScene.DataInterface().FlipBuffer_MainThread();
+	BufferedRenderInterface::FlipBuffer_MainThread();
 	if (m_hardwareRenderer->GetViewport() && !m_hardwareRenderer->GetViewport()->mRScene->IsInitialized())
 	{
 		m_hardwareRenderer->GetViewport()->mRScene = RendererScene::Get(mScene, m_hardwareRenderer.get());
 	}
 
 	//		m_hardwareRenderer->Render(mScene);
-	GRenderController.BeginRenderFrame();
-	GRenderController.EndRenderFrame();
+	//GRenderController.BeginRenderFrame();
+	//GRenderController.EndRenderFrame();
 	m_HwFrame = m_HwTimer.ElapsedMillis();
 	// if (dx12Win)
 	//{

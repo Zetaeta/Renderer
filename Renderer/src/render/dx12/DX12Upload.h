@@ -18,7 +18,7 @@ class DX12Uploader
 public:
 	constexpr static u32 NumContexts = 1;
 
-	RCOPY_PROTECT(DX12Uploader);
+	ZE_COPY_PROTECT(DX12Uploader);
 	RMOVE_DEFAULT(DX12Uploader);
 
 	DX12Uploader() = default;

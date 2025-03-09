@@ -3,6 +3,8 @@
 #include "core/Utils.h"
 #include "render/DeviceSurface.h"
 #include "common/Application.h"
+#include "imgui.h"
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 namespace wnd
 {
 
@@ -10,6 +12,8 @@ static std::unordered_map<HWND, Window*> sHwndToWindow;
 
 static LRESULT WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+		return true;
 	switch (msg)
 	{
 	case WM_SIZE:

@@ -107,6 +107,17 @@ bool Remove(Vector<T>& vec, T const& value)
 	}
 	return false;
 }
+template<typename T>
+bool RemoveSwap(Vector<T>& vec, T const& value)
+{
+	if (auto it = std::find(vec.begin(), vec.end(), value); it != vec.end())
+	{
+		*it = std::move(vec.back());
+		vec.pop_back();
+		return true;
+	}
+	return false;
+}
 
 template<typename T, typename Range>
 T* Find(Range& range, T const& value)

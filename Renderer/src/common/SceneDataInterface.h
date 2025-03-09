@@ -6,6 +6,7 @@
 #include <semaphore>
 #include <mutex>
 #include "Material.h"
+#include "BufferedRenderInterface.h"
 
 class StaticMeshComponent;
 struct CompoundMesh;
@@ -18,12 +19,10 @@ constexpr PrimitiveId InvalidPrimId()
 	return (PrimitiveId) -1;
 }
 
-
-
 /**
  * 
  */
-class SceneDataInterface
+class SceneDataInterface : public BufferedRenderInterface
 {
 public:
 	SceneDataInterface();
@@ -31,7 +30,7 @@ public:
 	SceneDataInterface& operator=(SceneDataInterface&& other) = default;
 	SceneDataInterface(SceneDataInterface&& other) = default;
 
-	static Span<SceneDataInterface*> GetAll();
+//	static Span<SceneDataInterface*> GetAll();
 	/**
 	 * 1 = rendering on main thread.
 	 * Assuming separate render thread(s), 2 buffers means the main and render thread have to synchronize
@@ -87,67 +86,67 @@ public:
 		data.Selected[id] = selected;
 	}
 
-	void FlipBuffer_MainThread()
-	{
-		WaitForRenderThread();
+	//void FlipBuffer_MainThread()
+	//{
+	//	WaitForRenderThread();
 
-		ReleaseFrame_MainThread();
-		u32 currFrame = mMainThreadIdx;
-		mMainThreadIdx = (mMainThreadIdx + 1) % NumSceneDataBuffers;
-		StartFrame_MainThread();
-		CopyFrameData(currFrame, mMainThreadIdx);
-	}
+	//	ReleaseFrame_MainThread();
+	//	u32 currFrame = mMainThreadIdx;
+	//	mMainThreadIdx = (mMainThreadIdx + 1) % NumSceneDataBuffers;
+	//	StartFrame_MainThread();
+	//	CopyFrameData(currFrame, mMainThreadIdx);
+	//}
 
-	void BeginFrame_RenderThread()
-	{
-		mFrameGuards[mRenderThreadIdx].acquire();
-	}
-	void EndFrame_RenderThread()
-	{
-		mFrameGuards[mRenderThreadIdx].release();
-		mRenderThreadIdx = (mRenderThreadIdx + 1) % NumSceneDataBuffers;
-	}
+	//void BeginFrame_RenderThread()
+	//{
+	//	mFrameGuards[mRenderThreadIdx].acquire();
+	//}
+	//void EndFrame_RenderThread()
+	//{
+	//	mFrameGuards[mRenderThreadIdx].release();
+	//	mRenderThreadIdx = (mRenderThreadIdx + 1) % NumSceneDataBuffers;
+	//}
 
 	SceneData& GetMainThreadData()
 	{
-		return mData[mMainThreadIdx];
+		return mData[sMainThreadIdx];
 	}
 
 	SceneData const& GetMainThreadData() const
 	{
-		return mData[mMainThreadIdx];
+		return mData[sMainThreadIdx];
 	}
 
 	SceneData const& GetRenderThreadData() const
 	{
-		return mData[mRenderThreadIdx];
+		return mData[sRenderThreadIdx];
 	}
 private:
 
-	void WaitForRenderThread()
-	{
-		u32 nextBuffer = (mMainThreadIdx + 1) % NumSceneDataBuffers;
-		mFrameGuards[nextBuffer].acquire();
-	}
+	//void WaitForRenderThread()
+	//{
+	//	u32 nextBuffer = (sMainThreadIdx + 1) % NumSceneDataBuffers;
+	//	sFrameGuards[nextBuffer].acquire();
+	//}
 
 
-	void StartFrame_MainThread()
-	{
-//		mFrameGuards[mMainThreadIdx].acquire();
-	}
-	void ReleaseFrame_MainThread()
-	{
-		mFrameGuards[mMainThreadIdx].release();
-	}
+//	void StartFrame_MainThread()
+//	{
+////		mFrameGuards[mMainThreadIdx].acquire();
+//	}
+//	void ReleaseFrame_MainThread()
+//	{
+//		mFrameGuards[mMainThreadIdx].release();
+//	}
 
-	void CopyFrameData(u32 from, u32 to);
+	void FlipFrameBuffers(u32 from, u32 to) override;
 
 
 	SceneData mData[NumSceneDataBuffers];
 
-	std::array<std::binary_semaphore, NumSceneDataBuffers> mFrameGuards;
+	//std::array<std::binary_semaphore, NumSceneDataBuffers> mFrameGuards;
 
-	u32 mMainThreadIdx = 0;
-	u32 mRenderThreadIdx = 0;
+	//u32 mMainThreadIdx = 0;
+	//u32 mRenderThreadIdx = 0;
 //	BitVector 
 };

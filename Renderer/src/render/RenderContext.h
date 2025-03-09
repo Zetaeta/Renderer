@@ -8,6 +8,8 @@
 #include "render/ConstantBuffer.h"
 #include "ShaderManager.h"
 #include "RenderGraph.h"
+#include "core/Async.h"
+#include "container/HandledVector.h"
 
 template<>
 struct std::hash<u32vec2>
@@ -280,6 +282,8 @@ private:
 	RGResourceHandle mPingPongHandle; 
 	RGResourceHandle mPixelDebugTex;
 	UnorderedAccessView mPixDebugUav;
+	DestructionToken mDestructionToken;
+	HandledVec::Handle mImguiHandle{};
 };
 
 class ScopedCBOverride

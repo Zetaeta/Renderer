@@ -17,7 +17,18 @@ public:
 
 	void EnqueueRenderCommand(std::function<RenderCmdFunc>&& command, IRenderDevice* backend, const char* debugName);
 	void FlushRenderCommands(IRenderDevice* backend);
+
+	void RequestExit()
+	{
+		mExitRequested.store(true, std::memory_order_release);
+	}
+	bool IsExitRequested()
+	{
+		return mExitRequested.load(std::memory_order_acquire);
+	}
+
 private:
+	std::atomic<bool> mExitRequested = false;
 //	Vector<IRenderDevice*> mBackends;
 	Vector<OwningPtr<RenderingThread>> mRenderThreads;
 //	SmallVector<OwningPtr<CommandPipe<RenderCmdFunc>>, 2> mPipes;

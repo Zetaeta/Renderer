@@ -14,6 +14,7 @@ public:
 	using Super = RenderManager;
 
 	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, bool createDx12 = false);
+	~RenderManagerDX11();
 	
 	virtual void DrawFrameData() override;
 
@@ -40,6 +41,8 @@ protected:
 	float m_HwFrame = 0;
 	OwningPtr<dx12::DX12RHI::LiveObjectReporter> dx12LOR;
 	OwningPtr<dx12::DX12RHI> dx12Win = nullptr;
+	std::thread mRenderThread;
+	std::atomic<bool> mExitRequested = false;
 	//std::vector<ComPtr
 };
 

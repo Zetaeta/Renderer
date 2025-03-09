@@ -14,6 +14,19 @@ RenderingThread::RenderingThread(IRenderDevice* device)
 void RenderingThread::RenderFrame()
 {
 	mDevice->RenderFrame();
+	mThreadId = std::this_thread::get_id();
+	ProcessCommands();
+}
+
+void RenderingThread::ProcessCommands()
+{
+	mDevice->GetImmediateContext([this](IRenderDeviceCtx& ctx) {
+		std::function<RenderCmdFunc> func;
+		while (mPipe.TryPop(func))
+		{
+			func(ctx);
+		}
+	});
 }
 
 void RenderingThread::AddCommand(RenderCommandPipe::CmdType command, const char* name)
@@ -31,6 +44,13 @@ void RenderingThread::AddCommand(RenderCommandPipe::CmdType command, const char*
 void RenderingThread::FlushCommands()
 {
 	//TODO multithreadin
+	std::binary_semaphore sema(0);
+	AddCommand([&sema](IRenderDeviceCtx& ctx) {
+		sema.release();
+	},
+		"Flush");
+	sema.acquire();
+
 }
 
 }

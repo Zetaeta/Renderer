@@ -15,6 +15,7 @@ public:
 	}
 
 	void RenderFrame();
+	void ProcessCommands();
 
 	IRenderDevice* GetDevice() const
 	{

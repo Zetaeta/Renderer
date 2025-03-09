@@ -86,7 +86,7 @@ struct MeshPart
 /// </summary>
 struct CompoundMesh : public Asset
 {
-	RCOPY_PROTECT(CompoundMesh);
+	ZE_COPY_PROTECT(CompoundMesh);
 	RMOVE_DEFAULT(CompoundMesh);
 	CompoundMesh(AssetPath const& path);
 	CompoundMesh(AssetPath const& path, MeshPart&& mesh);

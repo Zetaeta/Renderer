@@ -19,7 +19,7 @@ public:
 
 	void PopFrame()
 	{
-		ManualRingBuffer::PushFrame();
+		ManualRingBuffer::PopFrame();
 	}
 };
 

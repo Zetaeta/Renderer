@@ -165,8 +165,13 @@ void DX12RHI::WaitAndReleaseFrameIdx(u32 frameIdx)
 
 void DX12RHI::StartFrame()
 {
-	ProcessTimers();
 	WaitAndReleaseFrameIdx(mFrameIndex);
+	ProcessTimers();
+	if LIKELY(mCurrentFrame >= mNumBuffers + ReadbackCleanupDelay)
+	{
+		mReadbackBuffer->PopFrame();
+	}
+	mReadbackBuffer->PushFrame();
 	mStartedFrameIndex = mFrameIndex;
 }
 
@@ -225,7 +230,7 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 		{
 			debugController->EnableDebugLayer();
-			debugController->SetEnableGPUBasedValidation(true);
+			debugController->SetEnableGPUBasedValidation(false);
 			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 		}
 	}
@@ -486,15 +491,23 @@ void DX12RHI::FreeDescriptor(EDescriptorType descType, D3D12_CPU_DESCRIPTOR_HAND
 	}
 }
 
-DX12ReadbackAllocation DX12RHI::AllocateReadback(u64 size)
+DX12ReadbackBufferEntry DX12RHI::AllocateReadback(u64 size, u64 alignment, u32 readbackDelay)
+{
+	ZE_ASSERT(readbackDelay <= ReadbackCleanupDelay); // TODO support others?
+	auto result = mReadbackBuffer->Reserve(size, alignment);
+	return {mReadbackBuffer->GetCurrentBuffer(), result.Offset, result.WriteAddress, size};
+}
+
+
+DX12ReadbackAllocation DX12RHI::AllocateReadbackBuffer(u64 size)
 {
 	auto desc = CD3DX12_RESOURCE_DESC::Buffer(size);
-	return { mReadbackAllocator->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr).Get(), 0, size};
+	return {mReadbackAllocator->Allocate(desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr).Get(), 0, size};
 }
 
 void DX12RHI::FreeReadback(DX12ReadbackAllocation& buffer)
 {
-	buffer = {};// Should be safe to release it immediately...
+	buffer = {}; // Should be safe to release it immediately...
 }
 
 DX12CommandAllocator DX12RHI::AcquireCommandAllocator(D3D12_COMMAND_LIST_TYPE type)
@@ -859,11 +872,41 @@ GPUTimer* DX12RHI::CreateTimer(wchar_t const* name)
 	u32 dontCare;
 	bool isNew = mTimerPool.Claim(dontCare, timer);
 	timer->Name = name;
-	return nullptr;
+	return timer;
 }
 
 void DX12RHI::ProcessTimers()
 {
+	u64 gpuTimestamp, cpuTimestamp;
+	DXCALL(mQueues.Direct->GetClockCalibration(&gpuTimestamp, &cpuTimestamp));
+	u64 gpuFrequency= 0;
+	DXCALL(mQueues.Direct->GetTimestampFrequency(&gpuFrequency));
+	for (u32 i = 0; i < mTimerPool.Size(); ++i)
+	{
+		if (!mTimerPool.IsInUse(i))
+		{
+			continue;
+		}
+
+		u64 start = 0, end = 0;
+		auto& timer = mTimerPool[i];
+		if (timer.GetRefCount() == 0)
+		{
+			mTimerPool.Release(i);
+			continue;
+		}
+
+		if (timer.PerFrameData[mFrameIndex].Start.Location && timer.PerFrameData[mFrameIndex].End.Location)
+		{
+			start = *timer.PerFrameData[mFrameIndex].Start.Location;
+			end = *timer.PerFrameData[mFrameIndex].End.Location;
+		}
+
+		timer.GPUTimeMs = float((NumCast<double>(end - start) / gpuFrequency) * 1000.);
+		// Clear locations to prevent undesired rereading
+		timer.PerFrameData[mFrameIndex].Start.Location = 0;
+		timer.PerFrameData[mFrameIndex].End.Location = 0;
+	}
 }
 
 ID3D12Device_* GetD3D12Device()

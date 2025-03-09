@@ -24,7 +24,7 @@ enum class EMemberMetadata : u32
 
 class MemberMetadata
 {
-	RCOPY_PROTECT(MemberMetadata);
+	ZE_COPY_PROTECT(MemberMetadata);
 public:
 	RMOVE_DEFAULT(MemberMetadata);
 

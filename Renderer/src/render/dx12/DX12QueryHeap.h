@@ -31,8 +31,9 @@ private:
 
 struct DX12TimingQuery
 {
-	ID3D12Resource* ReadbackBuffer = nullptr;
-	u64 Offset = 0;
+//	ID3D12Resource* ReadbackBuffer = nullptr;
+//	u64 Offset = 0;
+	u64 const* Location = nullptr;
 };
 
 struct DX12Timer : public GPUTimer
@@ -43,7 +44,6 @@ struct DX12Timer : public GPUTimer
 		DX12TimingQuery End;
 	};
 	std::array<IntervalData, MaxSwapchainBufferCount> PerFrameData;
-	std::wstring Name;
 };
 
 }
