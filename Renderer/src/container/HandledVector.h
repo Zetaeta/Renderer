@@ -38,7 +38,7 @@ class HandledVector : public std::unordered_map<HandledVec::Handle, T>
 public:
 //	using namespace HandledVec;
 	using Handle = HandledVec::Handle;
-	#if HANDLED_VECTOR_TODO
+#if HANDLED_VECTOR_TODO
 	template<typename... Args>
 	Handle Emplace(Args... args)
 	{
@@ -50,7 +50,7 @@ public:
 	}
 	Vector<HandledVec::Element<T>> mData;
 	IndexType mFirstFree = 0;
-	#else
+#else
 	template<typename... Args>
 	Handle Emplace(Args... args)
 	{
@@ -73,5 +73,5 @@ public:
 			func(value);
 		}
 	}
-	#endif
+#endif
 };

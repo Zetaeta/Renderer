@@ -70,7 +70,6 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 	mTimingQueries = MakeOwning<DX12QueryHeap>(D3D12_QUERY_HEAP_TYPE_TIMESTAMP, 512);
 
 	WaitForGPU();
-	ResourceMgr.OnDevicesReady();
 	mReadbackBuffer = MakeOwning<DX12ReadbackBuffer>(64 * 1024);
 
 }

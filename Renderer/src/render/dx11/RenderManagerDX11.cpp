@@ -49,6 +49,7 @@ RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* 
 		dx12LOR = dx12Win->GetLiveObjectReporter();
 		CreateIndependentViewport(dx12Win.get(), L"DX12.1");
 	}
+	RenderResourceMgr::OnDevicesReady();
 	mRenderThread = std::thread([this]
 	{
 		SetThreadName(GetCurrentThreadId(), "Render thread");

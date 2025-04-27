@@ -146,7 +146,6 @@ void RenderResourceMgr::ProcessTextureCreations()
 				desc.Flags |= TF_SRGB;
 			}
 			auto			result = mDevice->CreateTexture2D(desc, tex->GetData());
-	//		std::make_shared<DX11Texture>(*mCtx, desc, );
 		#if !MULTI_RENDER_BACKEND
 			tex.SetDeviceTexture(result);
 		#endif
