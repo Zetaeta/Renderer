@@ -37,6 +37,10 @@ public:
 		return mResizeWidth != 0;
 	}
 
+	DXGI_FORMAT GetRTVFormat() const;
+
+	u32 GetNumBuffers() const { return mNumBuffers; }
+
 protected:	
 	uvec2 mSize;
 	u32 mBufferIndex = 0;

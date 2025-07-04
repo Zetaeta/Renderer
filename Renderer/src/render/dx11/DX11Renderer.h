@@ -109,6 +109,7 @@ public:
 	void PreImgui();
 	void ImguiBeginFrame();
 	void ImguiEndFrame();
+	bool mRenderingImgui = false;
 
 
 	MappedResource MapResource(ID3D11Resource*, u32 subResource, ECpuAccessFlags flags);

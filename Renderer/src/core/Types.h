@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BaseDefines.h"
+#include "CoreTypes.h"
 #include <vector>
 #include <string>
 #include <memory>
@@ -60,4 +61,3 @@ OwningPtr<T> MakeOwning(Args&&... args)
 {
 	return std::make_unique<T>(std::forward<Args>(args)...);
 }
-

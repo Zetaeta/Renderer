@@ -30,6 +30,11 @@ public:
 		mSurface = surface;
 	}
 
+	rnd::IDeviceSurface* GetSurface() const
+	{
+		return mSurface;
+	}
+
 	uvec2 GetSize() const
 	{
 		return {mWidth, mHeight};

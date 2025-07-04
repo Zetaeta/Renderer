@@ -494,6 +494,13 @@
     <ClInclude Include="src\core\Async.h" />
     <ClInclude Include="src\common\BufferedRenderInterface.h" />
     <ClInclude Include="src\container\HandledVector.h" />
+    <ClInclude Include="src\common\Config.h" />
+    <ClInclude Include="src\container\Map.h" />
+    <ClInclude Include="src\core\StringConversion.h" />
+    <ClInclude Include="src\common\CommandLine.h" />
+    <ClInclude Include="src\common\windows\WindowsConfigBackend.h" />
+    <ClInclude Include="src\common\ConfigTypes.h" />
+    <ClInclude Include="src\core\StringView.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -772,6 +779,10 @@
     <ClCompile Include="src\render\dx12\DX12QueryHeap.cpp" />
     <ClCompile Include="src\render\dx12\DX12EndFrameInterface.cpp" />
     <ClCompile Include="src\common\BufferedRenderInterface.cpp" />
+    <ClCompile Include="src\common\Config.cpp" />
+    <ClCompile Include="src\common\CommandLine.cpp" />
+    <ClCompile Include="src\common\windows\WindowsConfigBackend.cpp" />
+    <ClCompile Include="src\core\StringView.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

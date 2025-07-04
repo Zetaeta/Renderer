@@ -5,6 +5,7 @@
 // Usage: SetThreadName (-1, "MainThread");
 //
 #include <windows.h>
+#include "common/Config.h"
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 
 #pragma pack(push, 8)
@@ -33,6 +34,9 @@ void SetThreadName(DWORD dwThreadID, const char* threadName)
 	{
 	}
 }
+
+ConfigVariableAuto<int> CVarImguiBackend("imgui.backend", 11, "Backend for imgui rendering. 11 = DX11, 12 = DX12");
+
 namespace  rnd::dx11
 {
 RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, bool createDx12 /*= false*/)
@@ -42,12 +46,19 @@ RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* 
 	//auto& mWin11 = mWindows.emplace_back(std::make_unique<wnd::Window>(1500, 900, L"DX11"));
 	//m_hardwareRenderer->CreateSurface(mWin11.get())->CreateFullscreenViewport(&mScene, &m_Camera);
 	CreateIndependentViewport(m_hardwareRenderer.get(), L"DX11");
-	m_hardwareRenderer->ImGuiInit(mWindows[0].get());
+	if (CVarImguiBackend.GetValueOnMainThread() == 11)
+	{
+		m_hardwareRenderer->ImGuiInit(mWindows[0].get());
+	}
 	if (createDx12)
 	{
 		dx12Win = MakeOwning<dx12::DX12RHI>(1500, 900, L"DX12", TripleBuffered, &mScene, &m_Camera);
 		dx12LOR = dx12Win->GetLiveObjectReporter();
-		CreateIndependentViewport(dx12Win.get(), L"DX12.1");
+		auto* window = CreateIndependentViewport(dx12Win.get(), L"DX12.1");
+		if (CVarImguiBackend.GetValueOnMainThread() == 12)
+		{
+			dx12Win->ImGuiInit(window);
+		}
 	}
 	RenderResourceMgr::OnDevicesReady();
 	mRenderThread = std::thread([this]
@@ -61,10 +72,11 @@ RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* 
 	});
 }
 
-void RenderManagerDX11::CreateIndependentViewport(rnd::IRenderDevice* device, wchar_t const* name)
+wnd::Window* RenderManagerDX11::CreateIndependentViewport(rnd::IRenderDevice* device, wchar_t const* name)
 {
 	auto& win = mWindows.emplace_back(std::make_unique<wnd::Window>(1500, 900, name));
 	device->CreateSurface(win.get())->CreateFullscreenViewport(&mScene, new UserCamera(mInput, win.get()));
+	return win.get();
 }
 
 void RenderManagerDX11::DrawFrameData()

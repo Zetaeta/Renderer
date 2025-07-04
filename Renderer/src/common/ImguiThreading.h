@@ -68,6 +68,7 @@ using ImguiCallback = std::function<void()>;
 void EnqueueImguiFunc(ImguiCallback&& callback, CancellationHandle&& cancelHdl);
 void ExecuteQueuedFuncs();
 void DeferredDestroyWindows();
+void RenderPlatformWindows();
 
 HandledVec::Handle RegisterImguiFunc(std::function<void()> func, CancellationHandle cancelHdl = {});
 bool UnregisterImguiFunc(HandledVec::Handle hdl);

@@ -126,6 +126,12 @@ DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 
 DX11Renderer::~DX11Renderer()
 {
+	if (mRenderingImgui)
+	{
+		ImGui_ImplDX11_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+	}
+
 	mSwapChains.clear();
 	GRenderController.RemoveRenderBackend(this);
 	RendererScene::OnShutdownDevice(this);
@@ -580,7 +586,9 @@ void DX11Renderer::ImGuiInit(wnd::Window* mainWindow)
 {
 	ImGui_ImplWin32_Init(mainWindow->GetHwnd());
 	ImGui_ImplDX11_Init(m_Ctx.pDevice, m_Ctx.pContext);
+	ImGui_ImplDX11_CreateDeviceObjects();
 	ThreadImgui::ImguiThreadInterface::Init();
+	mRenderingImgui = true;
 }
 
 void DX11Renderer::PreImgui()
@@ -594,31 +602,26 @@ void DX11Renderer::PreImgui()
 
 void DX11Renderer::ImguiBeginFrame()
 {
-	ImGui_ImplDX11_NewFrame();
+	if (mRenderingImgui)
+	{
+		ImGui_ImplDX11_NewFrame();
+	}
 //	ThreadImgui::BeginFrame();
 }
 
 void DX11Renderer::ImguiEndFrame()
 {
+	if (!mRenderingImgui)
+	{
+		return;
+	}
 	//ImGui::End();
 	//ImGui::Render();
 //	ThreadImgui::EndFrame();
 	PreImgui();
 	ThreadImgui::ImDrawDataWrapper drawData = ThreadImgui::GetDrawData_RenderThread();
 	ImGui_ImplDX11_RenderDrawData(&drawData);
-    ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-	if (platformIO.Renderer_RenderWindow)
-	{
-		for (auto& Window : ThreadImgui::GetPlatformWindows_RenderThread())
-		{
-			if (Window.RendererUserData != nullptr && Window.DrawData != nullptr)
-			{
-				platformIO.Renderer_RenderWindow(&Window, nullptr);
-				if (platformIO.Renderer_SwapBuffers) platformIO.Renderer_SwapBuffers(&Window, nullptr);
-			}
-		}
-	}
-	ThreadImgui::DeferredDestroyWindows();
+	ThreadImgui::RenderPlatformWindows();
 }
 
 MappedResource DX11Renderer::MapResource(ID3D11Resource* resource, u32 subResource, ECpuAccessFlags flags)

@@ -19,4 +19,9 @@ String GetPlatformError()
 	return result;
 }
 
+String GetCmdLine()
+{
+	return ::GetCommandLineA();
+}
+
 }

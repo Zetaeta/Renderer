@@ -3,5 +3,8 @@
   <PropertyGroup>
     <ShowAllFiles>true</ShowAllFiles>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LocalDebuggerCommandArguments>-dx12 -config="imgui.backend=11"</LocalDebuggerCommandArguments>
+    <RemoteDebuggerCommandArguments>-dx12 -config="imgui.backend=11"</RemoteDebuggerCommandArguments>
+  </PropertyGroup>
 </Project>

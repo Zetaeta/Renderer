@@ -13,3 +13,6 @@ using byte = u8;
 using uint2 = uvec2;
 using uint3 = uvec3;
 using uint4 = uvec4;
+
+
+using CompileTimeString = char const*;

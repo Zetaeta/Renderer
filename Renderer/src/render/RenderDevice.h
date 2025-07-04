@@ -139,7 +139,7 @@ public:
 	DeviceMeshRef CreateDirectMesh(const Range& vertices)
 	{
 		using Vert = std::remove_cvref_t<decltype(vertices[0])>;
-		return CreateDirectMesh(EPrimitiveTopology::TRIANGLES, {TVertexAttributes<Vert>::template Handle, NumCast<u32>(std::size(vertices)), sizeof(Vert), &vertices[0]}, {});
+		return CreateDirectMesh(EPrimitiveTopology::TRIANGLES, {TVertexAttributes<Vert>::Handle, NumCast<u32>(std::size(vertices)), sizeof(Vert), &vertices[0]}, {});
 	}
 
 

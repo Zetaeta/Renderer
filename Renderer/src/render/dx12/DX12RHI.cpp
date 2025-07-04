@@ -23,6 +23,10 @@
 #include "render/shaders/ShaderDeclarations.h"
 #include "DX12ReadbackBuffer.h"
 
+#include "backends/imgui_impl_dx12.cpp"
+#include "backends/imgui_impl_win32.h"
+#include "common/ImguiThreading.h"
+
 #pragma comment(lib, "d3d12.lib")
 
 DEFINE_LOG_CATEGORY(LogDX12);
@@ -112,7 +116,6 @@ void DX12RHI::Tick()
 	}
 	ResizeSwapChains();
 
-
 	StartFrame();
 	auto& cmd = mCmdList.CmdList;
 	mRecordingCommands = true;
@@ -131,6 +134,8 @@ void DX12RHI::Tick()
 		float const clearColor[4] = {0.5f, 0.5f, 0.5f, 1.f};
 		cmd->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
 	}
+
+	ImGuiBeginFrame();
 }
 
 u64 DX12RHI::GetCompletedFrame() const
@@ -176,6 +181,7 @@ void DX12RHI::StartFrame()
 
 void DX12RHI::EndFrame()
 {
+	ImGuiEndFrame();
 	for (auto const& swapChain : mSwapChains)
 	{
 		swapChain->GetCurrentBuffer()->TransitionTo(mCmdList.CmdList.Get(), D3D12_RESOURCE_STATE_PRESENT);
@@ -906,6 +912,59 @@ void DX12RHI::ProcessTimers()
 		timer.PerFrameData[mFrameIndex].Start.Location = 0;
 		timer.PerFrameData[mFrameIndex].End.Location = 0;
 	}
+}
+
+void DX12RHI::ImGuiInit(wnd::Window* mainWindow)
+{
+	IDeviceSurface* surface = mainWindow->GetSurface();
+	assert(surface->GetDevice() == this);
+	DX12SwapChain* swapChain = static_cast<DX12SwapChain*>(surface);
+	mImguiHeap = DX12DescriptorHeap(Device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 256, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+	ImGui_ImplDX12_InitInfo initInfo;
+	initInfo.CommandQueue = CmdQueues().Direct;
+	initInfo.Device = Device();
+	initInfo.RTVFormat = swapChain->GetRTVFormat();
+	initInfo.DSVFormat = DXGI_FORMAT_UNKNOWN;
+	initInfo.NumFramesInFlight = swapChain->GetNumBuffers();
+	initInfo.SrvDescriptorHeap = mImguiHeap.GetHeap();
+	initInfo.UserData = this;
+	initInfo.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE* out_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE* out_gpu_desc_handle)
+	{
+		DX12RHI* This = static_cast<DX12RHI*>(info->UserData);
+		*out_cpu_desc_handle = CD3DX12_CPU_DESCRIPTOR_HANDLE(This->mImguiHeap->GetCPUDescriptorHandleForHeapStart(), This->mImGuiHeapIndex, This->mImguiHeap.ElementSize);
+		*out_gpu_desc_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE(This->mImguiHeap->GetGPUDescriptorHandleForHeapStart(), This->mImGuiHeapIndex, This->mImguiHeap.ElementSize);
+		This->mImGuiHeapIndex++;
+	};
+	initInfo.SrvDescriptorFreeFn = [](ImGui_ImplDX12_InitInfo* info, D3D12_CPU_DESCRIPTOR_HANDLE cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE gpu_desc_handle) { };
+	ImGui_ImplWin32_Init(mainWindow->GetHwnd());
+	ImGui_ImplDX12_Init(&initInfo);
+	ImGui_ImplDX12_CreateDeviceObjects();
+	mImGuiMainWindow = swapChain;
+	ThreadImgui::ImguiThreadInterface::Init();
+}
+
+void DX12RHI::ImGuiBeginFrame()
+{
+	if (mImGuiMainWindow)
+	{
+		ImGui_ImplDX12_NewFrame();
+	}
+}
+
+void DX12RHI::ImGuiEndFrame()
+{
+	if (!mImGuiMainWindow)
+	{
+		return;
+	}
+
+	ThreadImgui::ImDrawDataWrapper drawData = ThreadImgui::GetDrawData_RenderThread();
+	mCmdList->SetDescriptorHeaps(1, mImguiHeap.Heap.GetAddressOf());
+	mImGuiMainWindow->GetCurrentBuffer()->TransitionTo(mCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv = mImGuiMainWindow->GetBackbuffer()->GetRT()->GetData<D3D12_CPU_DESCRIPTOR_HANDLE>();
+	mCmdList->OMSetRenderTargets(1, &rtv, false, nullptr);
+	ImGui_ImplDX12_RenderDrawData(&drawData, mCmdList);
+	ThreadImgui::RenderPlatformWindows();
 }
 
 ID3D12Device_* GetD3D12Device()

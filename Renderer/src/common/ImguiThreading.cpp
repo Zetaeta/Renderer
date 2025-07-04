@@ -1,8 +1,7 @@
 #include "ImguiThreading.h"
-#include "backends/imgui_impl_win32.h"
 #include "mutex"
-#include "backends/imgui_impl_dx11.h"
 #include "thread/MPSCMessageQueue.h"
+#include "backends/imgui_impl_win32.h"
 
 namespace ThreadImgui
 {
@@ -79,7 +78,7 @@ void ImDrawDataWrapper::CopyTrivial(ImDrawData const& other)
 
 void BeginFrame()
 {
-	ImGui_ImplDX11_NewFrame();
+	//ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 }
@@ -157,19 +156,46 @@ bool UnregisterImguiFunc(HandledVec::Handle hdl)
 }
 
 static Vector<ImguiPlatformWindow> gDeferredDestroyWindows;
+
+void RenderPlatformWindows()
+{
+    ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+	if (platformIO.Renderer_RenderWindow)
+	{
+		for (auto& Window : GetPlatformWindows_RenderThread())
+		{
+			if (Window.RendererUserData != nullptr && Window.DrawData != nullptr)
+			{
+				auto*& referencedRUD = Window.DrawData->OwnerViewport->RendererUserData;
+				if (referencedRUD != Window.RendererUserData)
+				{
+					assert(referencedRUD == nullptr);
+				}
+				auto* oldRUD = referencedRUD;
+				referencedRUD = Window.RendererUserData;
+
+				platformIO.Renderer_RenderWindow(&Window, nullptr);
+				if (platformIO.Renderer_SwapBuffers) platformIO.Renderer_SwapBuffers(&Window, nullptr);
+				referencedRUD = oldRUD;
+			}
+		}
+	}
+	ThreadImgui::DeferredDestroyWindows();
+}
+
 static std::mutex gDeferredDestroyWindowsMtx;
-static void ThreadImGui_DX11_DestroyWindow(ImGuiViewport* viewport)
+static void ThreadImGui_DestroyWindow(ImGuiViewport* viewport)
 {
 	std::scoped_lock lock {gDeferredDestroyWindowsMtx};
 	gDeferredDestroyWindows.emplace_back(*viewport);
 	viewport->RendererUserData = nullptr;
 }
 
-static void (*sImGui_ImplDX11_DestroyWindow)(ImGuiViewport* vp);
+static void (*sImGui_Platform_DestroyWindow)(ImGuiViewport* vp);
 void ImguiThreadInterface::Init()
 {
-	sImGui_ImplDX11_DestroyWindow = ImGui::GetPlatformIO().Renderer_DestroyWindow;
-	ImGui::GetPlatformIO().Renderer_DestroyWindow = ThreadImGui_DX11_DestroyWindow;
+	sImGui_Platform_DestroyWindow = ImGui::GetPlatformIO().Renderer_DestroyWindow;
+	ImGui::GetPlatformIO().Renderer_DestroyWindow = ThreadImGui_DestroyWindow;
 }
 
 void DeferredDestroyWindows()
@@ -177,7 +203,7 @@ void DeferredDestroyWindows()
 	std::scoped_lock lock {gDeferredDestroyWindowsMtx};
 	for (auto& window : gDeferredDestroyWindows)
 	{
-		sImGui_ImplDX11_DestroyWindow(&window);
+		sImGui_Platform_DestroyWindow(&window);
 	}
 	gDeferredDestroyWindows.clear();
 }

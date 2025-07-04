@@ -24,6 +24,7 @@
 #include "render/dx12/DX12Window.h"
 #include "common/ImguiThreading.h"
 #include "common/Application.h"
+#include "core/StringView.h"
 
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "dxgi.lib")
@@ -122,16 +123,6 @@ void DrawTri(vec4 a, vec4 b, vec4 c)
 ComPtr<ID3D11DepthStencilView> dsv;
 
 DEFINE_LOG_CATEGORY_STATIC(LogDX11Backend)
-
-bool CharEqualsIgnoreCase(char a, char b)
-{
-	return std::tolower(static_cast<u8>(a)) == std::tolower(static_cast<u8>(b));
-}
-
-bool EqualsIgnoreCase(String const& a, String const& b)
-{
-	return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), CharEqualsIgnoreCase);
-}
 
 bool HasArg(const String& arg, int argc, char** argv)
 {
@@ -426,8 +417,6 @@ int MainDX11(int argc, char** argv)
 	}
 
 	// Cleanup
-	ImGui_ImplDX11_Shutdown();
-	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
 	CleanupDeviceD3D();

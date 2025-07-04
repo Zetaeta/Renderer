@@ -18,7 +18,7 @@ public:
 	
 	virtual void DrawFrameData() override;
 
-	void CreateIndependentViewport(rnd::IRenderDevice* device, wchar_t const* name);
+	wnd::Window* CreateIndependentViewport(rnd::IRenderDevice* device, wchar_t const* name);
 
 	void OnRenderStart() override;
 

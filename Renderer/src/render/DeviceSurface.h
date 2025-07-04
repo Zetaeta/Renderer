@@ -23,6 +23,10 @@ public:
 
 	Viewport* CreateFullscreenViewport(Scene* scene, Camera* camera);
 
+	IRenderDevice* GetDevice() const
+	{
+		return mDevice;
+	}
 
 protected:
 	ivec2 mPos{0};

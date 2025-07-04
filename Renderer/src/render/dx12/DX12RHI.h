@@ -113,6 +113,10 @@ public:
 		return "D3D12";
 	}
 
+	void ImGuiInit(wnd::Window* mainWindow);
+	void ImGuiBeginFrame();
+	void ImGuiEndFrame();
+
 	void BeginFrame() override;
 	void Tick();
 
@@ -293,6 +297,8 @@ private:
 	OwningPtr<DX12DescriptorTableAllocator> mShaderResourceDescTables;
 	OwningPtr<DX12DescriptorTableAllocator> mSamplerDescTables;
 	OwningPtr<DX12QueryHeap> mTimingQueries;
+	DX12DescriptorHeap mImguiHeap;
+	u32 mImGuiHeapIndex = 0;
 	std::array<OwningPtr<DX12CommandAllocatorPool>, 3> mCmdAllocatorPools;
 	std::array<Vector<ComPtr<ID3D12Pageable>>, MaxSwapchainBufferCount> mDeferredReleaseResources;
 	std::unordered_map<GraphicsPSODesc, ComPtr<ID3D12PipelineState>, GenericHash<>> mPSOs;
@@ -306,6 +312,7 @@ private:
 	u8 mStartedFrameIndex = 0;
 	OwningPtr<DX12Context> mContext;
 	Scene* mScene = nullptr;
+	DX12SwapChain* mImGuiMainWindow = nullptr;
 
 	DX12CBPool mCBPool;
 	ComPtr<IDXGIFactory6> mFactory;

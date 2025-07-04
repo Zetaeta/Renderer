@@ -50,9 +50,4 @@ public:
 		return Get() == other;
 	}
 
-	bool operator!=(T* other) const
-	{
-		return Get() == other;
-	}
-
 };
