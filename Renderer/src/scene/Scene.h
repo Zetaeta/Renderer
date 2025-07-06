@@ -89,6 +89,17 @@ class Scene : public BaseSerialized
 	void AddScenelet(Scenelet const& scenelet);
 	void AddSceneletPart(StaticMeshComponent& component, SceneletPart const& part);
 
+	template<typename SOType, typename... Args>
+	void AddSceneObject(Args&&... args)
+	{
+		auto& ptr = m_Objects.emplace_back(MakeOwning<SOType>(std::forward<Args>(args)...));
+		if (mInitialized)
+		{
+			ptr->SetScene(this);
+			ptr->Initialize();
+		}
+	}
+
 	void ForEachComponent(std::function<void(SceneComponent&)> const& func );
 	void ForEachComponent(std::function<void(SceneComponent const&)> const& func ) const;
 
@@ -119,8 +130,6 @@ class Scene : public BaseSerialized
 	}
 
 	void Initialize();
-
-	void Destroy();
 
 	AssetManager* GetAssetManager()
 	{
@@ -273,6 +282,8 @@ private:
 	std::vector<Mesh>& Meshes() const { return m_AssetManager->m_Meshes; }
 
 	void ForAllChildren(std::function<void(BaseSerialized*)> callback, bool recursive = false) override;
+
+	bool mInitialized = false;
 };
 
 DECLARE_CLASS_TYPEINFO(Scene);

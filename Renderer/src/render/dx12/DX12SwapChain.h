@@ -1,6 +1,7 @@
 #pragma once
 #include "render/DeviceSurface.h"
 #include "SharedD3D12.h"
+#include "DX12Texture.h"
 #include "dxgi1_4.h"
 
 namespace wnd { class Window; }

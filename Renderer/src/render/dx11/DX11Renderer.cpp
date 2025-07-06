@@ -31,6 +31,7 @@
 #include "common/ImguiThreading.h"
 #include "DX11Swapchain.h"
 #include "platform/windows/Window.h"
+#include "backends/imgui_impl_win32.h"
 
 #pragma comment(lib, "dxguid.lib")
 

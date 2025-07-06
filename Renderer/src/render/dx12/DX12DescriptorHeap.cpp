@@ -1,4 +1,5 @@
 #include "DX12DescriptorHeap.h"
+#include "DX12RHI.h"
 
 namespace rnd::dx12
 {

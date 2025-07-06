@@ -12,6 +12,7 @@
 #include "thread/ThreadUtils.h"
 #include "DX12Texture.h"
 #include "DX12DescriptorAllocator.h"
+#include "DX12DescriptorTableAllocator.h"
 #include "DX12ShaderCompiler.h"
 #include "render/dxcommon/DXGIUtils.h"
 #include "render/RenderController.h"
@@ -80,6 +81,11 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 
 DX12RHI::~DX12RHI()
 {
+	if (mImGuiMainWindow)
+	{
+		ImGui_ImplDX12_Shutdown();
+		ImGui_ImplWin32_Shutdown();
+	}
 	mSwapChains.clear();
 	mContext = nullptr;
 	ResourceMgr.Teardown();

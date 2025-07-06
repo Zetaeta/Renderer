@@ -17,7 +17,7 @@ struct DescriptorTableLoc
 class DX12DescriptorTableAllocator : FrameIndexedRingBuffer
 {
 public:
-	DX12DescriptorTableAllocator(ID3D12Device_* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, u32 size);
+	DX12DescriptorTableAllocator(ID3D12Device_* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, u32 size = 2048);
 
 	DescriptorTableLoc Reserve(u32 tableSize);
 private:

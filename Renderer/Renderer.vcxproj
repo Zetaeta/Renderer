@@ -88,6 +88,7 @@
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
       <CombineFilesOnlyFromTheSameFolder>true</CombineFilesOnlyFromTheSameFolder>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <IncludeInUnityFile>false</IncludeInUnityFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,6 +144,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\render\dx12\DX12State.h" />
+    <ClInclude Include="src\render\RenderState.h" />
+    <ClInclude Include="src\scene\Landscape.h" />
     <ClInclude Include="src\3rd\imgui\imgui.h" />
     <ClInclude Include="src\3rd\imgui\imgui_internal.h" />
     <ClInclude Include="src\3rd\imgui\imstb_rectpack.h" />
@@ -198,7 +202,8 @@
     <ClInclude Include="src\platform\windows\WinApi.h" />
     <ClInclude Include="src\platform\windows\Window.h" />
     <ClInclude Include="src\platform\windows\WinEvent.h" />
-    <ClInclude Include="src\RenderApp.h" />
+    <ClInclude Include="src\procedural\Noise.h" />
+    <ClInclude Include="src\procedural\PerlinNoise.h" />
     <ClInclude Include="src\asset\Asset.h" />
     <ClInclude Include="src\asset\AssetManager.h" />
     <ClInclude Include="src\asset\Mesh.h" />
@@ -334,6 +339,8 @@
     <ClInclude Include="src\thread\ThreadUtils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\procedural\PerlinNoise.cpp" />
+    <ClCompile Include="src\scene\Landscape.cpp" />
     <ClCompile Include="src\3rd\imgui\imgui.cpp" />
     <ClCompile Include="src\3rd\imgui\imgui_demo.cpp" />
     <ClCompile Include="src\3rd\imgui\imgui_draw.cpp" />
@@ -372,11 +379,6 @@
     <ClCompile Include="src\platform\windows\Window.cpp" />
     <ClCompile Include="src\platform\windows\WindowsPlatform.cpp" />
     <ClCompile Include="src\platform\windows\WinEvent.cpp" />
-    <ClCompile Include="src\RenderApp.cpp">
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
-      <ExternalWarningLevel>Level3</ExternalWarningLevel>
-    </ClCompile>
     <ClCompile Include="src\asset\AssetManager.cpp">
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>

@@ -3,6 +3,7 @@
 #include <iostream>
 #include "platform/windows/Window.h"
 #include "thread/ThreadUtils.h"
+#include "container/Vector.h"
 
 
 void UserCamera::Tick(float deltaTime)

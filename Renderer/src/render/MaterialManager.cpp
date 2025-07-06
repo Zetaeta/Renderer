@@ -93,36 +93,36 @@ void MaterialManager::UpdateMaterial(MaterialID matId)
 void MaterialManager::UpdateMaterial(MaterialID matId, TexturedRenderMaterial* texMat)
 {
 	Material const& mat = AssetManager::Get()->GetMaterial(matId);
-		if (mat.albedo.IsValid())
-		{
-			texMat->m_Albedo = mDevice->ResourceMgr.GetDeviceTexture(&*mat.albedo);
-		}
-		else
-		{
-			texMat->m_Albedo = mDevice->BasicTextures.GetBlackTexture(mDevice);
-		}
-		if (mat.normal.IsValid())
-		{
-			texMat->m_Normal = mDevice->ResourceMgr.GetDeviceTexture(&*mat.normal);
+	if (mat.albedo.IsValid())
+	{
+		texMat->m_Albedo = mDevice->ResourceMgr.GetDeviceTexture(&*mat.albedo);
+	}
+	else
+	{
+		texMat->m_Albedo = mDevice->BasicTextures.GetBlackTexture(mDevice);
+	}
+	if (mat.normal.IsValid())
+	{
+		texMat->m_Normal = mDevice->ResourceMgr.GetDeviceTexture(&*mat.normal);
 //			mat.normal.Clear();
-		}
-		if (mat.emissiveMap.IsValid())
-		{
-			texMat->m_Emissive = mDevice->ResourceMgr.GetDeviceTexture(&*mat.emissiveMap);
+	}
+	if (mat.emissiveMap.IsValid())
+	{
+		texMat->m_Emissive = mDevice->ResourceMgr.GetDeviceTexture(&*mat.emissiveMap);
 //			mat.emissive.Clear();
-		}
-		else
-		{
-			texMat->m_Emissive = nullptr;
-		}
-		if (mat.roughnessMap.IsValid())
-		{
-			texMat->m_Roughness = mDevice->ResourceMgr.GetDeviceTexture(&*mat.roughnessMap);
-		}
-		else
-		{
-			texMat->m_Roughness = nullptr; mDevice->BasicTextures.GetBlackTexture(mDevice);
-		}
+	}
+	else
+	{
+		texMat->m_Emissive = nullptr;
+	}
+	if (mat.roughnessMap.IsValid())
+	{
+		texMat->m_Roughness = mDevice->ResourceMgr.GetDeviceTexture(&*mat.roughnessMap);
+	}
+	else
+	{
+		texMat->m_Roughness = nullptr; mDevice->BasicTextures.GetBlackTexture(mDevice);
+	}
 }
 
 }

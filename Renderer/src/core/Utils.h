@@ -262,6 +262,12 @@ constexpr auto Addr(std::vector<T> const& v)
 }
 
 template<typename T>
+constexpr auto Addr(std::vector<T>& v)
+{
+	return v.empty() ? nullptr : &v[0];
+}
+
+template<typename T>
 constexpr u32 Size(T const& t)
 {
 	return static_cast<u32>(std::size(t));

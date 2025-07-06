@@ -1,6 +1,7 @@
 
 #include "VertexTypes.h"
 #include "VertexAttributes.h"
+#include "core/ContainerTypeInfo.h"
 
 namespace rnd
 {

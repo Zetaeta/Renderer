@@ -2,6 +2,7 @@
 #include "render/DeviceTexture.h"
 #include "editor/Viewport.h"
 #include "DX12RHI.h"
+#include "DX12DescriptorAllocator.h"
 
 namespace rnd::dx12
 {

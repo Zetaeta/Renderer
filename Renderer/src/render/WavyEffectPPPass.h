@@ -1,5 +1,6 @@
 #pragma once
 #include "passes/PostProcessPass.h"
+#include "RenderDevice.h"
 
 namespace rnd
 {

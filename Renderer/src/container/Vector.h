@@ -1,7 +1,9 @@
 #pragma once
 #include <algorithm>
 #include <vector>
+#include <memory>
 #include "core/TypeTraits.h"
+#include "core/CoreTypes.h"
 
 template<typename T>
 using Vector = std::vector<T>;

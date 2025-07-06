@@ -1,6 +1,7 @@
 #pragma once
 #include "SharedD3D12.h"
 #include "DX12EndFrameInterface.h"
+#include "render/GPUTimer.h"
 
 namespace rnd::dx12
 {

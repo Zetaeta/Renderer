@@ -1,6 +1,7 @@
 #pragma once
 #include "render/RenderPass.h"
 #include "render/RenderGraph.h"
+#include "render/Shader.h"
 
 namespace rnd
 {

@@ -3,6 +3,9 @@
 #include <memory>
 #include "core/RefCounted.h"
 using MaterialID = int;
+#ifndef PROFILING
+#define PROFILING 1
+#endif
 
 namespace rnd
 {

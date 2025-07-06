@@ -9,6 +9,8 @@
 
 class Texture;
 
+u32 GetPixelSize(ETextureFormat format);
+
 namespace rnd
 {
 

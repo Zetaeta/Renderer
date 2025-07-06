@@ -1,6 +1,7 @@
 #include "DeviceSurface.h"
 #include "editor/Viewport.h"
 #include "platform/windows/Window.h"
+#include "RenderDevice.h"
 
 namespace rnd
 {

@@ -8,6 +8,7 @@
 #include "core/Types.h"
 #include "render/RenderContext.h"
 #include <render/RenderDeviceCtx.h>
+#include "SharedD3D11.h"
 
 namespace rnd
 {

@@ -3,6 +3,7 @@
 #include "core/RefCounted.h"
 #include "Shader.h"
 #include "DeviceShader.h"
+#include "shaders/ShaderReflection.h"
 
 #define ALLOW_RECOMPILATION ZE_BUILD_EDITOR
 

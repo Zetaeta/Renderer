@@ -1,8 +1,6 @@
 #pragma once
-
-#ifndef PROFILING
-#define PROFILING 1
-#endif
+#include "core/RefCounted.h"
+#include "RndFwd.h"
 
 #if PROFILING
 namespace rnd

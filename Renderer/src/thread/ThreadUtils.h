@@ -1,4 +1,5 @@
 #pragma once
+#include "core/CoreTypes.h"
 
 enum class ENamedThread : u8
 {

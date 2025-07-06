@@ -5,6 +5,7 @@
 #include <d3dx12.h>
 #include "DX12Allocator.h"
 #include "DX12DescriptorAllocator.h"
+#include "render/dxcommon/DXGIUtils.h"
 
 namespace rnd::dx12
 {

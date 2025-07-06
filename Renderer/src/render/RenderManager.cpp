@@ -6,6 +6,7 @@
 #include "common/JsonDeserializer.h"
 #include <nfd.h>
 #include "scene/LightObject.h"
+#include "asset/Mesh.h"
 
 using std::string;
 using std::make_shared;
@@ -77,7 +78,7 @@ void RenderManager::CreateStarterScene()
 	//scene.m_DirLights = { DirLight({ -1.f, -1.f, 1.f }, 0.5) };
 	//scene.m_PointLights.emplace_back(vec3(1), vec3(1),1.f);
 //	scene.m_SpotLights.emplace_back(vec3(1), vec3{ 0, 0, 1 }, vec3(1), 1.f, 1.f);
-	vector<IndexedTri> inds = { IndexedTri({ 0, 1, 2 }) };
+	Vector<IndexedTri> inds = { IndexedTri({ 0, 1, 2 }) };
 	newScene.m_Objects.emplace_back(std::make_unique<LightObject<SpotLight>>(&mScene));
 	newScene.m_Objects.emplace_back(std::make_unique<LightObject<PointLight>>(&mScene));
 	newScene.m_Objects.emplace_back(std::make_unique<LightObject<DirLight>>(&mScene));

@@ -1,11 +1,9 @@
 #include "RenderManagerDX11.h"
 #include "editor/Viewport.h"
 #include "render/RendererScene.h"
-//
-// Usage: SetThreadName (-1, "MainThread");
-//
 #include <windows.h>
 #include "common/Config.h"
+#include "render/DeviceSurface.h"
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 
 #pragma pack(push, 8)
@@ -18,6 +16,9 @@ typedef struct tagTHREADNAME_INFO
 } THREADNAME_INFO;
 #pragma pack(pop)
 
+//
+// Usage: SetThreadName (-1, "MainThread");
+//
 void SetThreadName(DWORD dwThreadID, const char* threadName)
 {
 	THREADNAME_INFO info;

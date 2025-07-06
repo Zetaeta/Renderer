@@ -4,7 +4,7 @@
 namespace rnd::dx12
 {
 
-DX12DescriptorTableAllocator::DX12DescriptorTableAllocator(ID3D12Device_* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, u32 size = 2048)
+DX12DescriptorTableAllocator::DX12DescriptorTableAllocator(ID3D12Device_* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, u32 size)
 :FrameIndexedRingBuffer(size), mHeap(device, heapType, size, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE)
 {
 }

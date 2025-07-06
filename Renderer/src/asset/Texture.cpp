@@ -19,19 +19,32 @@ TextureRef Texture::LoadFrom(char const* fileName, bool isSRGB)
 
 static std::atomic<u64> NextTextureId = 0;
 
-Texture::Texture(size_type width, size_type height, std::string const& name /*= "(unnamed)"*/, u8 const* data /*= nullptr*/, ETextureFormat format)
+Texture::Texture(size_type width, size_type height, std::string const& name /*= "(unnamed)"*/, u8 const* data /*= nullptr*/, ETextureFormat format, bool upload)
 : width(width), height(height), Id(NextTextureId++), m_Data(width* height), m_Name(name), Format(format)
 {
 	if (data != nullptr)
 	{
 		memcpy(&m_Data[0], data, width * height * sizeof(u32));
 	}
-	rnd::IRenderResourceManager::CreateRenderTextures(this);
+
+	if (data && upload)
+	{
+		Upload();
+	}
 }
 
 Texture::~Texture()
 {
 	rnd::IRenderResourceManager::DestroyRenderTextures(this);
+}
+
+void Texture::Upload()
+{
+	if (!mUploaded)
+	{
+		rnd::IRenderResourceManager::CreateRenderTextures(this);
+		mUploaded = true;
+	}
 }
 
 rnd::DeviceTextureRef Texture::GetDeviceTexture() const

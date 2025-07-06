@@ -22,6 +22,7 @@
 #include "dxgi1_6.h"
 #include "DX12QueryHeap.h"
 #include "core/memory/GrowingImmobileObjectPool.h"
+#include "DX12State.h"
 
 
 DECLARE_LOG_CATEGORY(LogDX12);
@@ -107,6 +108,7 @@ public:
 	
 	DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers, Scene* scene = nullptr, Camera::Ref camera = nullptr);
 	~DX12RHI();
+	RCOPY_MOVE_PROTECT(DX12RHI)
 
 	char const* GetName() const override
 	{
@@ -310,7 +312,7 @@ private:
 	bool mRecordingCommands = false;
 	u8 mFrameIndex = 0;
 	u8 mStartedFrameIndex = 0;
-	OwningPtr<DX12Context> mContext;
+	OwningPtr<class DX12Context> mContext;
 	Scene* mScene = nullptr;
 	DX12SwapChain* mImGuiMainWindow = nullptr;
 

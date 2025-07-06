@@ -53,12 +53,19 @@ public:
 		return std::make_shared <Texture>(std::forward<Args>(args)...);
 	}
 
-	Texture(size_type width, size_type height, std::string const& name = "(unnamed)", u8 const* data = nullptr, ETextureFormat format = ETextureFormat::RGBA8_Unorm);
+	Texture(size_type width, size_type height, std::string const& name = "(unnamed)", u8 const* data = nullptr,
+			ETextureFormat format = ETextureFormat::RGBA8_Unorm, bool upload = true);
 	~Texture();
 
+	void Upload();
 	static TextureRef LoadFrom(char const* fileName, bool isSRGB = true);
 
 	u32 const* GetData() const
+	{
+		return Addr(m_Data);
+	}
+
+	u32* GetMutableData()
 	{
 		return Addr(m_Data);
 	}
@@ -97,6 +104,7 @@ private:
 
 	std::vector<u32> m_Data;
 	std::string m_Name;
+	bool mUploaded = false;
 
 	#if !MULTI_RENDER_BACKEND
 	mutable rnd::DeviceTextureRef m_DeviceTex = INVALID_DEV_TEX;

@@ -1,5 +1,7 @@
 #pragma once
 #include "SharedD3D12.h"
+#include "render/Shader.h"
+#include "container/EnumArray.h"
 
 namespace rnd::dx12
 {

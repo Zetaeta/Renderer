@@ -1,5 +1,7 @@
 #include "RenderMaterial.h"
 #include "RenderTextureManager.h"
+#include "RenderContext.h"
+#include "shaders/ShaderReflection.h"
 
 namespace rnd
 {

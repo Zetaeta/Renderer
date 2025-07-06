@@ -3,24 +3,10 @@
 #include "SharedD3D12.h"
 #include "DX12DescriptorHeap.h"
 #include <array>
+#include "DX12State.h"
 
 namespace rnd::dx12
 {
-
-enum class EDescriptorType : u8
-{
-	SRV,
-	UAV,
-	CBV,
-	Sampler,
-	RTV,
-	DSV,
-
-	Count,
-	ShaderVisibleCount = Sampler + 1,
-	CbvSrvUavCount = CBV + 1,
-
-};
 
 class DX12DescriptorAllocator
 {

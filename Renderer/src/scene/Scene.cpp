@@ -2,6 +2,8 @@
 #include <format>
 #include "scene/SceneComponent.h"
 #include "render/RendererScene.h"
+#include "Landscape.h"
+#include "StaticMeshComponent.h"
 
 /* Mesh Mesh::MakeCube(vec3 origin, mat3 rotation, MaterialID mat)
 {
@@ -71,7 +73,7 @@ void Scene::ForAllChildren(std::function<void(BaseSerialized*)> callback, bool r
 
 Scene::Scene(AssetManager* assMan) : m_AssetManager(assMan), mDataInterface(std::make_unique<SceneDataInterface>())
 {
-
+	AddSceneObject<Landscape>(this);
 }
 
 //Scene::Scene(Scene&& other)
@@ -161,16 +163,18 @@ MeshInstanceRef Scene::AddMesh(MeshRef mesh, Transform trans)
 void Scene::Initialize()
 {
 	rnd::RendererScene::InitializeScene(*this);
-	 for (auto const& obj : m_Objects)
-	 {
+	for (auto const& obj : m_Objects)
+	{
 		obj->SetScene(this);
 		obj->Initialize();
-	 }
+	}
+	mInitialized = true;
 }
 
 void Scene::Teardown()
 {
 	rnd::RendererScene::DestroyScene(*this);
+	mInitialized = false;
 }
 
 SceneObject* Scene::CreateObject(ClassTypeInfo const& type)

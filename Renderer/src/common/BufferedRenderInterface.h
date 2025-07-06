@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include "core/Types.h"
 #include <array>
+#include "container/Vector.h"
 
 template<bool Enabled>
 struct ConditionalRWMutex

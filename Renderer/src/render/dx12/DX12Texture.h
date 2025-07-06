@@ -2,6 +2,8 @@
 
 #include "SharedD3D12.h"
 #include "render/DeviceTexture.h"
+#include "container/Vector.h"
+
 #include <variant>
 
 namespace rnd::dx12

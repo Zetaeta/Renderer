@@ -18,7 +18,9 @@ using namespace rnd::dx;
 class DX12RHI;
 class DX12Allocator;
 class DX12Texture;
-	using DX12TextureRef=std::shared_ptr<DX12Texture>;
+class DX12Context;
+struct DX12CommandList;
+using DX12TextureRef=std::shared_ptr<DX12Texture>;
 
 class FrameIndexedRingBuffer;
 template<typename RingBufferBehavior>

@@ -1,6 +1,7 @@
 #pragma once
 #include "render/RenderPass.h"
 #include <scene/SceneComponent.h>
+#include "common/SceneDataInterface.h"
 
 namespace rnd
 {

@@ -33,7 +33,7 @@ using DX11VertexShader = DX11Shader<ID3D11VertexShader>;
 using DX11GeometryShader = DX11Shader<ID3D11GeometryShader>;
 using DX11ComputeShader = DX11Shader<ID3D11ComputeShader>;
 
-class DX11ShaderCompiler final : public IShaderCompiler, public FXCShaderCompiler
+class DX11ShaderCompiler final : public IShaderCompiler, public rnd::dx::FXCShaderCompiler
 {
 public:
 	DX11ShaderCompiler(ID3D11Device* device);

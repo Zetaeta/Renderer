@@ -2,6 +2,7 @@
 #include "RenderContext.h"
 #include <locale>
 #include <codecvt>
+#include <windows.h>
 
 namespace rnd
 {

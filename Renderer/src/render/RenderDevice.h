@@ -11,6 +11,7 @@
 #include "GPUSyncPoint.h"
 #include "MaterialManager.h"
 #include "ShaderManager.h"
+#include "GPUTimer.h"
 
 struct CompoundMesh;
 class Viewport;

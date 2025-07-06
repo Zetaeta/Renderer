@@ -1,6 +1,7 @@
 #pragma once
 #include "render/DeviceSurface.h"
 #include "DX11Texture.h"
+#include <dxgi1_2.h>
 
 namespace rnd::dx11
 {

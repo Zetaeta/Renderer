@@ -4,7 +4,6 @@
 #include <d3dx12.h>
 #include <queue>
 #include "FrameIndexedRingBuffer.h"
-#include "DX12RHI.h"
 
 namespace rnd::dx12
 {
