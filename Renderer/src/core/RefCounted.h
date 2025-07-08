@@ -232,3 +232,12 @@ public:
 private:
 	T* Ptr;
 };
+
+// Deletes pointed-to object and clears the pointer
+template<typename T>
+inline void Delete(RefPtr<T>& ptr)
+{
+	T* raw = ptr.Get();
+	ptr = nullptr;
+	delete raw;
+}

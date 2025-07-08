@@ -137,16 +137,19 @@ public:
 //	bool CreateInputLayout(VertexAttributeDesc::Handle vaHandle, I)
 
 	template<typename Range>
-	DeviceMeshRef CreateDirectMesh(const Range& vertices)
+	DeviceMeshRef CreateDirectMesh(const Range& vertices, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
 	{
 		using Vert = std::remove_cvref_t<decltype(vertices[0])>;
-		return CreateDirectMesh(EPrimitiveTopology::TRIANGLES, {TVertexAttributes<Vert>::Handle, NumCast<u32>(std::size(vertices)), sizeof(Vert), &vertices[0]}, {});
+		return CreateDirectMesh(topology, {TVertexAttributes<Vert>::Handle, NumCast<u32>(std::size(vertices)), sizeof(Vert), &vertices[0]}, {});
 	}
 
 
 	virtual void ExecuteCommand(std::function<void(IRenderDeviceCtx&)>&& command, char const* name) = 0;
 
 	virtual IDeviceSurface* CreateSurface(wnd::Window* window) = 0;
+
+	virtual void RegisterResource(IDeviceResource* resource);
+	virtual void UnregisterResource(IDeviceResource* resource);
 
 	ShaderManager ShaderMgr;
 
@@ -169,8 +172,12 @@ public:
 	virtual void EndFrame() {}
 
 	void RenderFrame();
+
+	const std::unordered_set<IDeviceResource*>& GetResources() { return mResources; }
+
 protected:
 	Vector<Viewport*> mViewports;
+	std::unordered_set<IDeviceResource*> mResources;
 };
 
 }

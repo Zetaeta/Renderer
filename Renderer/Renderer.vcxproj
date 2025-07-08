@@ -86,9 +86,9 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
-      <CombineFilesOnlyFromTheSameFolder>true</CombineFilesOnlyFromTheSameFolder>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <IncludeInUnityFile>false</IncludeInUnityFile>
+      <IncludeInUnityFile>true</IncludeInUnityFile>
+      <MaxFilesInUnityFile>20</MaxFilesInUnityFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,7 +144,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\procedural\ProceduralMeshes.h" />
     <ClInclude Include="src\render\dx12\DX12State.h" />
+    <ClInclude Include="src\render\RenderEnums.h" />
+    <ClInclude Include="src\render\RenderHelpers.h" />
     <ClInclude Include="src\render\RenderState.h" />
     <ClInclude Include="src\scene\Landscape.h" />
     <ClInclude Include="src\3rd\imgui\imgui.h" />
@@ -340,6 +343,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\procedural\PerlinNoise.cpp" />
+    <ClCompile Include="src\render\dx11\DX11TextureBase.cpp" />
+    <ClCompile Include="src\render\RenderHelpers.cpp" />
     <ClCompile Include="src\scene\Landscape.cpp" />
     <ClCompile Include="src\3rd\imgui\imgui.cpp" />
     <ClCompile Include="src\3rd\imgui\imgui_demo.cpp" />
@@ -351,6 +356,7 @@
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
       <ExternalWarningLevel>Level3</ExternalWarningLevel>
+      <IncludeInUnityFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</IncludeInUnityFile>
     </ClCompile>
     <ClCompile Include="src\asset\Asset.cpp" />
     <ClCompile Include="src\common\Application.cpp" />

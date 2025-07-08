@@ -7,6 +7,7 @@
 #include <nfd.h>
 #include "scene/LightObject.h"
 #include "asset/Mesh.h"
+#include "scene/Landscape.h"
 
 using std::string;
 using std::make_shared;
@@ -114,6 +115,8 @@ bool RenderManager::LoadScene(String const& path)
 		mScene.Teardown();
 		mScene = std::move(newScene);
 		printf("Loaded %s\n", path.c_str());
+		mScene.
+	AddSceneObject<Landscape>(&mScene);
 		mScene.Initialize();
 		return true;
 	}

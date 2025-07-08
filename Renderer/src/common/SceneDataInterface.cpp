@@ -37,7 +37,6 @@ PrimitiveId SceneDataInterface::AddPrimitive(PrimitiveComponent* component)
 		SMCreationData& creationData = data.AddedPrimitives.emplace_back();
 		creationData.ScreenId = component->GetScreenId();
 		creationData.Id = newId;
-		creationData.Materials ;
 		creationData.Mesh = mesh;
 		u32 numSubs = NumCast<u32>(mesh->components.size());
 		//u64 currTotalSubs = data.Materials.size();

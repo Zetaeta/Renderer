@@ -1,12 +1,24 @@
 #include "DeviceResource.h"
 #include "DeviceTexture.h"
+#include "RenderDevice.h"
 
 namespace rnd
 {
 
-EResourceType IDeviceResource::GetResourceType()
+IDeviceResource::IDeviceResource(IRenderDevice* device)
+	: mDevice(device)
 {
-	return static_cast<IDeviceTexture*>(this)->Desc.ResourceType;
+	device->RegisterResource(this);
+}
+
+IDeviceResource::~IDeviceResource()
+{
+	mDevice->UnregisterResource(this);
+}
+
+EResourceType IDeviceResource::GetResourceType() const
+{
+	return static_cast<const IDeviceTexture*>(this)->Desc.ResourceType;
 }
 
 }

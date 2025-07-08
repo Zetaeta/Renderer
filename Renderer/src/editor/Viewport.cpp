@@ -73,32 +73,34 @@ void Viewport::OnClick(ivec2 position)
 {
 #if HIT_TESTING	
 	using namespace rnd;
-	DeviceTextureDesc desc;
-	desc.DebugName = "ScreenIds";
-	desc.Flags = TF_RenderTarget | TF_CpuReadback;
-	desc.Format = ETextureFormat::R32_Uint;
-	desc.Width = mWidth;
-	desc.Height = mHeight;
-	auto				 screenIdTex = mRCtx->GetDevice()->CreateTexture2D(desc);
 	MappedResource mapped;
 	RefPtr<GPUSyncPoint> syncPt;
-	RenderCommand([&mapped, screenIdTex, this, &syncPt](IRenderDeviceCtx& ctx)
+	RenderCommand([&mapped, this, &syncPt](IRenderDeviceCtx& ctx)
 		{
+			DeviceTextureDesc desc;
+			desc.DebugName = "ScreenIds";
+			desc.Flags = TF_RenderTarget | TF_CpuReadback;
+			desc.Format = ETextureFormat::R32_Uint;
+			desc.Width = mWidth;
+			desc.Height = mHeight;
+			auto screenIdTex = mRCtx->GetDevice()->CreateTexture2D(desc);
 			mRCtx->RunSinglePass<rnd::RenderScreenIds>(ctx, "ScreenIds", mCamera, screenIdTex->GetRT());
 			mapped = ctx.Readback(screenIdTex, 0,&syncPt);
 		},
-		mRCtx->GetDevice());
+		mRCtx->GetDevice(), "ScreenIds readback");
 	FlushRenderCommands(mRCtx->GetDevice());
 
 	syncPt->Wait();
 
 	const u32* textureData = reinterpret_cast<const u32*>(mapped.Data);
-	const int width = screenIdTex->Desc.Width;
-	const int height = screenIdTex->Desc.Height;
-	ZE_ASSERT(position.x < width);
-	ZE_ASSERT(position.y < height);
+	ZE_ASSERT(position.x < int(mWidth));
+	ZE_ASSERT(position.y < int(mHeight));
 	const u32 id = textureData[position.x + position.y * (mapped.RowPitch / 4)];
-	mapped.Release();
+//	RenderCommand([toRelease = std::move(mapped)](IRenderDeviceCtx& ctx) {
+		mapped.Release();
+//	});
+	FlushRenderCommands(mRCtx->GetDevice());
+
 	printf("Id: %u\n", id);
 	if (ScreenObject* so = Editor::Get()->GetScreenObjManager().GetScreenObj(id))
 	{

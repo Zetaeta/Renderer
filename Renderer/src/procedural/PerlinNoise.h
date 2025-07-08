@@ -18,6 +18,7 @@ class PerlinNoise2 : public NoiseFunction<vec2, float>
 public:
 	template<typename URBG>
 	PerlinNoise2(float frequency, u32 periodicity, URBG&& randomGen)
+		: mFrequency(frequency)
 	{
 		assert(RoundUpToPowerOf2(periodicity) == periodicity);
 		periodicityMask = periodicity - 1;
@@ -42,5 +43,5 @@ private:
 	Vector<u16> permutation;
 	u32 periodicityMask;
 	float amplitude = 1.f;
-	float frequency = 1.f;
+	float mFrequency = 1.f;
 };

@@ -57,7 +57,7 @@ public:
 	DX12Texture* BaseTex = nullptr;
 };
 
-class DX12Texture : public IDeviceTexture, public std::enable_shared_from_this<DX12Texture>
+class DX12Texture : public IDeviceTexture//, public std::enable_shared_from_this<DX12Texture>
 {
 public:
 	struct UploadTools

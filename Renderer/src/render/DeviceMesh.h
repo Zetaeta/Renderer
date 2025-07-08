@@ -3,27 +3,10 @@
 #include "core/Maths.h"
 #include "VertexAttributes.h"
 #include "core/RefCounted.h"
+#include "RenderEnums.h"
 
 namespace rnd
 {
-
-enum class EPrimitiveTopology : u8
-{
-	TRIANGLES
-};
-
-//struct DevicePrimitiveDesc
-//{
-//	u32 VertexCount = 0;
-//	u32 TriCount = 0;
-//};
-
-
-enum class EDeviceMeshType : u8
-{
-	DIRECT,
-	INDEXED
-};
 
 class IDeviceMesh : public SelfDestructingRefCounted
 {

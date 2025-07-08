@@ -54,21 +54,6 @@ namespace fs = std::filesystem;
 
 using DX11Bool = u32;
 
-__declspec(align(16))
-struct VS2DCBuff
-{
-	float2 pos;
-	float2 size;
-};
-
-__declspec(align(16))
-struct PS2DCBuff
-{
-	float exponent = 1.f;
-	int renderMode = 0; // 1=depth, 2=uint
-};
-
-
 void DX11Renderer::PrepareShadowMaps()
 {
 
@@ -171,64 +156,38 @@ void DX11Renderer::DrawControls()
 	ImGui::DragInt2("Viewer size", &mViewerSize.x, 1.f, 0, 2500);
 	mRCtx->DrawControls();
 
+
+	IDeviceTextureCube*& cube = mRCtx->mDebugCube;
+	if (ImGui::BeginCombo("Cubemap viewer", cube == nullptr ? "None" : std::format("{}##{}", cube->Desc.DebugName.empty() ? (cube->IsDepthStencil() ? "Depth" : "Texture") : cube->Desc.DebugName.c_str(), reinterpret_cast<u64> (cube)).c_str()))
 	{
-		if (ImGui::BeginCombo("Texture viewer", m_ViewerTex == nullptr ? "None" : std::format("{}##{}", m_ViewerTex->IsDepthStencil() ? "Depth" : "Texture", reinterpret_cast<u64> (m_ViewerTex)).c_str()))
 		{
+			bool selected = cube == nullptr;
+			if (ImGui::Selectable("None##1", selected))
 			{
-				bool selected = m_ViewerTex == nullptr;
-				if (ImGui::Selectable("None##1", selected))
-				{
-					m_ViewerTex = nullptr;
-				}
-				if (selected)
-                    ImGui::SetItemDefaultFocus();
+				mRCtx->SetDebugCube(nullptr);
 			}
-			for (auto tex : m_TextureRegistry)
-			{
-				String name = std::format("{}##{}", tex->Desc.DebugName.empty() ? (tex->IsDepthStencil() ? "Depth" : "Texture") : tex->Desc.DebugName.c_str(), reinterpret_cast<u64>(tex));
-				bool selected = m_ViewerTex == tex;
-				if (ImGui::Selectable(name.c_str(), selected))
-				{
-					m_ViewerTex = tex;
-				}
-				if (selected)
-                    ImGui::SetItemDefaultFocus();
-			}
-			ImGui::EndCombo();
+			if (selected)
+				ImGui::SetItemDefaultFocus();
 		}
-
-		IDeviceTextureCube*& cube = mRCtx->mDebugCube;
-		if (ImGui::BeginCombo("Cubemap viewer", cube == nullptr ? "None" : std::format("{}##{}", cube->Desc.DebugName.empty() ? (cube->IsDepthStencil() ? "Depth" : "Texture") : cube->Desc.DebugName.c_str(), reinterpret_cast<u64> (cube)).c_str()))
+		for (auto tex : m_CubemapRegistry)
 		{
+			String name = std::format("{}##{}", tex->Desc.DebugName.empty() ? (tex->IsDepthStencil() ? "Depth" : "Texture") : tex->Desc.DebugName.c_str(), reinterpret_cast<u64>(tex));
+			bool selected = cube == tex;
+			if (ImGui::Selectable(name.c_str(), selected))
 			{
-				bool selected = cube == nullptr;
-				if (ImGui::Selectable("None##1", selected))
-				{
-					mRCtx->SetDebugCube(nullptr);
-				}
-				if (selected)
-                    ImGui::SetItemDefaultFocus();
+				mRCtx->SetDebugCube(tex);
 			}
-			for (auto tex : m_CubemapRegistry)
-			{
-				String name = std::format("{}##{}", tex->Desc.DebugName.empty() ? (tex->IsDepthStencil() ? "Depth" : "Texture") : tex->Desc.DebugName.c_str(), reinterpret_cast<u64>(tex));
-				bool selected = cube == tex;
-				if (ImGui::Selectable(name.c_str(), selected))
-				{
-					mRCtx->SetDebugCube(tex);
-				}
-				if (selected)
-                    ImGui::SetItemDefaultFocus();
-			}
-			ImGui::EndCombo();
+			if (selected)
+				ImGui::SetItemDefaultFocus();
 		}
-		ImGui::DragFloat("Exponent", &m_TexViewExp, 0.01f, 0.01f, 10.f);
-
-		//if (m_ViewerTex != nullptr)
-		//{
-		//	ImGui::Image(m_ViewerTex->GetSRV(), {500, 500}, {0,1}, {1,0});
-		//}
+		ImGui::EndCombo();
 	}
+	ImGui::DragFloat("Exponent", &m_TexViewExp, 0.01f, 0.01f, 10.f);
+
+	//if (m_ViewerTex != nullptr)
+	//{
+	//	ImGui::Image(m_ViewerTex->GetSRV(), {500, 500}, {0,1}, {1,0});
+	//}
 
 
 	ImGui::End();
@@ -441,7 +400,7 @@ void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 
 void DX11Renderer::DrawMesh(IDeviceMesh const* mesh)
 {
-	pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	pContext->IASetPrimitiveTopology(GetD3D11Topology(mesh->Topology));
 //	UpdateInputLayout();
 
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
@@ -508,9 +467,9 @@ rnd::MappedResource DX11Renderer::Readback(DeviceResourceRef resource, u32 subre
 	{
 		auto* tex = static_cast<DX11Texture*>(resource.get());
 		MappedResource result = tex->Map(subresource, ECpuAccessFlags::Read);
-		result.Release = [tex, subresource]
+		result.Release = [resource, subresource]
 		{
-			tex->Unmap(subresource);
+			static_cast<DX11Texture*>(resource.get())->Unmap(subresource);
 		};
 		return result;
 	}

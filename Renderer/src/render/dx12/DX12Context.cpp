@@ -303,7 +303,7 @@ DX12Context::DX12Context(DX12CommandList& cmdList, bool manualTransitioning)
 void DX12Context::DrawMesh(IDeviceMesh const* mesh)
 {
 	FinalizeGraphicsState();
-	mCmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	mCmdList->IASetPrimitiveTopology(GetD3D12Topology(mesh->Topology));
 
 	if (mesh->MeshType == EDeviceMeshType::DIRECT)
 	{

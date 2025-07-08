@@ -9,10 +9,7 @@ namespace dx11
 class DX11TextureBase : public IDeviceTexture
 {
 public:
-	DX11TextureBase(DX11Ctx& ctx, DeviceTextureDesc const& desc)
-		:IDeviceTexture(desc), m_Ctx(&ctx)
-	{
-	}
+	DX11TextureBase(DX11Ctx& ctx, DeviceTextureDesc const& desc);
 
 	ID3D11UnorderedAccessView* GetUAV()
 	{

@@ -11,8 +11,8 @@ namespace rnd::dx12
 {
 
 DX12Texture::DX12Texture(DeviceTextureDesc const& desc, TextureData data, UploadTools& upload)
-:IDeviceTexture(desc)
-{
+		: IDeviceTexture(&GetRHI(), desc)
+	{
 	u64 offset = CreateResource(&upload);
 
 //	memcpy(writeAddress, data, desc.GetSize());
@@ -25,13 +25,13 @@ DX12Texture::DX12Texture(DeviceTextureDesc const& desc, TextureData data, Upload
 }
 
 DX12Texture::DX12Texture(DeviceTextureDesc const& desc)
-:IDeviceTexture(desc)
+:IDeviceTexture(&GetRHI(), desc)
 {
 	CreateResource(nullptr);
 }
 
 DX12Texture::DX12Texture(DeviceTextureDesc const& desc, ID3D12Resource_* resource, D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle)
-:IDeviceTexture(desc), mResource(resource)
+:IDeviceTexture(&GetRHI(), desc), mResource(resource)
 {
 	SetResourceName(mResource, Desc.DebugName);
 	RenderTargetDesc rtDesc;

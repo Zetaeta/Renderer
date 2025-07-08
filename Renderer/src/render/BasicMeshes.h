@@ -14,10 +14,12 @@ public:
 		: mDevice(device) {}
 
 	DeviceMeshRef GetFullScreenTri();
-	void Teardown() {FullScreenTriangle = nullptr;}
+	DeviceMeshRef GetFullscreenSquare();
+	void Teardown() {FullScreenTriangle = nullptr; mSquare = nullptr;}
 
 private:
 	RefPtr<IDeviceMesh> FullScreenTriangle;
+	RefPtr<IDeviceMesh> mSquare;
 	IRenderDevice*		mDevice;
 };
 

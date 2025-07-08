@@ -4,6 +4,7 @@
 #include <memory>
 #include <span>
 #include "core/memory/CopyableMemory.h"
+#include "RndFwd.h"
 
 
 template<typename T>
@@ -61,6 +62,7 @@ enum class EResourceType : u8
 	Buffer = 0x10,
 	VertexBuffer = 0x20
 };
+FLAG_ENUM(EResourceType)
 
 struct DeviceChildDesc
 {
@@ -72,14 +74,20 @@ struct DeviceResourceDesc : public DeviceChildDesc
 	EResourceType ResourceType;
 };
 
-class IDeviceResource
+class IDeviceResource : public std::enable_shared_from_this<IDeviceResource>
 {
 public:
-	virtual ~IDeviceResource() {}
+	IDeviceResource(IRenderDevice* device);
+	virtual ~IDeviceResource();
 	virtual MappedResource Map(u32 subResource, ECpuAccessFlags flags) = 0;
 	virtual void		   Unmap(u32 subResource) = 0;
 
-	EResourceType GetResourceType();
+	EResourceType GetResourceType() const;
+
+	bool IsTexture() const
+	{
+		return !!(GetResourceType() & EResourceType::Texture);
+	}
 
 	virtual CopyableMemory<8> GetShaderResource(ShaderResourceId id = 0) = 0;
 	template <typename T>
@@ -99,9 +107,12 @@ public:
 	}
 
 	virtual UavId CreateUAV(u32 subresourceIdx) { return 0; }
+private:
+	IRenderDevice* mDevice;
 };
 
 using DeviceResourceRef = std::shared_ptr<IDeviceResource>;
+using DeviceResourceWeakRef = std::weak_ptr<IDeviceResource>;
 
 struct ResourceView
 {

@@ -20,8 +20,7 @@ ShaderManager::~ShaderManager()
 	for (auto& [id, shader] : mCompiledShaders)
 	{
 		Assertf(shader->GetRefCount() <= 1, "Shader %s is still referenced", ShaderRegistry::Get().GetRegisteredShader(id.ShaderId).Name.c_str());
-		delete shader;
-		shader = nullptr;
+		Delete(shader);
 	}
 	mCompiledShaders.clear();
 }

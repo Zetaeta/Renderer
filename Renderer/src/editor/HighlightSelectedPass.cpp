@@ -54,7 +54,7 @@ void HighlightSelectedPass::DrawPrimitive(const PrimitiveComponent* primComp)
 	material->Bind(*mRCtx, EShadingLayer::BASE);
 	DeviceCtx()->SetBlendMode(EBlendState::COL_ADD | EBlendState::ALPHA_MAX);
 	DeviceCtx()->SetDepthStencilMode(EDepthMode::LessEqual | EDepthMode::NoWrite);
-	mRCtx->DrawPrimComp(primComp, material);
+// mRCtx->DrawPrimComp(primComp, material);
 }
 
 }

@@ -505,6 +505,9 @@
     <ClInclude Include="src\scene\Landscape.h" />
     <ClInclude Include="src\render\dx12\DX12State.h" />
     <ClInclude Include="src\render\RenderState.h" />
+    <ClInclude Include="src\render\RenderEnums.h" />
+    <ClInclude Include="src\render\RenderHelpers.h" />
+    <ClInclude Include="src\procedural\ProceduralMeshes.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -788,6 +791,8 @@
     <ClCompile Include="src\core\StringView.cpp" />
     <ClCompile Include="src\scene\Landscape.cpp" />
     <ClCompile Include="src\procedural\PerlinNoise.cpp" />
+    <ClCompile Include="src\render\dx11\DX11TextureBase.cpp" />
+    <ClCompile Include="src\render\RenderHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

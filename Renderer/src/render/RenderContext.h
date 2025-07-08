@@ -197,8 +197,15 @@ public:
 	void DrawControls();
 	IDeviceTexture* mDebugCube = nullptr;
 
-	void DrawPrimComp(const StaticMeshComponent* component, const IDeviceMaterial* matOverride = nullptr, EShadingLayer layer = EShadingLayer::BASE);
 	void DrawPrimitive(const IDeviceIndexedMesh* mesh, const mat4& transform, const mat4& viewMatrix, RenderMaterial* matOverride = nullptr, EShadingLayer layer = EShadingLayer::BASE);
+
+	enum class EDrawTextureMode : u8
+	{
+		CorrectedRatio,
+		ViewportRelative,
+		TextureSize
+	};
+	void DrawTexture(const DeviceTextureRef& tex, const vec2& position, const vec2& scale = vec2(1), EDrawTextureMode mode = EDrawTextureMode::CorrectedRatio);
 	void SetScreenObjId(ScreenObjectId id)
 	{
 		mCurrentId = id;
@@ -251,6 +258,8 @@ public:
 	RenderTextureManager TextureManager;
 private:
 
+	void UpdateDebugTextures();
+
 	Vector<IDeviceTexture::Ref> tempRemember;
 
 	bool mUseMSAA = false;
@@ -284,6 +293,18 @@ private:
 	UnorderedAccessView mPixDebugUav;
 	DestructionToken mDestructionToken;
 	HandledVec::Handle mImguiHandle{};
+
+	struct TextureDebugInfo
+	{
+//		TextureId Id{};
+		DeviceTextureDesc Desc;
+		std::weak_ptr<IDeviceTexture> Tex;
+	};
+
+	// TODO move somewhere else?
+	Vector<TextureDebugInfo> mDebugTextures;
+	std::mutex mDebugTexMutex;
+	std::weak_ptr<IDeviceTexture> mViewerTex;
 };
 
 class ScopedCBOverride
@@ -305,4 +326,6 @@ private:
 	Name mName;
 	CBDataSource& mCbOverrides;
 };
+
+
 } // namespace rnd

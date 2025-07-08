@@ -19,6 +19,8 @@
 #include "RendererScene.h"
 #include "asset/AssetManager.h"
 #include "common/ImguiThreading.h"
+#include "RenderHelpers.h"
+#include "VertexTypes.h"
 
 namespace rnd
 {
@@ -201,6 +203,8 @@ void RenderContext::SetupPostProcess()
 
 	Postprocessing(ctx);
 	ctx.ClearResourceBindings();
+
+	UpdateDebugTextures();
 }
 
  void RenderContext::SetTarget(IDeviceTexture::Ref newTarget)
@@ -249,6 +253,11 @@ void RenderContext::Postprocessing(rnd::IRenderDeviceCtx& ctx)
 	if (Settings.EnablePixelDebug)
 	{
 		ShowPixelDebug(ctx);
+	}
+
+	if (auto debugTex = mViewerTex.lock())
+	{
+		DrawTexture(debugTex, {0,0});
 	}
 
 	if (static_cast<RGFlipFlop*>(mRGBuilder[mPingPongHandle])->IsOdd())
@@ -391,6 +400,47 @@ void RenderContext::DrawControls()
 	static char const* const BRDFs[] = { "Blinn-Phong", "GGX" };
 	ImGui::Combo("BRDF", &mBrdf, BRDFs, 2, 2);
 
+	auto getName = [](auto& tex)
+	{
+		return std::format("{}##{}", tex.Desc.DebugName.empty() ? (!!(tex.Desc.Flags & TF_DEPTH) ? "Depth" : "Texture")
+										  : tex.Desc.DebugName.c_str(), reinterpret_cast<u64>(&tex));
+	};
+
+	auto viewerTex = mViewerTex.lock();
+	if (ImGui::BeginCombo("Texture viewer", viewerTex == nullptr ? "None" : getName(*viewerTex).c_str()))
+	{
+		// None
+		{
+			bool selected = viewerTex == nullptr;
+			if (ImGui::Selectable("None##1", selected))
+			{
+				viewerTex = nullptr;
+			}
+			if (selected)
+				ImGui::SetItemDefaultFocus();
+		}
+
+		for (auto tex : mDebugTextures)
+		{
+			auto strongTex = tex.Tex.lock();
+			String name = getName(tex);
+			bool selected = viewerTex == strongTex;
+			if (ImGui::Selectable(name.c_str(), selected) && strongTex)
+			{
+				mViewerTex = tex.Tex;
+			}
+			if (selected)
+				ImGui::SetItemDefaultFocus();
+		}
+
+		ImGui::EndCombo();
+	}
+
+	if (ImGui::Button("Full recompile shaders"))
+	{
+		GetDevice()->ShaderMgr.RecompileAll(true);
+	}
+
 	bool needsRebuild = false;
 	auto passBox = [&needsRebuild, this](RenderPass& pass)
 	{
@@ -436,18 +486,6 @@ void RenderContext::DrawControls()
 	else if (needsRebuild)
 	{
 		BuildGraph();
-	}
-}
-
-void RenderContext::DrawPrimComp(const PrimitiveComponent* component, const IDeviceMaterial* matOverride /*= nullptr*/, EShadingLayer layer /*= EShadingLayer::BASE*/)
-{
-	mCurrentId = component->GetScreenId();
-	if (const CompoundMesh* mesh = component->GetMesh())
-	{
-		for (const MeshPart& part : mesh->components)
-		{
-//			DrawPrimitive(&part, component->GetWorldTransform(), mCamera->GetProjWorld(), matOverride); TODO
-		}
 	}
 }
 
@@ -539,6 +577,45 @@ void RenderContext::DrawPrimitive(const IDeviceIndexedMesh* mesh, const mat4& tr
 	DeviceCtx()->DrawMesh(mesh);
 }
 
+void RenderContext::DrawTexture(const DeviceTextureRef& tex, const vec2& pos, const vec2& scale /*= vec2(1)*/, EDrawTextureMode mode /*= EDrawTextureMode::CorrectedRatio*/)
+{
+	auto& deviceCtx = *DeviceCtx();
+	deviceCtx.Device->MatMgr.MatTypes()[MAT_2D].Bind(*this, EShadingLayer::BASE, E_MT_OPAQUE);
+	
+	VS2DCBuff cbuff;
+	vec2 texturePos = vec2(pos);// / vec2 {m_Width, m_Height};
+	cbuff.pos = texturePos;// vec2(texturePos.x * 2 - 1, 1 - 2 * texturePos.y);
+	//if (size.x <= 0)
+	//	size.x = mViewerSize.x;
+	//if (size.y <= 0)
+	//	size.y = mViewerSize.y;
+	cbuff.size = vec2(1);// / vec2 {m_Width, m_Height};
+	SetConstantBuffer(deviceCtx, EShaderType::Vertex, cbuff);
+
+	PS2DCBuff pbuff;
+	if (tex->Desc.Format == ETextureFormat::R32_Uint)
+	{
+		pbuff.renderMode = 2;
+	}
+	else if (tex->IsDepthStencil())
+	{
+		pbuff.renderMode = 1;
+	}
+	else if (GetNumChannels(tex->Desc.Format) == 1)
+	{
+		pbuff.renderMode = 3;
+	}
+	pbuff.exponent = 1;
+	SetConstantBuffer(deviceCtx, EShaderType::Pixel, pbuff);
+	ResourceView srv{ tex };
+	deviceCtx.SetShaderResources(EShaderType::Pixel, Single(srv));
+
+	deviceCtx.SetBlendMode(EBlendState::COL_OVERWRITE | EBlendState::ALPHA_OVERWRITE);
+	deviceCtx.SetDepthMode(EDepthMode::Disabled);
+	deviceCtx.SetVertexLayout(GetVertAttHdl<FlatVert>());
+	deviceCtx.DrawMesh(deviceCtx.Device->BasicMeshes.GetFullscreenSquare());
+}
+
 IDepthStencil::Ref RenderContext::GetTempDepthStencilFor(IRenderTarget::Ref rt)
 {
 	u32vec2 size {rt->Desc.Width, rt->Desc.Height};
@@ -573,6 +650,21 @@ void RenderContext::ShowPixelDebug(rnd::IRenderDeviceCtx& ctx)
 	mRGBuilder.GetFlipFlopState(mPingPongHandle, _, lastRT);
 	ctx.SetRTAndDS(lastRT->GetRT(), IDepthStencil::Ref{});
 	ctx.DrawMesh(tri);
+}
+
+void RenderContext::UpdateDebugTextures()
+{
+	Vector<TextureDebugInfo> newDebugTextures;
+	for (const auto& resource : mDevice->GetResources())
+	{
+		if (resource->IsTexture())
+		{
+			auto* tex = static_cast<IDeviceTexture*>(resource);
+			newDebugTextures.emplace_back(tex->Desc, std::static_pointer_cast<IDeviceTexture>(tex->shared_from_this()));
+		}
+	}
+	std::scoped_lock lock {mDebugTexMutex};
+	std::swap(newDebugTextures, mDebugTextures);
 }
 
 Camera::ConstRef LightRenderData::GetCamera() const

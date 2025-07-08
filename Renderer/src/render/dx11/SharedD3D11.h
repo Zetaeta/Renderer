@@ -6,6 +6,7 @@
 #include <core/Utils.h>
 #include "render/DeviceTexture.h"
 #include "render/dxcommon/SharedD3D.h"
+#include "render/RenderEnums.h"
 
 
 enum class ETextureFormat : u8;
@@ -23,6 +24,8 @@ class DX11DepthStencil;
 class DX11Cubemap;
 
 using DX11TextureRef = std::shared_ptr<DX11Texture>;
+
+D3D11_PRIMITIVE_TOPOLOGY GetD3D11Topology(EPrimitiveTopology topology);
 
 }
 }

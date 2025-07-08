@@ -9,10 +9,12 @@
 
 class Texture;
 
-u32 GetPixelSize(ETextureFormat format);
 
 namespace rnd
 {
+
+u32 GetPixelSize(ETextureFormat format);
+u32 GetNumChannels(ETextureFormat format);
 
 enum class ETextureDimension : u8
 {
@@ -180,8 +182,8 @@ constexpr ShaderResourceId SRV_Texture = 0;
 class IDeviceTexture : public IDeviceResource
 {
 public:
-	IDeviceTexture(DeviceTextureDesc const& desc)
-		: Desc(desc) {}
+	IDeviceTexture(IRenderDevice* device, DeviceTextureDesc const& desc)
+		:IDeviceResource(device), Desc(desc) {}
 
 	virtual ~IDeviceTexture() {}
 	using Ref = std::shared_ptr<IDeviceTexture>;

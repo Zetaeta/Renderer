@@ -1,9 +1,22 @@
 #include "RenderDevice.h"
 #include "RendererScene.h"
 #include "editor/Viewport.h"
+#include "thread/ThreadUtils.h"
 
 namespace rnd
 {
+
+void IRenderDevice::RegisterResource(IDeviceResource* resource)
+{
+	assert(IsInRenderThread());
+	mResources.insert(resource);
+}
+
+void IRenderDevice::UnregisterResource(IDeviceResource* resource)
+{
+	assert(IsInRenderThread());
+	mResources.erase(resource);
+}
 
 void IRenderDevice::BeginFrame()
 {

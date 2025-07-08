@@ -12,14 +12,32 @@ DeviceMeshRef BasicMeshFactory::GetFullScreenTri()
 	{
 		FlatVert const verts[3] =
 		{
-			{ {-1,-1.f, Z}, {0,1} },
-			{ {-1,3.f, Z}, {0,-1} },
-			{ {3,-1.f, Z}, {2,1} },
+			{ {-1,-1.f, Z}, {0,1} }, // bottom left
+			{ {-1,3.f, Z}, {0,-1} }, // above top left 
+			{ {3,-1.f, Z}, {2,1} }, // right of bottom right
 		};
 		FullScreenTriangle = mDevice->CreateDirectMesh(verts);
 		FullScreenTriangle->Topology = EPrimitiveTopology::TRIANGLES;
 	}
 	return FullScreenTriangle;
+}
+
+rnd::DeviceMeshRef BasicMeshFactory::GetFullscreenSquare()
+{
+	constexpr float Z = 0.5f;
+	if (!mSquare.IsValid())
+	{
+		FlatVert const verts[] =
+		{
+			{ {-1,1.f, Z}, {0,0} },
+			{ {1,1.f, Z}, {1,0} },
+			{ {-1,-1.f, Z}, {0,1} },
+			{ {1,-1.f, Z}, {1,1} },
+		};
+		mSquare = mDevice->CreateDirectMesh(verts);
+		mSquare->Topology = EPrimitiveTopology::TRIANGLE_STRIP;
+	}
+	return mSquare;
 }
 
 DeviceTextureRef BasicTextureMgr::GetBlackTexture(IRenderDevice* device)

@@ -1,34 +1,24 @@
-#pragma once
-#include "container/Vector.h"
+#include "Landscape.h"
 
-#define DECLARE_BROADCAST_INTERFACE_COMMON(ClassName)
+#include "asset/Texture.h"
+#include "procedural/PerlinNoise.h"
+#include <random>
 
-#define DECLARE_BROADCAST_INTERFACE_ONEPARAM(ClassName, FuncName, ParamType, ParamName)\
-	class ClassName                                                                     \
-	{                                                                                   \
-		static Vector<ClassName*> sInstances;\
-	public:
-		ClassName();\
-		~ClassName();\
-		virtual void FuncName(ParamType ParamName) = 0;\
-		static void	 Broadcast##FuncName(ParamType ParamName);\
-	};
+Landscape::Landscape(Scene* scene, uvec2 extents /*= {1, 1}*/)
+	: SceneObject(scene, "Landscape")
+{
 
-#define DEFINE_BROADCAST_INTERFACE_ONEPARAM(ClassName, FuncName, ParamType, ParamName)\
-	Vector<ClassName*> ClassName::sInstances;\
-	ClassName::ClassName()                                                             \
-	{                                                                                  \
-		sInstances.push_back(this);                                                         \
-	}\
-	ClassName::~ClassName()                                                             \
-	{                                                                                  \
-		Remove(sInstances, this);                                                         \
-	}\
-	void			   ClassName::Broadcast##FuncName(ParamType ParamName)\
-	{\
-		for (auto* instance : sInstances)\
-		{\
-			instance->FuncName(std::forward<ParamType>(ParamName))\
-		}\
+	constexpr u32 textureSize = 1024;
+	mHeightmap = std::make_shared<Texture>(textureSize, textureSize, "LandscapeHeight", nullptr, ETextureFormat::R32_Float, false);
+	float* data = reinterpret_cast<float*>(mHeightmap->GetMutableData());
+	PerlinNoise2 noise(1.f, 64, std::mt19937(0));
+	for (int y = 0; y < textureSize; ++y)
+	{
+		for (int x = 0; x < textureSize; ++x)
+		{
+			data[y * textureSize + x] = //(
+			noise.Evaluate(vec2{x, y} * 100.f/float(textureSize));// + 1)/2;
+		}
 	}
-
+	mHeightmap->Upload();
+}

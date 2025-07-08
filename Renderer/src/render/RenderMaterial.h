@@ -32,6 +32,21 @@ public:
 DECLARE_CLASS_TYPEINFO(PerInstanceVSData);
 
 
+__declspec(align(16))
+struct VS2DCBuff
+{
+	float2 pos;
+	float2 size;
+};
+
+__declspec(align(16))
+struct PS2DCBuff
+{
+	float exponent = 1.f;
+	int renderMode = 0; // 1=depth, 2=uint
+};
+
+
 class MaterialArchetype : public RefCountedObject
 {
 public:
