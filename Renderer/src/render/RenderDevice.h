@@ -96,7 +96,7 @@ using BatchedUploadHandle = u32;
 class IRenderDevice
 {
 protected:
-	IRenderDevice(IShaderCompiler* compiler) :ShaderMgr(compiler), BasicMeshes(this), MatMgr(this), ResourceMgr(this) {}
+	IRenderDevice(IShaderCompiler* compiler);
 public:
 
 	virtual IDeviceTexture::Ref CreateTextureCube(DeviceTextureDesc const& desc, CubemapData const& initialData = CubemapData{}) = 0;
@@ -129,10 +129,7 @@ public:
 		ResourceMgr.Teardown();
 	}
 
-	virtual ~IRenderDevice()
-	{
-		MatMgr.Release();
-	}
+	virtual ~IRenderDevice();
 
 //	bool CreateInputLayout(VertexAttributeDesc::Handle vaHandle, I)
 
@@ -175,9 +172,26 @@ public:
 
 	const std::unordered_set<IDeviceResource*>& GetResources() { return mResources; }
 
+	u32 GetRenderDeviceIndex() const { return mGlobalIndex; }
+
 protected:
 	Vector<Viewport*> mViewports;
 	std::unordered_set<IDeviceResource*> mResources;
+	u32 mGlobalIndex;
 };
+
+extern PerRenderDevice<IRenderDevice*> gRenderDevices;
+
+template<typename Func>
+void ForEachDevice(Func&& function)
+{
+	for (u32 i = 0; i < gNumRenderDevices; ++i)
+	{
+		if (gRenderDevices[i])
+		{
+			function(gRenderDevices[i], i);
+		}
+	}
+}
 
 }

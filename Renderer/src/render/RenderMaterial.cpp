@@ -54,7 +54,8 @@ void RenderMaterial::Bind(RenderContext& rctx, EShadingLayer layer)
 	rctx.TextureManager.Bind(rctx.DeviceCtx());
 }
 
-MaterialArchetype::MaterialArchetype(MaterialArchetypeDesc const& desc)
+MaterialArchetype::MaterialArchetype(MaterialArchetypeDesc const& desc, IRenderDevice& device)
+	: mDevice(&device)
 {
 	CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = GetLayout<PerInstancePSData>();
 	DebugName = desc.DebugName;
@@ -68,6 +69,7 @@ MaterialArchetype::~MaterialArchetype()
 
 void MaterialArchetype::Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType)
 {
+	ZE_ASSERT(rctx.GetDevice() == mDevice);
 	auto ctx = rctx.DeviceCtx();
 	if (mVertexShader == nullptr && Desc.mVSRegistryId)
 	{

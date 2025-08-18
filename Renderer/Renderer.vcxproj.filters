@@ -508,6 +508,7 @@
     <ClInclude Include="src\render\RenderEnums.h" />
     <ClInclude Include="src\render\RenderHelpers.h" />
     <ClInclude Include="src\procedural\ProceduralMeshes.h" />
+    <ClInclude Include="src\scene\DrawableComponent.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -793,6 +794,8 @@
     <ClCompile Include="src\procedural\PerlinNoise.cpp" />
     <ClCompile Include="src\render\dx11\DX11TextureBase.cpp" />
     <ClCompile Include="src\render\RenderHelpers.cpp" />
+    <ClCompile Include="src\procedural\ProceduralMeshes.cpp" />
+    <ClCompile Include="src\scene\DrawableComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">
@@ -848,6 +851,7 @@
     </FxCompile>
     <FxCompile Include="src\shaders\ScreenId_VS.hlsl" />
     <FxCompile Include="src\shaders\DepthCube_PS.hlsl" />
+    <FxCompile Include="src\shaders\MaterialDefinitions.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\VertexShader.hlsli">

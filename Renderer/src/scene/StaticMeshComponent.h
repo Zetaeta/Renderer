@@ -1,10 +1,12 @@
 #pragma once
 #include "SceneComponent.h"
 #include "common/SceneDataInterface.h"
+#include "DrawableComponent.h"
 
-class StaticMeshComponent : public SceneComponent
+
+class StaticMeshComponent : public DrawableComponent
 {
-	DECLARE_RTTI(StaticMeshComponent, SceneComponent);
+	DECLARE_RTTI(StaticMeshComponent, DrawableComponent);
 public:
 	StaticMeshComponent() {}
 
@@ -12,7 +14,7 @@ public:
 
 	template<typename TParent>
 	StaticMeshComponent(TParent* parent)
-		:SceneComponent(parent)//, m_MeshInst(-1)
+		:Super(parent)//, m_MeshInst(-1)
 	{
 	}
 	//StaticMeshComponent(SceneObject* parent, MeshInstanceRef minst, String const& name = "", Transform const& trans = Transform{})
@@ -31,6 +33,7 @@ public:
 
 	void OnInitialize() override;
 	void OnDeinitialize() override;
+	bool ShouldAddToScene() override;
 
 	void SetMesh(CompoundMesh::Ref mesh);
 	void SetMesh(AssetPath const& path);
@@ -59,14 +62,9 @@ public:
 
 protected:
 	EType m_Type = EType::VISIBLE;
-	PrimitiveId mPrimId = InvalidPrimId();
-	//	MeshInstanceRef m_MeshInst = -1;
 	CompoundMesh::Ref m_MeshRef = CompoundMesh::INVALID_REF;
 	SmallVector<MaterialID, 4> mMaterialOverrides;
 	AssetPath m_Mesh;
 };
 
 DECLARE_CLASS_TYPEINFO(StaticMeshComponent)
-
-using PrimitiveComponent = StaticMeshComponent;
-

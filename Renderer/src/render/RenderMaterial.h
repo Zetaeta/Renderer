@@ -51,7 +51,7 @@ class MaterialArchetype : public RefCountedObject
 {
 public:
 	MaterialArchetype() = default;
-	MaterialArchetype(MaterialArchetypeDesc const& desc);
+	MaterialArchetype(MaterialArchetypeDesc const& desc, IRenderDevice& device);
 	RMOVE_DEFAULT(MaterialArchetype)
 	ZE_COPY_PROTECT(MaterialArchetype)
 	~MaterialArchetype();
@@ -69,6 +69,11 @@ public:
 	
 	virtual void Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMatType matType);
 
+	bool IsValid() const
+	{
+		return mDevice != nullptr;
+	}
+
 	EnumArray<rnd::ECBFrequency, ShaderCBData> CBData;
 	EnumArray<EShadingLayer, RefPtr<rnd::MaterialPixelShader const>> PixelShaders;
 	MaterialArchetypeDesc Desc;
@@ -77,7 +82,8 @@ public:
 	std::unique_ptr<rnd::RenderMaterial> m_Default;
 	bool mGotVSCBData = false;
 	bool mGotPSCBData = false;
-
+protected:
+	IRenderDevice* mDevice = nullptr;
 };
 
 using RenderMaterialType = MaterialArchetype;

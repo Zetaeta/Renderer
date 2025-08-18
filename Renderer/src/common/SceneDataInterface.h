@@ -7,13 +7,20 @@
 #include <mutex>
 #include "Material.h"
 #include "BufferedRenderInterface.h"
+#include "render/RenderDevice.h"
 
-class StaticMeshComponent;
+class DrawableComponent;
 struct CompoundMesh;
-using PrimitiveComponent = StaticMeshComponent;
+using PrimitiveComponent = DrawableComponent;
+
+namespace rnd
+{
+class IDrawable;
+}
 
 using PrimitiveId = u32;
 
+constexpr PrimitiveId INVALID_PRIMITIVE = -1;
 constexpr PrimitiveId InvalidPrimId()
 {
 	return (PrimitiveId) -1;
@@ -54,6 +61,13 @@ public:
 		ScreenObjectId ScreenId;
 	};
 
+	struct CustomDrawableCreationData
+	{
+		rnd::PerRenderDevice<RefPtr<rnd::IDrawable>> Drawable;
+		PrimitiveId Id;
+		ScreenObjectId ScreenId;
+	};
+
 	struct SceneData
 	{
 //		Vector<CompoundMesh*> Meshes;
@@ -64,10 +78,13 @@ public:
 //		Vector<SubPrimitiveRange> SubPrimitives;
 		BitVector TransformsDirty;
 		BitVector Selected;
-		Vector<SMCreationData> AddedPrimitives;
+		Vector<SMCreationData> AddedStaticMeshes;
+		Vector<CustomDrawableCreationData> AddedCustomDrawables;
 		Vector<PrimitiveId> RemovedPrimitives;
 		SceneData() = default;
 		RCOPY_MOVE_PROTECT(SceneData);
+
+		PrimitiveId AllocatePrimitiveSlot();
 	};
 
 	PrimitiveId AddPrimitive(PrimitiveComponent* component);
@@ -128,6 +145,7 @@ private:
 	//	u32 nextBuffer = (sMainThreadIdx + 1) % NumSceneDataBuffers;
 	//	sFrameGuards[nextBuffer].acquire();
 	//}
+
 
 
 //	void StartFrame_MainThread()

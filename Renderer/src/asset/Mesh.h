@@ -9,16 +9,15 @@
 #include "Asset.h"
 #include "render/VertexAttributes.h"
 
-struct TVertex
+struct Vertex
 {
-	TVertex(vec3 pos = vec3 {0}, vec3 normal = vec3{ 0 }, vec2 uvs = vec2{ 0 })
+	Vertex(vec3 pos = vec3 {0}, vec3 normal = vec3{ 0 }, vec2 uvs = vec2{ 0 })
 		:pos(pos), normal(normal), uvs(uvs){}
 	pos3 pos;
 	vec3 normal;
 	vec3 tangent;
 	vec2 uvs;
 };
-using Vertex = TVertex;
 DECLARE_VERTEX_ATTRIBUTE_DESC(Vertex);
 
 using IndexedTri = std::array<u16, 3>;

@@ -16,6 +16,7 @@
 #include "common/SceneDataInterface.h"
 
 class StaticMeshComponent;
+class SceneDataInterface;
 
 using namespace glm;
 

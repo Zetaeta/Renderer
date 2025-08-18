@@ -37,14 +37,14 @@ rnd::RenderMaterial* rnd::MaterialManager::GetOrCreateRenderMaterial(MaterialID 
 
 MaterialManager::MaterialManager(rnd::IRenderDevice* device) : mDevice(device)
 {
-	mMatTypes[MAT_PLAIN] = MaterialArchetype(PlainMat);
-	mMatTypes[MAT_TEX] = MaterialArchetype(TexturedMat);
-	mMatTypes[MAT_POINT_SHADOW_DEPTH] = MaterialArchetype(PointShadow);
-	mMatTypes[MAT_SCREEN_ID] = MaterialArchetype(ScreenId);
-	mMatTypes[MAT_2D] = MaterialArchetype(Mat2D);
-	mMatTypes[MAT_2D_UINT] = MaterialArchetype(Mat2DUint);
-	mMatTypes[MAT_BG] = MaterialArchetype(MatCube);
-	mMatTypes[MAT_CUBE_DEPTH] = MaterialArchetype(MatCubeDepth);
+	mMatTypes[MAT_PLAIN] = MaterialArchetype(PlainMat, *device);
+	mMatTypes[MAT_TEX] = MaterialArchetype(TexturedMat, *device);
+	mMatTypes[MAT_POINT_SHADOW_DEPTH] = MaterialArchetype(PointShadow, *device);
+	mMatTypes[MAT_SCREEN_ID] = MaterialArchetype(ScreenId, *device);
+	mMatTypes[MAT_2D] = MaterialArchetype(Mat2D, *device);
+	mMatTypes[MAT_2D_UINT] = MaterialArchetype(Mat2DUint, *device);
+	mMatTypes[MAT_BG] = MaterialArchetype(MatCube, *device);
+	mMatTypes[MAT_CUBE_DEPTH] = MaterialArchetype(MatCubeDepth, *device);
 
 	static DataLayout screenIdLayout(16, { { &GetTypeInfo<u32>(), "screenObjectId", 0 } });
 	mMatTypes[MAT_SCREEN_ID].CBData[Denum(ECBFrequency::PS_PerInstance)].Layout = &screenIdLayout;

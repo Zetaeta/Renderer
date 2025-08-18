@@ -47,7 +47,7 @@ void SceneRenderPass::RenderScene(RendererScene const& scene)
 	//	}
 	//});
 
-	scene.ForEachMeshPart([&](PrimitiveId prim, IDeviceIndexedMesh* mesh, RenderMaterial* mat) {
+	scene.ForEachMeshPart([&](PrimitiveId prim, IDeviceMesh* mesh, RenderMaterial* mat) {
 		Accept({prim, mesh, mat});
 	});
 	OnCollectFinished();
@@ -180,6 +180,11 @@ void SceneRenderPass::Draw(DrawData const& data)
 
 void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, mat4 const& projWorld)
 {
+	IDeviceIndexedMesh* indexedMesh = dynamic_cast<IDeviceIndexedMesh*>(data.mesh);
+	if (!indexedMesh)
+	{
+		return;
+	}
 	mRCtx->SetScreenObjId(mScene->GetScreenObjId(data.primitive));
 #if ZE_BUILD_EDITOR
 	bool selected = mScene->IsSelected(data.primitive);
@@ -189,7 +194,7 @@ void SceneRenderPass::DrawSingle(DrawData const& data, mat4 const& projection, m
 	}
 	mRCtx->SetScreenObjId(mRCtx->GetScene().GetScreenObjId(data.primitive));
 #endif
-	mRCtx->DrawPrimitive(data.mesh, mScene->GetPrimTransform(data.primitive), projWorld,
+	mRCtx->DrawPrimitive(indexedMesh, mScene->GetPrimTransform(data.primitive), projWorld,
 						mMatOverride ? mMatOverride : data.material, mLayer);
 	mRCtx->SetScreenObjId(SO_NONE);
 #if ZE_BUILD_EDITOR

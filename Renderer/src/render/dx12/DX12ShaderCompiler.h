@@ -8,6 +8,7 @@ namespace rnd::dx12
 
 struct DX12Shader : public IDeviceShader
 {
+	virtual ~DX12Shader() {}
 	DX12Shader(ComPtr<ID3DBlob> bc)
 	:Bytecode(bc){ }
 	ComPtr<ID3DBlob> Bytecode;

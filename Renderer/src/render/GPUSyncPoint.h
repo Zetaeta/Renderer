@@ -2,7 +2,7 @@
 #include "core/RefCounted.h"
 namespace rnd
 {
-class GPUSyncPoint : public SelfDestructingRefCounted
+class GPUSyncPoint : public SelfReleasingRefCounted
 {
 public:
 	constexpr static u32 Infinite = (u32) -1;

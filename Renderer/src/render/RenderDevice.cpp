@@ -6,6 +6,19 @@
 namespace rnd
 {
 
+IRenderDevice::IRenderDevice(IShaderCompiler* compiler)
+: ShaderMgr(compiler), BasicMeshes(this), MatMgr(this), ResourceMgr(this)
+{
+	mGlobalIndex = gNumRenderDevices++;
+	gRenderDevices[mGlobalIndex] = this;
+}
+
+IRenderDevice::~IRenderDevice()
+{
+	gRenderDevices[mGlobalIndex] = nullptr;
+	MatMgr.Release();
+}
+
 void IRenderDevice::RegisterResource(IDeviceResource* resource)
 {
 	assert(IsInRenderThread());
@@ -43,5 +56,9 @@ void IRenderDevice::RenderFrame()
 	}
 	EndFrame();
 }
+
+
+u32 gNumRenderDevices = 0;
+PerRenderDevice<IRenderDevice*> gRenderDevices;
 
 }

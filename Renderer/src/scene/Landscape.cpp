@@ -3,6 +3,68 @@
 #include "asset/Texture.h"
 #include "procedural/PerlinNoise.h"
 #include <random>
+#include "common/Material.h"
+#include "render/VertexAttributes.h"
+#include "render/RenderContext.h"
+#include "render/RendererScene.h"
+#include "procedural/ProceduralMeshes.h"
+
+namespace rnd
+{
+DECLARE_MATERIAL_SHADER(LandscapeMat)
+
+DEFINE_MATERIAL_SHADER(LandscapeMat, "PlainPixelShader", "main", "GPULandscape", "VSMain", VA_TexCoord);
+
+static PerRenderDevice<rnd::MaterialArchetype> sLandscapeMatArch;
+
+class LandscapeMaterial : public RenderMaterial
+{
+	using Super = RenderMaterial;
+public:
+	LandscapeMaterial(RefPtr<MaterialArchetype> matType, EMatType opacity, StandardMatProperties const& props, const DeviceTextureRef& heightmap)
+		: RenderMaterial(matType, opacity, props), mHeightmap(heightmap)
+	{
+	}
+
+	void Bind(rnd::RenderContext& rctx, EShadingLayer layer) override
+	{
+		Super::Bind(rctx, layer);
+		rctx.DeviceCtx()->SetShaderResources(EShaderType::Vertex, Single<ResourceView const>({mHeightmap}));
+	}
+
+	DeviceTextureRef mHeightmap;
+};
+
+class LandscapeDrawable : public rnd::IDrawable
+{
+	
+public:
+	LandscapeDrawable(TextureRef heightmap)
+		: mHeightmapTextureRef(heightmap)
+	{
+	}
+
+	void InitResources(IRenderDevice& device)
+	{
+		auto& matArch = sLandscapeMatArch[device.GetRenderDeviceIndex()];
+		if (!matArch.IsValid())
+		{
+			matArch = MaterialArchetype(LandscapeMat, device);
+		}
+		mMaterial = MakeOwning<LandscapeMaterial>(&matArch, EMatType::E_MT_OPAQUE, StandardMatProperties{}, device.ResourceMgr.GetDeviceTexture(mHeightmapTextureRef));
+		mMesh = ProceduralMeshes::CreateTiledPlane(&device, 0.5f, float2(0), { 10, 10 });
+	}
+	void DrawDynamic(IPrimitiveDrawer& drawInterface) override
+	{
+		drawInterface.DrawMesh(mMesh, mMaterial.get());
+	}
+
+	TextureRef mHeightmapTextureRef;
+	RefPtr<IDeviceMesh> mMesh;
+	OwningPtr<LandscapeMaterial> mMaterial;
+};
+
+}
 
 Landscape::Landscape(Scene* scene, uvec2 extents /*= {1, 1}*/)
 	: SceneObject(scene, "Landscape")
@@ -25,4 +87,29 @@ Landscape::Landscape(Scene* scene, uvec2 extents /*= {1, 1}*/)
 		}
 	}
 	mHeightmap->Upload();
+
+	SetRoot<LandscapeComponent>("LandscapeComponent");
+
+//	mMaterial = std::make_shared<LandscapeMaterial>(&mMatArch, EMatType::E_MT_OPAQUE, {}, );
 }
+
+bool LandscapeComponent::ShouldAddToScene()
+{
+	return true;
+}
+
+RefPtr<rnd::IDrawable> LandscapeComponent::CreateDrawable()
+{
+	Landscape* landscape = GetOwner<Landscape>();
+	return new rnd::LandscapeDrawable(landscape->mHeightmap);
+}
+
+DEFINE_CLASS_TYPEINFO(Landscape)
+BEGIN_REFL_PROPS()
+END_REFL_PROPS()
+END_CLASS_TYPEINFO()
+
+DEFINE_CLASS_TYPEINFO(LandscapeComponent)
+BEGIN_REFL_PROPS()
+END_REFL_PROPS()
+END_CLASS_TYPEINFO()

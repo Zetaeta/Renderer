@@ -2,6 +2,7 @@
 #include "RenderDevice.h"
 #include "DeviceMesh.h"
 #include "RenderDeviceCtx.h"
+#include "scene/DrawableComponent.h"
 
 namespace rnd
 {
@@ -76,6 +77,23 @@ RenderObject* RendererScene::AddPrimitive(SceneDataInterface::SMCreationData con
 	return object;
 }
 
+void RendererScene::AddCustomDrawable(SceneDataInterface::CustomDrawableCreationData const& data)
+{
+	RefPtr<IDrawable> drawable = std::move(data.Drawable[mDevice->GetRenderDeviceIndex()]);
+	drawable->InitResources(*mDevice);
+	mCustomPrimitives[data.Id] = std::move(drawable);
+}
+
+void RendererScene::RemoveCustomPrimitive(PrimitiveId prim)
+{
+	auto it = mCustomPrimitives.find(prim);
+	if (it != mCustomPrimitives.end())
+	{
+		delete it->second; // TODO decide lifetime
+		mCustomPrimitives.erase(it);
+	}
+}
+
 void RendererScene::Destroy()
 {
 	mInitialized = false;
@@ -97,10 +115,24 @@ void RendererScene::UpdatePrimitives()
 		mPrimitives.erase(id);
 	}
 	
-	for (auto const& creation : sceneData.AddedPrimitives)
+	for (auto const& creation : sceneData.AddedStaticMeshes)
 	{
 		AddPrimitive(creation);
 	}
+
+	for (auto const& creation : sceneData.AddedCustomDrawables)
+	{
+		AddCustomDrawable(creation);
+	}
+}
+
+ScreenObjectId RendererScene::GetScreenObjId(PrimitiveId prim) const
+{
+	if (auto it = mPrimitives.find(prim); it != mPrimitives.end())
+	{
+		return it->second.ScreenId;
+	}
+	return INVALID_PRIMITIVE;
 }
 
 void RendererScene::BeginFrame()

@@ -72,6 +72,14 @@ public:
 		return m_Object;
 	}
 
+	template<typename T>
+	T* GetOwner() const
+		requires std::derived_from<T, SceneObject>
+	{
+		return Cast<T>(m_Object);
+	}
+
+
 	WorldTransform const& GetWorldTransform() const
 	{
 		return m_WorldTransform;

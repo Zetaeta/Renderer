@@ -13,9 +13,30 @@ struct RenderObject
 {
 	SmallVector<RefPtr<IDeviceIndexedMesh>, 1> MeshData;
 	SmallVector<RefPtr<RenderMaterial>, 1> Materials;
-	#if HIT_TESTING
+#if HIT_TESTING
 	ScreenObjectId ScreenId;
-	#endif
+#endif
+};
+
+class IPrimitiveDrawer
+{
+public:
+	virtual void DrawMesh(IDeviceMesh* mesh, RenderMaterial* material) = 0;
+};
+
+class IDrawable;
+
+class SimplePrimitiveRecorder : public IPrimitiveDrawer
+{
+public:
+	void DrawMesh(IDeviceMesh* mesh, RenderMaterial* material) override
+	{
+		Meshes.push_back(mesh);
+		Materials.push_back(material);
+	}
+
+	Vector<IDeviceMesh*> Meshes;
+	Vector<RenderMaterial*> Materials;
 };
 
 /**
@@ -42,6 +63,8 @@ public:
 
 	RenderObject* AddPrimitive(SceneDataInterface::SMCreationData const& data);
 
+	void AddCustomDrawable(SceneDataInterface::CustomDrawableCreationData const& data);
+	void RemoveCustomPrimitive(PrimitiveId primId);
 
 	template<typename Func>
 	void ForEachPrimitive(Func&& func) const
@@ -60,6 +83,17 @@ public:
 			for (u32 i = 0; i < obj.MeshData.size(); ++i)
 			{
 				func(id, obj.MeshData[i], obj.Materials[i]);
+			}
+		}
+
+		for (const auto& [id, customPrim] : mCustomPrimitives)
+		{
+			SimplePrimitiveRecorder customPrimRecorder;
+			customPrim->DrawDynamic(customPrimRecorder);
+
+			for (u32 i = 0; i < customPrimRecorder.Meshes.size(); ++i)
+			{
+				func(id, customPrimRecorder.Meshes[i], customPrimRecorder.Materials[i]);
 			}
 		}
 	}
@@ -128,10 +162,7 @@ public:
 		return *mDataInterface;
 	}
 
-	ScreenObjectId GetScreenObjId(PrimitiveId prim) const
-	{
-		return mPrimitives.at(prim).ScreenId;
-	}
+	ScreenObjectId GetScreenObjId(PrimitiveId prim) const;
 
 	bool IsSelected(PrimitiveId prim) const
 	{
@@ -157,6 +188,8 @@ private:
 	bool mInitialized = false;
 
 	std::unordered_map<PrimitiveId, RenderObject> mPrimitives{}; // TODO optimize
+	std::unordered_map<PrimitiveId, RefPtr<IDrawable>> mCustomPrimitives; // For non-trivial static meshes.
+
 	Scene const* mScene = nullptr;
 //	Vector<RenderObject*> mPrimitives;
 //	std::unordered_map<MaterialID, RenderMaterial> mMaterials;

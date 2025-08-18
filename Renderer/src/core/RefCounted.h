@@ -52,13 +52,13 @@ private:
 	mutable std::atomic<u32> mRefCount;
 };
 
-class SelfDestructingRefCounted
+class SelfReleasingRefCounted
 {
 public:
-	SelfDestructingRefCounted()
+	SelfReleasingRefCounted()
 		: mRefCount(0) {}
 	template<typename TOther>
-	SelfDestructingRefCounted(TOther&& other) noexcept
+	SelfReleasingRefCounted(TOther&& other) noexcept
 		: mRefCount(0)
 	{
 	}
@@ -80,11 +80,22 @@ public:
 	{
 		return mRefCount.load(std::memory_order_acquire);
 	}
-
+protected:
 	virtual void OnFullyReleased() {}
 
 private:
 	mutable std::atomic<u32> mRefCount;
+};
+
+class SelfDestructingRefCounted : public SelfReleasingRefCounted
+{
+public:
+	virtual ~SelfDestructingRefCounted() {}
+protected:
+	virtual void OnFullyReleased() override
+	{
+		delete this;
+	}
 };
 
 template<typename T>

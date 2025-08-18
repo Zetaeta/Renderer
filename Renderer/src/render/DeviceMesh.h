@@ -8,7 +8,7 @@
 namespace rnd
 {
 
-class IDeviceMesh : public SelfDestructingRefCounted
+class IDeviceMesh : public SelfReleasingRefCounted
 {
 public:
 	DeviceVertAttsRef VertexAttributes;

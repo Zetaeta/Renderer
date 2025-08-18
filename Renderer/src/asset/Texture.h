@@ -143,6 +143,11 @@ public:
 		return m_Tex;
 	}
 
+	operator Texture*() const &
+	{
+		return m_Tex.get();
+	}
+
 	void Clear()
 	{
 		m_Tex = Texture::EMPTY;

@@ -23,7 +23,7 @@ struct DrawData
 //	MeshPart const* mesh;
 //	SceneComponent const* component;
 	PrimitiveId primitive;
-	IDeviceIndexedMesh* mesh;
+	IDeviceMesh* mesh;
 	RenderMaterial* material;
 };
 

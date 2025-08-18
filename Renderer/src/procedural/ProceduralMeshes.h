@@ -4,5 +4,8 @@
 
 namespace ProceduralMeshes
 {
-	rnd::IDeviceMesh* CreateTiledPlane(rnd::IRenderDevice* device);
+// Positions and uvs
+RefPtr<rnd::IDeviceMesh> CreateTiledPlane(rnd::IRenderDevice* device, float tileSize, vec2 startPos, uvec2 numTiles);
+
+
 }

@@ -1,49 +1,29 @@
 #include "VertexShader.hlsli"
+#include "MaterialDefinitions.hlsli"
 
-#ifndef	TEXTURED
-#define TEXTURED 1
-#endif
-
-#ifndef	SHADED
-#define SHADED 1
-#endif
-
-struct VSOut {
-#if TEXTURED
-	float2 uv: TexCoord;
-#endif //TEXTURED
-#if SHADED
-	float3 normal: Normal;
-	float3 tangent: Tangent;
-	float3 viewDir: ViewDir;
-	float3 worldPos : WorldPos;
-#endif
-	float4 pos : SV_POSITION;
-};
-
-struct VSIn
+#ifdef MATERIAL_VERTEX_DEFINITION
+#include MATERIAL_VERTEX_DEFINITION
+#else
+VSInputs ModifyVertexProperties(VSInputs vsi)
 {
-    float3 pos : POSITION;
-#if SHADED
-    float3 n : Normal;
-    float3 t : Tangent;
+    return vsi;
+}
 #endif
-    float2 uv : TexCoord;
-};
 
-VSOut main( VSIn vsi)
+VSOut main( VSInputs vsi)
 {
+    vsi = ModifyVertexProperties(vsi);
 	VSOut vso;
-	vso.pos = mul(fullTrans,float4(vsi.pos, 1));
+	vso.pos = mul(fullTrans,float4(vsi.Position, 1));
 #if SHADED
-	float4 worldPos = mul(model2Shade, float4(vsi.pos,1));
+	float4 worldPos = mul(model2Shade, float4(vsi.Position,1));
 	vso.worldPos = worldPos.xyz;//(n + float3(1,1,1))/2;
-	vso.normal = mul(model2ShadeDual, float4(vsi.n,0)).xyz;
-	vso.tangent = mul(model2Shade, float4(vsi.t,0)).xyz;
-	vso.viewDir = mul(model2Shade, float4(vsi.pos,1)).xyz - cameraPos;
+	vso.normal = mul(model2ShadeDual, float4(vsi.Normal,0)).xyz;
+	vso.tangent = mul(model2Shade, float4(vsi.Tangent,0)).xyz;
+	vso.viewDir = mul(model2Shade, float4(vsi.Position,1)).xyz - cameraPos;
 #endif
 #if TEXTURED
-	vso.uv = vsi.uv;
+	vso.uv = vsi.UV;
 #endif //TEXTURED
 	return vso;
 }

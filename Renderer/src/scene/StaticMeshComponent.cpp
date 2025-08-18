@@ -13,18 +13,7 @@ void StaticMeshComponent::OnInitialize()
 	{
 		m_MeshRef = GetScene().GetAssetManager()->GetMesh(m_Mesh);
 	}
-	if (IsValid(m_MeshRef))
-	{
-		//if (!IsValid(m_MeshInst))
-		//{
-		//	m_MeshInst = GetScene().AddMesh(mesh);
-		//}
-		mPrimId = GetScene().DataInterface().AddPrimitive(this);
-	}
-	else
-	{
-		printf("Couldn't find mesh %s", m_Mesh.ToString().c_str());
-	}
+	Super::OnInitialize();
 }
 
 void StaticMeshComponent::OnDeinitialize()
@@ -34,6 +23,16 @@ void StaticMeshComponent::OnDeinitialize()
 		GetScene().DataInterface().RemovePrimitive(mPrimId);
 		mPrimId = InvalidPrimId();
 	}
+}
+
+bool StaticMeshComponent::ShouldAddToScene()
+{
+	if (!IsValid(m_MeshRef))
+	{
+		printf("Couldn't find mesh %s", m_Mesh.ToString().c_str());
+		return false;
+	}
+	return true;
 }
 
 void StaticMeshComponent::SetMesh(CompoundMesh::Ref mesh)

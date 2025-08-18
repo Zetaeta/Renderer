@@ -7,6 +7,7 @@
 #include "render/RenderContext.h"
 #include "render/ShadingCommon.h"
 #include "pix3.h"
+#include "DX12ShaderCompiler.h"
 
 namespace rnd::dx12
 {
@@ -253,7 +254,7 @@ void DX12Context::SetConstantBuffers(EShaderType shaderType, std::span<CBHandle 
 
 void DX12Context::SetGraphicsShader(EShaderType shaderType, Shader const* shader)
 {
-
+//	ZE_ASSERT(dynamic_cast<DX12Shader>(shader->GetDeviceShader()) != nullptr);
 	auto& current = mGraphicsState.Shaders()[shaderType];
 	if (current != shader)
 	{

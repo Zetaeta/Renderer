@@ -24,6 +24,11 @@ using DeviceMeshRef = RefPtr<IDeviceMesh>;
 using VertAttDescHandle = s64;
 
 
+constexpr u32 gMaxRenderDevices = 4;
+extern u32 gNumRenderDevices;
+template<typename T>
+using PerRenderDevice = std::array<T, gMaxRenderDevices>;
+
 }
 
 using ScreenObjectId = u32;
