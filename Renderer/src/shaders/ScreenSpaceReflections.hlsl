@@ -55,10 +55,17 @@ float3 GGXSpecularReflection(float3 normal, float3 diffuseCol, float roughness, 
 float3 ReflectionStrength(float3 normal, float3 diffuseCol, float roughness, float3 viewDir, float metalness, float specularStrength)
 {
 	viewDir = -viewDir;
-	float NL = pdot(normal, viewDir);
-	float3 specularCol = metalness * diffuseCol + (1-metalness) * float3(dielectricF0,dielectricF0,dielectricF0);
-	float3 Fresnel = specularCol + (1-specularCol) * pow(1-NL, 5);
-    return clamp(Fresnel / roughness, 0, 1);
+	float NL = dot(normal, viewDir);
+    if (NL > 0)
+    {
+        float3 specularCol = metalness * diffuseCol + (1-metalness) * float3(dielectricF0,dielectricF0,dielectricF0);
+        float3 Fresnel = specularCol + (1-specularCol) * pow(1-NL, 5);
+        return clamp(Fresnel / roughness, 0, 1);
+    }
+    else
+    {
+        return 0;
+    }
 
 }
 

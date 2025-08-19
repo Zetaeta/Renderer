@@ -852,6 +852,7 @@
     <FxCompile Include="src\shaders\ScreenId_VS.hlsl" />
     <FxCompile Include="src\shaders\DepthCube_PS.hlsl" />
     <FxCompile Include="src\shaders\MaterialDefinitions.hlsli" />
+    <FxCompile Include="src\shaders\GPULandscape.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\VertexShader.hlsli">

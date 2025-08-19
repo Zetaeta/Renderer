@@ -1,8 +1,29 @@
 #include "JsonSerializer.h"
 #include "core/TypeInfoUtils.h"
 #include <fstream>
+#include "core/PointerTypeInfo.h"
 
+bool ShouldSerializeType(TypeInfo const& type)
+{
+	if (type.IsClass())
+	{
+		return !static_cast<ClassTypeInfo const&>(type).HasAnyClassFlags(EClassFlags::Transient);
+	}
+	else if (type.GetTypeCategory() == ETypeCategory::POINTER)
+	{
+		return ShouldSerializeType(static_cast<PointerTypeInfo const&>(type).GetTargetType());
+	}
+	else
+	{
+		return true;
+	}
 
+}
+
+bool ShouldSerialize(ConstReflectedValue value)
+{
+	return ShouldSerializeType(value.GetRuntimeType());
+}
 
 void JsonSerializer::Dump(ConstReflectedValue value, std::string file)
 {
@@ -13,6 +34,24 @@ void JsonSerializer::Dump(ConstReflectedValue value, std::string file)
 	o.close();
 }
 
+json JsonSerializer::Serialize(ConstReflectedValue value)
+{
+	switch (value.GetType().GetTypeCategory())
+	{
+		case ETypeCategory::BASIC:
+			return SerializeBasic(value);
+		case ETypeCategory::CONTAINER:
+			return SerializeContainer(value);
+		case ETypeCategory::CLASS:
+			return SerializeClass(value);
+		case ETypeCategory::POINTER:
+			return SerializePointer(value);
+		default:
+			break;
+	}
+	return json{};
+}
+
 json JsonSerializer::SerializeContainer(ConstReflectedValue value)
 {
 	json					 j = json::array();
@@ -21,7 +60,11 @@ json JsonSerializer::SerializeContainer(ConstReflectedValue value)
 	size_t size = accessor->GetSize();
 	for (int i = 0; i < size; ++i)
 	{
-		j.push_back(Serialize(accessor->GetAt(i)));
+		auto child = accessor->GetAt(i);
+		if (ShouldSerialize(child))
+		{
+			j.push_back(Serialize(child));
+		}
 	}
 	return j;
 }
@@ -32,7 +75,11 @@ json JsonSerializer::SerializeClass(ConstClassValuePtr value)
 	ConstClassValuePtr actual = value.Downcast();
 	actual.GetType().ForEachProperty([this, actual, &j](PropertyInfo const& prop)
 	{
-		j[prop.GetName()] = Serialize(prop.Access(actual));
+		auto child = prop.Access(actual);
+		if (ShouldSerialize(child))
+		{
+			j[prop.GetName()] = Serialize(child);
+		}
 	});
 	return j;
 }
@@ -79,9 +126,13 @@ json JsonSerializer::SerializePointer(ConstReflectedValue value)
 	else
 	{
 		auto target = typ.GetConst(value);
-		j["type"] = target.GetRuntimeType().GetName();
-		j["value"] = Serialize(target);
+		if (ShouldSerialize(target))
+		{
+			j["type"] = target.GetRuntimeType().GetName();
+			j["value"] = Serialize(target);
+		}
 	}
 
 	return j;
 }
+

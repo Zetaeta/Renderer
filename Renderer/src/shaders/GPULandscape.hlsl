@@ -1,3 +1,4 @@
+#define TEXTURED 0
 #include "VertexShader.hlsli"
 
 Texture2D<float> Heightmap;
@@ -22,28 +23,30 @@ VSInputs GenerateVertexInputs(LandscapeInput input)
 {
     VSInputs vsi;
     float2 uv = input.UV;
-//    float height = Heightmap.SampleLevel(BilinearSampler, uv, 0);
-    float height = 0;
-    vsi.Position = input.Position + float3(0, 0, height);
+    float height = Heightmap.SampleLevel(BilinearSampler, uv, 0);
+    //float height = 0;
+    //float dhdy = 0;
+    //float dhdx = 0;
+    vsi.Position = input.Position + float3(0, height, 0); // + float3(uv, 0) * 0.0001;
 #if SHADED
-    //float heightPX = Heightmap.SampleLevel(BilinearSampler, uv + float2(Delta, 0), 0);
-    //float heightMX = Heightmap.SampleLevel(BilinearSampler, uv - float2(Delta, 0), 0);
-    //float heightPY = Heightmap.SampleLevel(BilinearSampler, uv + float2(0, Delta), 0);
-    //float heightMY = Heightmap.SampleLevel(BilinearSampler, uv - float2(0, Delta), 0);
+    float heightPX = Heightmap.SampleLevel(BilinearSampler, uv + float2(Delta, 0), 0);
+    float heightMX = Heightmap.SampleLevel(BilinearSampler, uv - float2(Delta, 0), 0);
+    float heightPY = Heightmap.SampleLevel(BilinearSampler, uv + float2(0, Delta), 0);
+    float heightMY = Heightmap.SampleLevel(BilinearSampler, uv - float2(0, Delta), 0);
 
-    //float dhdx = (heightPX - heightMX) * 0.5f / Delta;
-    //float dhdy = (heightPY - heightMY) * 0.5f / Delta;
-    float dhdy = 0;
-    float dhdx = 0;
+    float dhdx = (heightPX - heightMX) * 0.5f / Delta;
+    float dhdy = (heightPY - heightMY) * 0.5f / Delta;
 
     // For a parametrized surface, cross product of partial derivatives is normal to surface
-    float3 normal = normalize(cross(float3(1, 0, dhdx), float3(0, 1, dhdy)));
-    float3 TX = normalize(float3(1, 0, dhdx));
+    float3 normal = -normalize(cross(float3(1, dhdx, 0), float3(0, dhdy, 1)));
+    float3 TX = -normalize(float3(1, dhdx, 0));
 
     vsi.Normal = normal;
     vsi.Tangent = TX;
 #endif
+#if TEXTURED
     vsi.UV = input.UV; 
+#endif
     return vsi;
 }
 

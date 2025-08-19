@@ -49,6 +49,11 @@ public:
 		return m_Flags & CONST_TARGET;
 	}
 
+	TypeInfo const& GetTargetType() const
+	{
+		return m_TargetType;
+	}
+
 	virtual bool New(ReflectedValue holder, TypeInfo const& newType) const = 0;
 
 	// virtual void Reset(ValuePtr val) = 0;

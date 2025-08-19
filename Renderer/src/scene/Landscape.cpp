@@ -8,12 +8,13 @@
 #include "render/RenderContext.h"
 #include "render/RendererScene.h"
 #include "procedural/ProceduralMeshes.h"
+#include "render/VertexTypes.h"
 
 namespace rnd
 {
 DECLARE_MATERIAL_SHADER(LandscapeMat)
 
-DEFINE_MATERIAL_SHADER(LandscapeMat, "PlainPixelShader", "main", "GPULandscape", "VSMain", VA_TexCoord);
+DEFINE_MATERIAL_SHADER(LandscapeMat, "PlainPixelShader", "main", "GPULandscape", "VSMain", VA_Position | VA_TexCoord);
 
 static PerRenderDevice<rnd::MaterialArchetype> sLandscapeMatArch;
 
@@ -24,15 +25,20 @@ public:
 	LandscapeMaterial(RefPtr<MaterialArchetype> matType, EMatType opacity, StandardMatProperties const& props, const DeviceTextureRef& heightmap)
 		: RenderMaterial(matType, opacity, props), mHeightmap(heightmap)
 	{
+		SamplerDesc samplerDesc{};
+		mSampler = matType->GetDevice()->GetSampler(samplerDesc);
 	}
 
 	void Bind(rnd::RenderContext& rctx, EShadingLayer layer) override
 	{
 		Super::Bind(rctx, layer);
+		rctx.DeviceCtx()->SetSamplers(EShaderType::Vertex, Single(mSampler));
 		rctx.DeviceCtx()->SetShaderResources(EShaderType::Vertex, Single<ResourceView const>({mHeightmap}));
+		rctx.DeviceCtx()->SetVertexLayout(GetVertAttHdl<FlatVert>());
 	}
 
 	DeviceTextureRef mHeightmap;
+	SamplerHandle mSampler;
 };
 
 class LandscapeDrawable : public rnd::IDrawable
@@ -44,6 +50,11 @@ public:
 	{
 	}
 
+	~LandscapeDrawable()
+	{
+		sLandscapeMatArch = {};
+	}
+
 	void InitResources(IRenderDevice& device)
 	{
 		auto& matArch = sLandscapeMatArch[device.GetRenderDeviceIndex()];
@@ -51,8 +62,11 @@ public:
 		{
 			matArch = MaterialArchetype(LandscapeMat, device);
 		}
-		mMaterial = MakeOwning<LandscapeMaterial>(&matArch, EMatType::E_MT_OPAQUE, StandardMatProperties{}, device.ResourceMgr.GetDeviceTexture(mHeightmapTextureRef));
-		mMesh = ProceduralMeshes::CreateTiledPlane(&device, 0.5f, float2(0), { 10, 10 });
+		StandardMatProperties props;
+		props.colour = float4(0,0.5,0, 1);
+		props.roughness = 1;
+		mMaterial = MakeOwning<LandscapeMaterial>(&matArch, EMatType::E_MT_OPAQUE, props, device.ResourceMgr.GetDeviceTexture(mHeightmapTextureRef));
+		mMesh = ProceduralMeshes::CreateTiledPlane(&device, 0.3f, float2(0), { 100, 100 });
 	}
 	void DrawDynamic(IPrimitiveDrawer& drawInterface) override
 	{
@@ -83,7 +97,7 @@ Landscape::Landscape(Scene* scene, uvec2 extents /*= {1, 1}*/)
 		for (int x = 0; x < textureSize; ++x)
 		{
 			data[y * textureSize + x] = //(
-			noise.Evaluate(vec2{x, y} * 4.f/float(textureSize));// + 1)/2;
+			noise.Evaluate(vec2{x, y} * 4.f/float(textureSize)) * 10;// + 1)/2;
 		}
 	}
 	mHeightmap->Upload();
@@ -104,7 +118,7 @@ RefPtr<rnd::IDrawable> LandscapeComponent::CreateDrawable()
 	return new rnd::LandscapeDrawable(landscape->mHeightmap);
 }
 
-DEFINE_CLASS_TYPEINFO(Landscape)
+DEFINE_CLASS_TYPEINFO(Landscape, EClassFlags::Transient)
 BEGIN_REFL_PROPS()
 END_REFL_PROPS()
 END_CLASS_TYPEINFO()

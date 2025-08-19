@@ -14,17 +14,19 @@ RefPtr<rnd::IDeviceMesh> CreateTiledPlane(rnd::IRenderDevice* device, float tile
 
 	vec2 pos = startPos;
 	vec2 uv(0.f);
-	const vec2 duv = vec2(1) / vec2(numTiles);
+	const float2 duv = vec2(1) / vec2(numTiles);
 	const u32 yPitch = numTiles.x + 1;
 #define INDEX(x, y) (x) + (y) * yPitch
 	for (u32 y = 0; y <= numTiles.y; ++y)
 	{
 		for (u32 x = 0; x <= numTiles.x; ++x)
 		{
-			verts[x + y * (numTiles.x + 1)] = FlatVert({ float3(pos, 0), uv });
-			uv += vec2(duv);
-			pos += float2(tileSize, tileSize);
+			verts[x + y * (numTiles.x + 1)] = FlatVert({ float3(pos.x, 0, pos.y), uv });
+			uv += float2(duv.x, 0);
+			pos += float2(tileSize, 0);
 		}
+		uv = float2(0, uv.y + duv.y);
+		pos = float2(0, pos.y + tileSize);
 	}
 	Vector<u16> indices;
 	indices.reserve(numTiles.y * (numTiles.x * 2 + 4) + 2 * (numTiles.y - 1));
@@ -52,7 +54,7 @@ RefPtr<rnd::IDeviceMesh> CreateTiledPlane(rnd::IRenderDevice* device, float tile
 		}
 	}
 	auto uploadHdl = device->StartBatchedUpload();
-	auto result = device->CreateIndexedMesh(EPrimitiveTopology::TRIANGLE_STRIP, { GetVertAttHdl<FlatVert>(), numVerts, sizeof(FlatVert), verts.data()}, indices, uploadHdl);
+	auto result = device->CreateIndexedMesh(EPrimitiveTopology::TriangleStrip, { GetVertAttHdl<FlatVert>(), numVerts, sizeof(FlatVert), verts.data()}, indices, uploadHdl);
 	device->FinishBatchedUpload(uploadHdl);
 	return result;
 #undef INDEX

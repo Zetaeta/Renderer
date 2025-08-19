@@ -13,7 +13,7 @@ class IDeviceMesh : public SelfReleasingRefCounted
 public:
 	DeviceVertAttsRef VertexAttributes;
 
-	IDeviceMesh(DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
+	IDeviceMesh(DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, EPrimitiveTopology topology = EPrimitiveTopology::Triangles)
 		: VertexAttributes(vertAttrs), VertexCount(vertCount), Topology(topology) {}
 
 
@@ -27,14 +27,14 @@ public:
 	const EDeviceMeshType MeshType = EDeviceMeshType::DIRECT;
 
 protected:
-	IDeviceMesh(EDeviceMeshType InMeshType, DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
+	IDeviceMesh(EDeviceMeshType InMeshType, DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, EPrimitiveTopology topology = EPrimitiveTopology::Triangles)
 		: VertexAttributes(vertAttrs), VertexCount(vertCount), Topology(topology), MeshType(InMeshType) {}
 };
 
 class IDeviceIndexedMesh : public IDeviceMesh
 {
 public:
-	IDeviceIndexedMesh(DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, u32 idxCount = 0, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
+	IDeviceIndexedMesh(DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, u32 idxCount = 0, EPrimitiveTopology topology = EPrimitiveTopology::Triangles)
 		: IDeviceMesh(EDeviceMeshType::INDEXED, vertAttrs, vertCount, topology), IndexCount(idxCount) {}
 
 	u32 IndexCount = 0;

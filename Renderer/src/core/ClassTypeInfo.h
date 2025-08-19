@@ -280,11 +280,18 @@ public:
 	ptrdiff_t GetOffset() const { return m_Offset; }
 };
 
+enum class EClassFlags : u8
+{
+	None = 0,
+	Transient = 1,
+};
+FLAG_ENUM(EClassFlags)
+
 class ClassTypeInfo : public TypeInfo
 {
 public:
-	ClassTypeInfo(Name name, size_t size, ClassTypeInfo const* parent, ETypeFlags typeFlags, Vector<PropertyInfo>&& attrs)
-		: TypeInfo(name, size, ETypeCategory::CLASS, typeFlags), m_Parent(parent), m_Properties(std::move(attrs)) {}
+	ClassTypeInfo(Name name, size_t size, ClassTypeInfo const* parent, ETypeFlags typeFlags, EClassFlags classFlags, Vector<PropertyInfo>&& attrs)
+		: TypeInfo(name, size, ETypeCategory::CLASS, typeFlags), m_Parent(parent), m_Properties(std::move(attrs)), mClassFlags(classFlags) {}
 
 	virtual bool Contains(TypeInfo const& cls) const override {
 		return cls.GetTypeCategory() == ETypeCategory::CLASS && InheritsFrom(static_cast<ClassTypeInfo const&>(cls));
@@ -330,6 +337,9 @@ public:
 	Vector<ClassTypeInfo const*> const& GetAllChildren() const;
 	Vector<ClassTypeInfo const*> const& GetImmediateChildren() const;
 
+	EClassFlags GetClassFlags() const { return mClassFlags; }
+	bool HasAnyClassFlags(EClassFlags flags) const { return !!(mClassFlags & flags); }
+
 	using Properties = Vector<PropertyInfo>;
 
 protected:
@@ -338,6 +348,7 @@ protected:
 	mutable Vector<ClassTypeInfo const*> m_Children;
 	mutable Vector<ClassTypeInfo const*> m_AllChildren;
 	mutable bool m_FoundChildren = false;
+	EClassFlags mClassFlags = EClassFlags::None;
 
 public:
 };
@@ -365,8 +376,8 @@ template<typename TClass>
 class ClassTypeInfoImpl : public ClassTypeInfo
 {
 public:
-	ClassTypeInfoImpl(Name name, ClassTypeInfo const* parent, Properties&& attrs)
-		: ClassTypeInfo(name, sizeof(TClass), parent, ComputeFlags<TClass>(), std::move(attrs)) {}
+	ClassTypeInfoImpl(Name name, ClassTypeInfo const* parent, EClassFlags classFlags, Properties&& attrs)
+		: ClassTypeInfo(name, sizeof(TClass), parent, ComputeFlags<TClass>(), classFlags, std::move(attrs)) {}
 
 	ReflectedValue Construct(void* location) const override
 	{
@@ -491,7 +502,7 @@ public:\
 
 #define DECLARE_STI_NOBASE(Class) DECLARE_STI(Class, void)
 
-#define DEFINE_CLASS_TYPEINFO_TEMPLATE(temp, Class)\
+#define DEFINE_CLASS_TYPEINFO_TEMPLATE(temp, Class, ...)\
 	temp\
 	ClassTypeInfo const& Class::GetTypeInfo() const\
 	{                                  \
@@ -509,8 +520,9 @@ public:\
 		Name name = #Class;\
 		ClassTypeInfo::Properties attrs;\
 		auto const* parent = MaybeGetClassTypeInfo<Class::Super>();\
+		EClassFlags classFlags {__VA_ARGS__};
 
-#define DEFINE_CLASS_TYPEINFO(Class)\
+#define DEFINE_CLASS_TYPEINFO(Class, ...)\
 	ClassTypeInfo const& Class::GetTypeInfo() const\
 	{                                  \
 		return ::GetClassTypeInfo<Class>();\
@@ -523,7 +535,8 @@ public:\
 	ClassTypeInfoImpl<Class> Class::TypeInfoHelper::MakeTypeInfo() {\
 		Name name = #Class;\
 		ClassTypeInfo::Properties attrs;\
-		auto const* parent = MaybeGetClassTypeInfo<Class::Super>();
+		auto const* parent = MaybeGetClassTypeInfo<Class::Super>();\
+		EClassFlags classFlags {__VA_ARGS__};
 	//= ConstructorHelper < std::function<void()>([] {\
 	//g_TypeDB[TypeInfoHelper<Class>::ID] = std::make_unique<ClassTypeInfo>(#Class, GetTypeInfo<Class::Super>(), Vector<OwningPtr<AttributeInfo>> { 
 
@@ -532,5 +545,5 @@ public:\
 #define REFL_PROP_SETTER(prop, setter, ...) attrs.emplace_back(#prop, ::GetTypeInfo<decltype(Type::prop)>(), offsetof(Type, prop), new MemberFunctionImpl<Type, decltype(std::declval<Type>().setter(Type{}.prop)), const decltype(Type::prop)&>(&Type::setter), std::is_const_v<decltype(Type::prop)>, __VA_ARGS__);
 #define END_REFL_PROPS()
 #define END_CLASS_TYPEINFO()                           \
-		return ClassTypeInfoImpl<Type>{ name, parent, std::move(attrs) }; \
+		return ClassTypeInfoImpl<Type>{ name, parent, classFlags, std::move(attrs) }; \
 	}

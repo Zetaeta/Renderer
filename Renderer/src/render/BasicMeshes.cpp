@@ -17,7 +17,7 @@ DeviceMeshRef BasicMeshFactory::GetFullScreenTri()
 			{ {3,-1.f, Z}, {2,1} }, // right of bottom right
 		};
 		FullScreenTriangle = mDevice->CreateDirectMesh(verts);
-		FullScreenTriangle->Topology = EPrimitiveTopology::TRIANGLES;
+		FullScreenTriangle->Topology = EPrimitiveTopology::Triangles;
 	}
 	return FullScreenTriangle;
 }
@@ -35,7 +35,7 @@ rnd::DeviceMeshRef BasicMeshFactory::GetFullscreenSquare()
 			{ {1,-1.f, Z}, {1,1} },
 		};
 		mSquare = mDevice->CreateDirectMesh(verts);
-		mSquare->Topology = EPrimitiveTopology::TRIANGLE_STRIP;
+		mSquare->Topology = EPrimitiveTopology::TriangleStrip;
 	}
 	return mSquare;
 }

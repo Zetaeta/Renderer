@@ -25,7 +25,7 @@ public:
 struct DX11IndexedMesh : public IDeviceIndexedMesh
 {
 	DX11IndexedMesh(DeviceVertAttsArg vertAttrs = InvalidVertAttsHandle, u32 vertCount = 0, u32 idxCount = 0,
-		EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
+		EPrimitiveTopology topology = EPrimitiveTopology::Triangles)
 	:IDeviceIndexedMesh(vertAttrs, vertCount, idxCount, topology) { }
 	ComPtr<ID3D11Buffer> vBuff;
 	ComPtr<ID3D11Buffer> iBuff;

@@ -22,9 +22,9 @@ D3D_PRIMITIVE_TOPOLOGY GetD3D12Topology(EPrimitiveTopology topology)
 {
 	switch (topology)
 	{
-		case rnd::EPrimitiveTopology::TRIANGLES:
+		case rnd::EPrimitiveTopology::Triangles:
 			return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		case rnd::EPrimitiveTopology::TRIANGLE_STRIP:
+		case rnd::EPrimitiveTopology::TriangleStrip:
 			return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 		default:
 			assert(false);

@@ -1,7 +1,7 @@
 
 #include "VertexShader.hlsli"
 
-struct VSOut {
+struct MyVSOut {
 	float3 lightSpacePos : LightSpacePos;
 	float4 pos : SV_POSITION;
 };
@@ -12,9 +12,9 @@ struct VSOut {
 //	Matrix world2Light;
 //}
 
-VSOut main( float3 pos : POSITION )
+MyVSOut main( float3 pos : POSITION )
 {
-	VSOut vso;
+	MyVSOut vso;
 	vso.pos = mul(fullTrans,float4(pos, 1));
 	vso.lightSpacePos = mul(world2Light, mul(model2Shade, float4(pos, 1))).xyz;
 	return vso;

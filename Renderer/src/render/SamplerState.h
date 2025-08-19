@@ -64,6 +64,7 @@ struct SamplerDesc
 
 struct SamplerHandle : public SimpleOpaqueHandle<>
 {
+	SamplerHandle() = default;
 	template<typename T>
 		requires std::is_trivially_copyable_v<T>
 	SamplerHandle(T value)

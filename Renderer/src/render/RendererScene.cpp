@@ -69,7 +69,7 @@ RenderObject* RendererScene::AddPrimitive(SceneDataInterface::SMCreationData con
 		vbd.NumVerts = NumCast<u32>(meshPart.vertices.size());
 		vbd.VertAtts = GetVertAttHdl(meshPart.vertices[0]);
 		auto batchedUpload = mDevice->StartBatchedUpload();
-		object->MeshData.push_back(mDevice->CreateIndexedMesh(EPrimitiveTopology::TRIANGLES, vbd, {&meshPart.triangles[0][0], meshPart.triangles.size() * 3}, batchedUpload));
+		object->MeshData.push_back(mDevice->CreateIndexedMesh(EPrimitiveTopology::Triangles, vbd, {&meshPart.triangles[0][0], meshPart.triangles.size() * 3}, batchedUpload));
 		object->Materials.push_back(mDevice->MatMgr.GetOrCreateRenderMaterial(data.Materials[i]));
 	}
 	object->ScreenId = data.ScreenId;

@@ -9,6 +9,7 @@ class Landscape : public SceneObject
 {
 	DECLARE_RTTI(Landscape, SceneObject);
 public:
+	Landscape() = default;
 	Landscape(Scene* scene, uvec2 extents = uvec2{1, 1});
 private:
 	std::shared_ptr<Texture> mHeightmap;

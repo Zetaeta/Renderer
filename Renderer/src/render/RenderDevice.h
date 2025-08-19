@@ -134,7 +134,7 @@ public:
 //	bool CreateInputLayout(VertexAttributeDesc::Handle vaHandle, I)
 
 	template<typename Range>
-	DeviceMeshRef CreateDirectMesh(const Range& vertices, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLES)
+	DeviceMeshRef CreateDirectMesh(const Range& vertices, EPrimitiveTopology topology = EPrimitiveTopology::Triangles)
 	{
 		using Vert = std::remove_cvref_t<decltype(vertices[0])>;
 		return CreateDirectMesh(topology, {TVertexAttributes<Vert>::Handle, NumCast<u32>(std::size(vertices)), sizeof(Vert), &vertices[0]}, {});

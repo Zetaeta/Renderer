@@ -94,18 +94,18 @@ DX12RHI::~DX12RHI()
 	BasicMeshes.Teardown();
 	GRenderController.RemoveRenderBackend(this);
 	RendererScene::OnShutdownDevice(this);
+	mCBPool.ReleaseResources();
+	DX12SyncPointPool::Destroy();
+	WaitFence(mCurrentFrame - 1);
 	mTest = nullptr;
 	mUploadBuffer = nullptr;
 	mReadbackBuffer = nullptr;
-	mCBPool.ReleaseResources();
-	DX12SyncPointPool::Destroy();
 	mRTVAlloc = nullptr;
 	mDSVAlloc = nullptr;
 	mShaderResourceDescAlloc = nullptr;
 	DX12GraphicsRootSignature::ClearCache();
 	DX12ComputeRootSignature::ClearCache();
 
-	WaitFence(mCurrentFrame - 1);
 	for (auto& deferredReleases : mDeferredReleaseResources)
 	{
 		deferredReleases.clear();
@@ -359,6 +359,7 @@ RefPtr<IDeviceIndexedMesh> DX12RHI::CreateIndexedMesh(EPrimitiveTopology topolog
 	u32 vbSize = NumCast<u32>(vertexBuffer.VertSize * vertexBuffer.NumVerts);
 	auto uploadCtx = mUploader.StartUpload();
 	auto* result = mIndexedMeshes.Acquire();
+	result->Topology = topology;
 	result->VertBuff = CreateVertexBuffer(vertexBuffer, uploadCtx.CmdList.Get());
 	result->VertBuffView.BufferLocation = result->VertBuff->GetGPUVirtualAddress();
 	

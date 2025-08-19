@@ -135,7 +135,7 @@ float4 DoShading(PixelLightingInput li)
 	}
 #endif
 
-	float unshadowed = 0.;
+	float unshadowed = 1.;
 	const float bias = 0.0005;
     float3 worldPos = li.worldPos;
 #ifdef SHADOWMAP_2D

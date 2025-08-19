@@ -5,8 +5,8 @@ namespace rnd
 
 enum class EPrimitiveTopology : u8
 {
-	TRIANGLES,
-	TRIANGLE_STRIP
+	Triangles,
+	TriangleStrip
 };
 
 enum class EDeviceMeshType : u8

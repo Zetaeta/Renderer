@@ -11,9 +11,9 @@ D3D11_PRIMITIVE_TOPOLOGY GetD3D11Topology(EPrimitiveTopology topology)
 {
 	switch (topology)
 	{
-		case EPrimitiveTopology::TRIANGLES:
+		case EPrimitiveTopology::Triangles:
 			return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		case EPrimitiveTopology::TRIANGLE_STRIP:
+		case EPrimitiveTopology::TriangleStrip:
 			return D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 		default:
 			assert(false);

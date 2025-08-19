@@ -4,28 +4,15 @@
 
 using json = nlohmann::json;
 
+
+bool ShouldSerialize(ConstReflectedValue value);
+
 class JsonSerializer
 {
 public:
 	static void Dump(ConstReflectedValue value, std::string file);
 
-	json Serialize(ConstReflectedValue value)
-	{
-		switch (value.GetType().GetTypeCategory())
-		{
-			case ETypeCategory::BASIC:
-				return SerializeBasic(value);
-			case ETypeCategory::CONTAINER:
-				return SerializeContainer(value);
-			case ETypeCategory::CLASS:
-				return SerializeClass(value);
-			case ETypeCategory::POINTER:
-				return SerializePointer(value);
-			default:
-				break;
-		}
-		return json {};
-	}
+	json Serialize(ConstReflectedValue value);
 
 private:
 	json SerializeContainer(ConstReflectedValue value);

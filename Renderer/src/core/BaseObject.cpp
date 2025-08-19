@@ -17,6 +17,6 @@ ClassTypeInfoImpl<BaseObject> BaseObject::TypeInfoHelper::MakeTypeInfo() {
 	Name							  name = "BaseObject";
 	ClassTypeInfo::Properties attrs;
 	ClassTypeInfo const* parent = nullptr;
-	return ClassTypeInfoImpl<BaseObject>(name, parent, std::move(attrs));
+	return ClassTypeInfoImpl<BaseObject>(name, parent, {}, std::move(attrs));
 }
 

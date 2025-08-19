@@ -74,6 +74,8 @@ public:
 		return mDevice != nullptr;
 	}
 
+	IRenderDevice* GetDevice() const { return mDevice; }
+
 	EnumArray<rnd::ECBFrequency, ShaderCBData> CBData;
 	EnumArray<EShadingLayer, RefPtr<rnd::MaterialPixelShader const>> PixelShaders;
 	MaterialArchetypeDesc Desc;
