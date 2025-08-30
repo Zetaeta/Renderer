@@ -144,11 +144,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\core\String.h" />
     <ClInclude Include="src\procedural\ProceduralMeshes.h" />
     <ClInclude Include="src\render\dx12\DX12State.h" />
     <ClInclude Include="src\render\RenderEnums.h" />
     <ClInclude Include="src\render\RenderHelpers.h" />
     <ClInclude Include="src\render\RenderState.h" />
+    <ClInclude Include="src\render\shaders\ShaderCompiler.h" />
     <ClInclude Include="src\scene\DrawableComponent.h" />
     <ClInclude Include="src\scene\Landscape.h" />
     <ClInclude Include="src\3rd\imgui\imgui.h" />
@@ -343,10 +345,12 @@
     <ClInclude Include="src\thread\ThreadUtils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\core\String.cpp" />
     <ClCompile Include="src\procedural\PerlinNoise.cpp" />
     <ClCompile Include="src\procedural\ProceduralMeshes.cpp" />
     <ClCompile Include="src\render\dx11\DX11TextureBase.cpp" />
     <ClCompile Include="src\render\RenderHelpers.cpp" />
+    <ClCompile Include="src\render\shaders\ShaderCompiler.cpp" />
     <ClCompile Include="src\scene\DrawableComponent.cpp" />
     <ClCompile Include="src\scene\Landscape.cpp" />
     <ClCompile Include="src\3rd\imgui\imgui.cpp" />
@@ -739,6 +743,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Dist|x64'">Vertex</ShaderType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="src\shaders\VertColourPixelShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Dist|x64'">Pixel</ShaderType>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>

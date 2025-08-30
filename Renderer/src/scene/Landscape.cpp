@@ -14,7 +14,7 @@ namespace rnd
 {
 DECLARE_MATERIAL_SHADER(LandscapeMat)
 
-DEFINE_MATERIAL_SHADER(LandscapeMat, "PlainPixelShader", "main", "GPULandscape", "VSMain", VA_Position | VA_TexCoord);
+DEFINE_MATERIAL_SHADER(LandscapeMat, "VertColourPixelShader", "main", "GPULandscape", "VSMain", VA_Position | VA_TexCoord);
 
 static PerRenderDevice<rnd::MaterialArchetype> sLandscapeMatArch;
 
@@ -66,7 +66,7 @@ public:
 		props.colour = float4(0,0.5,0, 1);
 		props.roughness = 1;
 		mMaterial = MakeOwning<LandscapeMaterial>(&matArch, EMatType::E_MT_OPAQUE, props, device.ResourceMgr.GetDeviceTexture(mHeightmapTextureRef));
-		mMesh = ProceduralMeshes::CreateTiledPlane(&device, 0.3f, float2(0), { 100, 100 });
+		mMesh = ProceduralMeshes::CreateTiledPlane(&device, 0.1f, float2(0), { 200, 200 });
 	}
 	void DrawDynamic(IPrimitiveDrawer& drawInterface) override
 	{

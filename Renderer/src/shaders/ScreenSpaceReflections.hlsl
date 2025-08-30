@@ -1,8 +1,8 @@
 
 cbuffer ReflectionParameters
 {
-    Matrix projWorld;
-    Matrix screen2World;
+    float4x4 projWorld;
+    float4x4 screen2World;
     float reflectionThreshold;
     float maxDist;
     float traceResolution;

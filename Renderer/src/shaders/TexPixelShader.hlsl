@@ -136,6 +136,18 @@ struct BasePassPSIn
 #if TEXTURED
     float2 uv : TexCoord;
 #endif
+#if VERTEX_COLOUR
+    float4 vertexColour : Colour;
+    float4 GetVertexColour()
+    {
+        return vertexColour;
+    }
+#else
+    float4 GetVertexColour()
+    {
+        return 0;
+    }
+#endif
     float3 normal : Normal;
     float3 tangent : Tangent;
     float3 viewDir : ViewDir;
@@ -148,7 +160,11 @@ PixelLightingInput GetLightingInput(BasePassPSIn interp)
     result.ambientStrength = ambdiffspec.x;
     result.diffuseStrength = ambdiffspec.y;
     result.specularStrength = ambdiffspec.z;
+#if VERTEX_COLOUR
+    float4 colour = interp.GetVertexColour();
+#else
 	float4 colour = matColour;
+#endif
 #if TEXTURED
 	colour = diffuse.Sample(splr, interp.uv);
 #endif

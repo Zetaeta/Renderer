@@ -12,9 +12,9 @@
 
 cbuffer FrameInfo
 {
-    Matrix projectionMat;
-    Matrix inverseProjection;
-    Matrix world2ScreenSpace;
+    float4x4 projectionMat;
+    float4x4 inverseProjection;
+    float4x4 world2ScreenSpace;
     uint2 screenSize;
     float threshold;
     float radius;

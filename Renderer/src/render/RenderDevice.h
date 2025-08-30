@@ -12,6 +12,7 @@
 #include "MaterialManager.h"
 #include "ShaderManager.h"
 #include "GPUTimer.h"
+#include "shaders/ShaderCompiler.h"
 
 struct CompoundMesh;
 class Viewport;

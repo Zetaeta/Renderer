@@ -48,5 +48,4 @@ inline bool FromString(char const* string, bool& value)
 	}
 
 	return false;
-
 }

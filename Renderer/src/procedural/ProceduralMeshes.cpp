@@ -9,6 +9,7 @@ using namespace rnd;
 RefPtr<rnd::IDeviceMesh> CreateTiledPlane(rnd::IRenderDevice* device, float tileSize, vec2 startPos, uvec2 numTiles)
 {
 	u32 numVerts = (numTiles.x + 1) * (numTiles.y + 1);
+	ZE_ASSERT(numVerts <= std::numeric_limits<u16>::max());
 	Vector<FlatVert> verts;
 	verts.resize(numVerts);
 

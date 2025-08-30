@@ -7,12 +7,6 @@
 #include "RndFwd.h"
 
 
-template<typename T>
-Span<T> Single(T& value)
-{
-	return Span<T>(&value, 1u);
-}
-
 namespace rnd
 {
 

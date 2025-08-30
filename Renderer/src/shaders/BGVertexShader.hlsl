@@ -13,8 +13,8 @@ struct VSOut {
 
 cbuffer PerFrameVertexData
 {
-	Matrix screen2World;
-	Matrix world2Camera;
+	float4x4 screen2World;
+	float4x4 world2Camera;
 	float3 cameraPos;
 }
 

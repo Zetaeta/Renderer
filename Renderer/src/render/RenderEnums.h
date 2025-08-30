@@ -22,11 +22,13 @@ enum class EShaderType : u8
 	TessControl,
 	TessEval,
 	Pixel,
+	Mesh,
+	Amplification,
 	Compute,
 	Count,
 
 	GraphicsStart = Vertex,
-	GraphicsCount = Pixel + 1,
+	GraphicsCount = Mesh + 1,
 	VertexPipelineCount = Pixel + 1
 };
 ITER_ENUM(EShaderType);

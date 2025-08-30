@@ -4,15 +4,15 @@
 
 cbuffer PerInstanceVSData : register(b0)
 {
-	Matrix fullTrans;
-	Matrix model2Shade;
-	Matrix model2ShadeDual;
+	float4x4 fullTrans;
+	float4x4 model2Shade;
+	float4x4 model2ShadeDual;
 }
 
 cbuffer PerFrameVertexData : register(b1)
 {
-	Matrix screen2World;
-	Matrix world2Light;
+	float4x4 screen2World;
+	float4x4 world2Light;
 	float3 cameraPos;
 }
 

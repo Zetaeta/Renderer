@@ -4,6 +4,7 @@
 #include "Shader.h"
 #include "DeviceShader.h"
 #include "shaders/ShaderReflection.h"
+#include "shaders/ShaderCompiler.h"
 
 #define ALLOW_RECOMPILATION ZE_BUILD_EDITOR
 
@@ -45,7 +46,10 @@ public:
 		{
 			deviceShader = mCompiler->CompileShader(instanceId, shaderInfo, env, ShaderType::Type, {}, &reflector);
 		}
-		shader->mRequirements = GetRequirements(reflector.get());
+		if (reflector)
+		{
+			shader->mRequirements = GetRequirements(reflector.get());
+		}
 		if (outReflector)
 		{
 			*outReflector = std::move(reflector);

@@ -6,6 +6,7 @@
 #include "d3dcommon.h"
 #include <filesystem>
 #include "render/shaders/ShaderReflection.h"
+#include "render/shaders/ShaderCompiler.h"
 
 namespace rnd { class IShaderReflector; }
 
@@ -18,12 +19,11 @@ namespace rnd::dx
 
 ComPtr<ID3DBlob> DXCompileFile(wchar_t const* filePath, char const* entryPoint, char const* shaderTarget, D3D_SHADER_MACRO const* macros, UINT flags );
 
-class DXShaderCompiler
+class DXShaderCompiler : public ShaderCompilerData
 {
 protected:
 	EnumArray<EShaderType, char const*> mTypeStrings; 
-	fs::path mOutDir;
-	fs::path mSrcDir;
+	fs::path mOutDir = "generated\\shaders";
 //	fs::path mOverrideSrcDir;
 };
 

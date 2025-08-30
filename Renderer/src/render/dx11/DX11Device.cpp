@@ -143,6 +143,7 @@ SamplerHandle DX11Device::GetSampler(SamplerDesc const& desc)
 	if (value == nullptr)
 	{
 		D3D11_SAMPLER_DESC desc11;
+		Zero(desc11);
 		desc11.ComparisonFunc = EnumCast<D3D11_COMPARISON_FUNC>(desc.Comparison);
 		desc11.MipLODBias = desc.MipBias;
 		desc11.MinLOD = desc.MinMip;
@@ -157,13 +158,13 @@ SamplerHandle DX11Device::GetSampler(SamplerDesc const& desc)
 		switch (desc.Filter & 0x0f)
 		{
 		case ETextureFilter::Point:
-			desc11.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+			desc11.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 			break;
 		case ETextureFilter::Bilinear:
-			desc11.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
+			desc11.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
 			break;
 		case ETextureFilter::Trilinear:
-			desc11.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+			desc11.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 			break;
 		default:
 			ZE_ASSERT(false);

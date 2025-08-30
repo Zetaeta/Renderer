@@ -8,8 +8,8 @@ struct MyVSOut {
 
 //cbuffer PointShadowVS
 //{
-//	Matrix projection;
-//	Matrix world2Light;
+//	float4x4 projection;
+//	float4x4 world2Light;
 //}
 
 MyVSOut main( float3 pos : POSITION )

@@ -20,20 +20,26 @@
 
 void AssertionFailed(bool fatal, const char* file, u32 line, const char* fmt, ...);
 
-#define RASSERT_IMPL(expr, stringexpr, ...)\
+#define RASSERT_IMPL(expr, stringexpr, fatal, ...)\
 	if (!(expr))\
 	{\
 		AssertionFailed(true, __FILE__, __LINE__, "Assertion failed: " stringexpr, __VA_ARGS__);\
 		__debugbreak();\
+		if (fatal)\
+		{                                                                                        \
+			std::terminate();\
+		}\
 	}
 
-#define ZE_ASSERT(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
-#define Assertf(expr, msg, ...) RASSERT_IMPL(expr, msg, __VA_ARGS__)
+#define ZE_ASSERT(expr, ...) RASSERT_IMPL(expr, #expr, true, __VA_ARGS__)
+#define Assertf(expr, msg, ...) RASSERT_IMPL(expr, msg, true, __VA_ARGS__)
 // An assertion that will always evaluate the containing expression even if assertions are disabled
-#define CHECK_SUCCEEDED(expr, ...) RASSERT_IMPL(expr, #expr, __VA_ARGS__)
+#define CHECK_SUCCEEDED(expr, ...) RASSERT_IMPL(expr, #expr, true, __VA_ARGS__)
 #define ZE_ASSERT_DEBUG(expr, ...) ZE_ASSERT(expr, __VA_ARGS__)
-#define RCHECK(expr, ...) ((expr) || ([&] { RASSERT_IMPL(false, #expr); return false; })())
-#define ZE_ENSURE(expr, ...) RCHECK(expr, __VA_ARGS__)
+#define RASSERT_IMPL_INLINE(expr, str, fatal, ...)  ((expr) || ([&] { RASSERT_IMPL(false, str, fatal, __VA_ARGS__); return false; })())
+#define RCHECK(expr, ...) RASSERT_IMPL_INLINE(expr, #expr, true, __VA_ARGS__)
+#define ZE_ENSURE(expr) RASSERT_IMPL_INLINE(expr, #expr, false)
+#define ZE_Ensuref(expr, format, ...) RASSERT_IMPL_INLINE(expr, #expr, false, __VA_ARGS__)
 #define ZE_REQUIRE(expr, ...) \
 	if (!ZE_ENSURE(expr))              \
 	{                         \

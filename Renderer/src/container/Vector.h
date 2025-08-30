@@ -131,6 +131,16 @@ T* Find(Range& range, T const& value)
 	return nullptr;
 }
 
+template<typename T, typename Range>
+bool Contains(Range& range, T const& value)
+{
+	if (auto it = std::find(range.begin(), range.end(), value); it != range.end())
+	{
+		return true;
+	}
+	return false;
+}
+
 template<typename Range, typename SizeType>
 void RemoveSwapIndex(Range& range, SizeType index)
 {

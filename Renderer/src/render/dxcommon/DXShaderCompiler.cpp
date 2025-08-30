@@ -54,14 +54,18 @@ ComPtr<ID3DBlob> FXCShaderCompiler::GetShaderBytecode(ShaderInstanceId const& id
 	}
 	macros.push_back({nullptr, nullptr});
 
-	fs::create_directories(mOutDir);
 	auto			 srcName = std::format("{}.hlsl", file);
 	fs::path		 src = mSrcDir / srcName;
 	if (!ZE_ENSURE(fs::exists(src)))
 	{
 		return nullptr;
 	}
-	auto			 lastWrite = fs::last_write_time(src);
+	const ShaderFileDesc* fileDesc = GetFileData(src);
+	if (!ZE_ENSURE(fileDesc))
+	{
+		return nullptr;
+	}
+	auto lastWrite = LastUpdatedTime(*fileDesc);
 	ComPtr<ID3DBlob> outBlob;
 	ComPtr<ID3DBlob> errBlob;
 	UINT			 flags = D3DCOMPILE_ENABLE_STRICTNESS;
@@ -69,6 +73,7 @@ ComPtr<ID3DBlob> FXCShaderCompiler::GetShaderBytecode(ShaderInstanceId const& id
 	flags |= D3DCOMPILE_DEBUG;
 #endif
 
+	fs::create_directories(mOutDir);
 	auto	 csoName = std::format("{}_{:x}.cso", file, id.PermuatationId);
 	fs::path cso = mOutDir / csoName;
 	if (forceRecompile || !fs::exists(cso) || fs::last_write_time(cso) < lastWrite)

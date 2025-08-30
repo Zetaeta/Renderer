@@ -13,6 +13,9 @@ struct VSOut {
 #if TEXTURED
 	float2 uv: TexCoord;
 #endif //TEXTURED
+#if VERTEX_COLOUR
+	float4 vertexColour : Colour;
+#endif
 #if SHADED
 	float3 normal: Normal;
 	float3 tangent: Tangent;

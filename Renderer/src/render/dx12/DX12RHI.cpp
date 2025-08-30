@@ -36,16 +36,29 @@ namespace rnd
 {
 namespace dx12
 {
+// Necessary for running unsigned shaders
+static HRESULT EnableExperimentalShaderModels()
+{
+	static const GUID D3D12ExperimentalShaderModelsID = { /* 76f5573e-f13a-40f5-b297-81ce9e18933f */
+		0x76f5573e,
+		0xf13a,
+		0x40f5,
+		{ 0xb2, 0x97, 0x81, 0xce, 0x9e, 0x18, 0x93, 0x3f }
+	};
+
+	return D3D12EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModelsID, nullptr, nullptr);
+}
 
 static DX12RHI* sRHI = nullptr;
 
 DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCount numBuffers, Scene* scene, Camera::Ref camera)
-:IRenderDevice(new DX12LegacyShaderCompiler), mNumBuffers(numBuffers)
+:IRenderDevice(new DX12ShaderCompiler), mNumBuffers(numBuffers)
 {
 	GRenderController.AddRenderBackend(this);
 
 	ZE_ASSERT(sRHI == nullptr);
 	sRHI = this;
+	HR_ERR_CHECK(EnableExperimentalShaderModels());
 
 	CreateDeviceAndCmdQueue();
 	DX12DescriptorHeap::GetDescriptorSizes(mDevice.Get());

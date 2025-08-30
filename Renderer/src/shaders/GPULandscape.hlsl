@@ -1,4 +1,5 @@
 #define TEXTURED 0
+#define VERTEX_COLOUR 1
 #include "VertexShader.hlsli"
 
 Texture2D<float> Heightmap;
@@ -19,7 +20,11 @@ float SampleHeight(float2 uv)
     return Heightmap.SampleLevel(BilinearSampler, uv + float2(Delta, 0), 0);
 }
 
-VSInputs GenerateVertexInputs(LandscapeInput input)
+static const float SnowCutoff = 1.2f;
+static const float RockCutoff = .5f;
+static const float WaterCutoff = -1.5f;
+
+VSInputs GenerateVertexInputs(LandscapeInput input, out float4 colour)
 {
     VSInputs vsi;
     float2 uv = input.UV;
@@ -47,13 +52,33 @@ VSInputs GenerateVertexInputs(LandscapeInput input)
 #if TEXTURED
     vsi.UV = input.UV; 
 #endif
+    if (height > SnowCutoff)
+	{
+		colour = float4(1, 1, 1, 1);
+	}
+    else if (normal.y < 0.02 || height > RockCutoff)
+	{
+		colour = float4(0.5, 0.5, 0.5, 1);
+	}
+	else if (height > WaterCutoff)
+	{
+		colour = float4(0, 0.5, 0, 1);
+	}
+	else
+	{
+		colour = float4(0, 0, 0.5, 1);
+	}
+//	colour = float4(normal, 1);
     return vsi;
 }
 
 VSOut VSMain(LandscapeInput input)
 {
-    VSInputs vertexInput = GenerateVertexInputs(input);
-    return DefaultVertexShader(vertexInput);
+	float4 colour;
+    VSInputs vertexInput = GenerateVertexInputs(input, colour);
+    VSOut result = DefaultVertexShader(vertexInput);
+	result.vertexColour = colour;
+	return result;
 }
 
 

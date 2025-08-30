@@ -6,7 +6,7 @@
 
 cbuffer ShadingInstanceData
 {
-    Matrix screen2World;
+    float4x4 screen2World;
     float3 cameraPos;
     uint2 screenSize;
 };

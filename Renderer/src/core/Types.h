@@ -15,6 +15,13 @@ using String = std::string;
 template<typename T>
 using Span = std::span<T>;
 
+
+template<typename T>
+Span<T> Single(T& value)
+{
+	return Span<T>(&value, 1u);
+}
+
 //class String : public std::string
 //{
 //public:

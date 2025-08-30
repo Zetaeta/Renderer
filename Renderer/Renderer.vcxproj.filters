@@ -509,6 +509,8 @@
     <ClInclude Include="src\render\RenderHelpers.h" />
     <ClInclude Include="src\procedural\ProceduralMeshes.h" />
     <ClInclude Include="src\scene\DrawableComponent.h" />
+    <ClInclude Include="src\render\shaders\ShaderCompiler.h" />
+    <ClInclude Include="src\core\String.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -796,6 +798,8 @@
     <ClCompile Include="src\render\RenderHelpers.cpp" />
     <ClCompile Include="src\procedural\ProceduralMeshes.cpp" />
     <ClCompile Include="src\scene\DrawableComponent.cpp" />
+    <ClCompile Include="src\render\shaders\ShaderCompiler.cpp" />
+    <ClCompile Include="src\core\String.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">
@@ -853,6 +857,7 @@
     <FxCompile Include="src\shaders\DepthCube_PS.hlsl" />
     <FxCompile Include="src\shaders\MaterialDefinitions.hlsli" />
     <FxCompile Include="src\shaders\GPULandscape.hlsl" />
+    <FxCompile Include="src\shaders\VertColourPixelShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\VertexShader.hlsli">

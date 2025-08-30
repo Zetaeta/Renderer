@@ -8,7 +8,7 @@ cbuffer PerFramePSData : register(b0) {
 #define SHADOWMAP_2D 1
 	float3 dirLightCol;
 	float3 dirLightDir;
-	Matrix world2Light;
+	float4x4 world2Light;
 #endif
 
 #if POINT_LIGHT
@@ -17,7 +17,7 @@ cbuffer PerFramePSData : register(b0) {
 	float pointLightRad;
 	float3 pointLightCol;
 	float pointLightFalloff;
-	Matrix world2Light;
+	float4x4 world2Light;
 #endif
 
 #if SPOTLIGHT
@@ -28,7 +28,7 @@ cbuffer PerFramePSData : register(b0) {
 	float3 spotLightDir;
 	float spotLightFalloff;
 	float3 spotLightCol;
-	Matrix world2Light;
+	float4x4 world2Light;
 #endif
 	int debugMode;
 	float debugGrayscaleExp;
