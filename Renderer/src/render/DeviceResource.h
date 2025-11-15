@@ -5,6 +5,7 @@
 #include <span>
 #include "core/memory/CopyableMemory.h"
 #include "RndFwd.h"
+#include "core/Types.h"
 
 
 namespace rnd

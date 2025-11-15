@@ -76,7 +76,7 @@ class Scene : public BaseSerialized
 	DECLARE_RTTI(Scene, BaseSerialized);
 	Scene(AssetManager* assMan);
 
-	Name MakeName(String base);
+	Name MakeName(Name base);
 
 	bool IsObjNameTaken(Name name);
 

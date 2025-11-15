@@ -7,11 +7,106 @@
 #include "RndFwd.h"
 #include "VertexAttributes.h"
 #include "RenderEnums.h"
+#include "core/ClassTypeInfo.h"
+#include "DeviceResource.h"
 
-namespace rnd { class IDeviceShader; }
+#ifndef SHADER_PARAMETER_VALIDATION
+	#define SHADER_PARAMETER_VALIDATION defined(_DEBUG)
+#endif
+
 
 namespace rnd
 {
+
+class IDeviceShader;
+
+struct ShaderParamInfo
+{
+	PropertyInfo Property;
+};
+
+enum class EShaderParamObjectKind : u8
+{
+	ConstantBuffer,
+	SRV,
+	UAV
+};
+
+inline EResourceType GetResourceDimension(IDeviceResource* resource)
+{
+	return resource ? resource->GetResourceType() : EResourceType::Unknown;
+}
+
+template<typename ObjRefType, EResourceType InDimension>
+class ShaderParamObjectBase
+{
+	ShaderParamObjectBase(EResourceType dimension)
+	{}
+
+	ObjRefType mObject;
+	constexpr static EResourceType Dimension = InDimension;
+
+	ShaderParamObjectBase& operator=(ObjRefType const& obj)
+	{
+#if SHADER_PARAMETER_VALIDATION
+		ZE_ENSURE(GetResourceDimension(obj) == Dimension);
+#endif
+		mObject = obj;
+		return *this;
+	}
+};
+
+template<typename ElementType = float4>
+struct Texture2D : public ShaderParamObjectBase<ResourceView, EResourceType::Texture2D>
+{
+};
+
+
+template<typename ElementType = float4>
+struct RWTexture2D : public ShaderParamObjectBase<UnorderedAccessView, EResourceType::Texture2D>
+{
+};
+
+#define SHADER_PARAMETER_STRUCT_START(name)\
+	constexpr static int _sp_Start = __COUNTER__;\
+	using Self = name;\
+	template<int spIndex>\
+	constexpr static void _sp_GetParamInfo(Vector<ShaderParamInfo>& params);\
+	template<>\
+	constexpr static void _sp_GetParamInfo<_sp_Start>(Vector<ShaderParamInfo>& params) {}
+
+#define SHADER_PARAMETER(Type, name, ...)\
+	Type name __VA_ARGS__;\
+	constexpr static int _sp_Param##name = __COUNTER__;\
+	template <>                                         \
+	constexpr static void _sp_GetParamInfo<_sp_Param##name>(Vector<ShaderParamInfo>& params)\
+	{\
+		_sp_GetParamInfo<_sp_Param##name - 1>(params);\
+		params.push_back({ PropertyInfo(#name, GetTypeInfo<Type>(), offsetof(Self, name)) });\
+	}
+
+#define SHADER_PARAMETER_UAV()
+
+#define SHADER_PARAMETER_STRUCT_END(name)\
+	constexpr static int _sp_End = __COUNTER__;\
+	constexpr static int _sp_Count = _sp_End - _sp_Start - 1;\
+	inline static ClassTypeInfoImpl<Self> _sp_MakeTypeInfo()\
+	{\
+		Vector<ShaderParamInfo> params;\
+		_sp_GetParamInfo<_sp_End - 1>(params);\
+		ClassTypeInfo::Properties attrs;\
+		for (const auto& param : params)\
+		{                                                     \
+			attrs.push_back(param.Property);\
+		}\
+		return ClassTypeInfoImpl<Self>{ #name, nullptr, EClassFlags::None, std::move(attrs) }; \
+	}\
+	struct TypeInfoHelper                                         \
+	{                                                             \
+		inline static ClassTypeInfoImpl<Self> const s_TypeInfo = _sp_MakeTypeInfo();\
+	};
+
+
 
 class ShaderCompileEnv
 {
@@ -107,6 +202,12 @@ struct ShaderRequirements
 	u32 NumCBs = 0;
 };
 
+struct EmptyShaderParameters
+{
+	SHADER_PARAMETER_STRUCT_START(EmptyShaderParameters)
+	SHADER_PARAMETER_STRUCT_END(EmptyShaderParameters)
+};
+
 class Shader : public RefCountedObject
 {
 public:
@@ -166,7 +267,6 @@ public:\
 
 #define DEFINE_SHADER(Type, ShaderFile, EntryPoint)\
 	ShaderTypeId const Type::sRegistryId = ShaderRegistry::Get().RegisterShaderType<Type>(#Type, "" ShaderFile, "" EntryPoint);
-}
 
 #define VS_INPUTS(args)\
 public:\
@@ -179,9 +279,10 @@ public:\
 #define VS_INPUTS_END return VertexAttributeMask(mask); }
 
 
+}
+
 START_HASH(rnd::ShaderInstanceId, id)
 {
 	return CombineHash(id.PermuatationId, id.ShaderId);
 }
 END_HASH(rnd::ShaderInstanceId)
-

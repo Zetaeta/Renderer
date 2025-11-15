@@ -144,13 +144,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\common\Serializer.h" />
+    <ClInclude Include="src\container\Span.h" />
+    <ClInclude Include="src\core\ClassTypeInfoFwd.h" />
+    <ClInclude Include="src\core\Concepts.h" />
+    <ClInclude Include="src\core\Core.h" />
+    <ClInclude Include="src\core\NameBase.h" />
+    <ClInclude Include="src\core\StaticString.h" />
     <ClInclude Include="src\core\String.h" />
+    <ClInclude Include="src\core\TypeInfo.h" />
     <ClInclude Include="src\procedural\ProceduralMeshes.h" />
     <ClInclude Include="src\render\dx12\DX12State.h" />
     <ClInclude Include="src\render\RenderEnums.h" />
     <ClInclude Include="src\render\RenderHelpers.h" />
     <ClInclude Include="src\render\RenderState.h" />
     <ClInclude Include="src\render\shaders\ShaderCompiler.h" />
+    <ClInclude Include="src\render\shaders\VertexFactory.h" />
     <ClInclude Include="src\scene\DrawableComponent.h" />
     <ClInclude Include="src\scene\Landscape.h" />
     <ClInclude Include="src\3rd\imgui\imgui.h" />
@@ -229,7 +238,7 @@
     <ClInclude Include="src\core\PointerTypeInfo.h" />
     <ClInclude Include="src\core\Rotator.h" />
     <ClInclude Include="src\core\Transform.h" />
-    <ClInclude Include="src\core\TypeInfo.h" />
+    <ClInclude Include="src\core\TypeInfoBase.h" />
     <ClInclude Include="src\core\TypeInfoTest.h" />
     <ClInclude Include="src\core\Types.h" />
     <ClInclude Include="src\core\Utils.h" />
@@ -345,6 +354,9 @@
     <ClInclude Include="src\thread\ThreadUtils.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\common\Serializer.cpp" />
+    <ClCompile Include="src\core\ContainerTypeInfo.cpp" />
+    <ClCompile Include="src\core\Name.cpp" />
     <ClCompile Include="src\core\String.cpp" />
     <ClCompile Include="src\procedural\PerlinNoise.cpp" />
     <ClCompile Include="src\procedural\ProceduralMeshes.cpp" />

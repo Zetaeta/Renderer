@@ -23,32 +23,6 @@ bool ClassTypeInfo::InheritsFrom(ClassTypeInfo const& cls) const
 	return (cls == *this) || ((m_Parent != nullptr) && m_Parent->InheritsFrom(cls));
 }
 
-template <>
-ClassTypeInfo const& TClassValuePtr<true>::GetRuntimeType() const
-{
-	if (GetType().IsA<BaseObject>())
-	{
-		return GetAs<BaseObject>().GetTypeInfo();
-	}
-	else
-	{
-		return GetType();
-	}
-}
-
-template <>
-ClassTypeInfo const& TClassValuePtr<false>::GetRuntimeType() const
-{
-	if (GetType().IsA<BaseObject>())
-	{
-		return GetAs<BaseObject>().GetTypeInfo();
-	}
-	else
-	{
-		return GetType();
-	}
-}
-
 
 #define X(name) DEFINE_BASIC_TYPEINFO(name);
 BASIC_TYPES
@@ -56,8 +30,8 @@ BASIC_TYPES
 
 VoidTypeInfo const TypeInfoHelper<void>::s_TypeInfo;
 
- TypeInfo::TypeInfo(String name, size_t size, ETypeCategory cat /*= ETypeCategory::BASIC*/, ETypeFlags flags)
-	: m_Name(name), m_Category(cat), m_Size(size), m_TypeFlags(flags)
+ TypeInfo::TypeInfo(Name name, size_t size, size_t alignment, ETypeCategory cat /*= ETypeCategory::BASIC*/, ETypeFlags flags)
+	: m_Name(name), m_Category(cat), m_Size(NumCast<int>(size)), m_Alignment(NumCast<int>(alignment)), m_TypeFlags(flags)
 {
 	GetTypeDB()[name] = this;
  }

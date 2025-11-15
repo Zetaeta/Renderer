@@ -2,6 +2,8 @@
 
 #include "core/TypeInfo.h"
 #include "core/ClassTypeInfo.h"
+#include "Types.h"
+#include "Utils.h"
 
 class ContainerAccessor
 {
@@ -28,9 +30,9 @@ public:
 		CONST_CONTENT = 2
 	};
 
-	ContainerTypeInfo(Name name, size_t size, ETypeFlags typeFlags, EContainerFlag flags, TypeInfo const& contained,
+	ContainerTypeInfo(Name name, size_t size, size_t alignment, ETypeFlags typeFlags, EContainerFlag flags, TypeInfo const& contained,
 						MemberMetadata&& containedMeta)
-		: TypeInfo(name, size, ETypeCategory::CONTAINER, typeFlags), m_Flags(flags)
+		: TypeInfo(name, size, alignment, ETypeCategory::CONTAINER, typeFlags), m_Flags(flags)
 		, m_ContainedType(contained), m_ContainedMeta(std::move(containedMeta)) {}
 
 	virtual OwningPtr<ContainerAccessor>	  CreateAccessor(ReflectedValue container) const = 0;
@@ -56,6 +58,8 @@ public:
 		return m_ContainedMeta;
 	}
 
+	void Serialize(class Serializer& serializer, void* val) const override;
+
 protected:
 	MemberMetadata m_ContainedMeta;
 	EContainerFlag m_Flags = NONE;
@@ -66,8 +70,8 @@ template<typename T, typename TContained, typename TAccessor, typename TConstAcc
 class ContainerTypeInfoImpl : public ContainerTypeInfo
 {
 public:
-	ContainerTypeInfoImpl(Name name, size_t size, EContainerFlag flags, MemberMetadata&& containedMeta = {})
-		: ContainerTypeInfo(name, size, ComputeFlags<T>(), flags, GetTypeInfo<TContained>(), std::move(containedMeta))
+	ContainerTypeInfoImpl(Name name, EContainerFlag flags, MemberMetadata&& containedMeta = {})
+		: ContainerTypeInfo(name, sizeof(T), alignof(T), ComputeFlags<T>(), flags, GetTypeInfo<TContained>(), std::move(containedMeta))
 	{ }
 
 	OwningPtr<ContainerAccessor> CreateAccessor(ReflectedValue container) const override
@@ -113,6 +117,8 @@ public:
 			ZE_ASSERT(false, "Not movable");
 		}
 	}
+
+	void* NewOperator() const override { return new T; }
 };
 
 template<u32 N, typename T, glm::qualifier Q>
@@ -168,7 +174,7 @@ struct VecNames<N, float, defaultp>
 		};\
 		using AggAccessor = TAggAccessor<ContainerAccessor, false>;\
 		using ConstAggAccessor = TAggAccessor<ConstContainerAccessor, true>;\
-		inline static ContainerTypeInfoImpl<Type, entryType, AggAccessor, ConstAggAccessor> const s_TypeInfo{ NAME.str, sizeof(Type), ContainerTypeInfo::NONE, __VA_ARGS__ };\
+		inline static ContainerTypeInfoImpl<Type, entryType, AggAccessor, ConstAggAccessor> const s_TypeInfo{ NAME.str, ContainerTypeInfo::NONE, __VA_ARGS__ };\
 	}
 
 template<u32 N, typename T, glm::qualifier Q>
@@ -185,14 +191,10 @@ struct TypeInfoHelper<vec<N,T,Q>>
 	public:
 		using cvec = ApplyConst<vec<N,T,Q>, IsConst>;
 		TVecAccessor(vec3& v)
-			: m_Vec(v)
-		{
-		}
+			: m_Vec(v) {}
 
 		TVecAccessor(TReflectedValue<IsConst>& v)
-			: m_Vec(v.GetAs<Type>())
-		{
-		}
+			: m_Vec(v.GetAs<Type>()) {}
 
 		TReflectedValue<IsConst> GetAt(size_t pos) override
 		{
@@ -204,7 +206,6 @@ struct TypeInfoHelper<vec<N,T,Q>>
 		{
 			return m_Vec.length();
 		}
-		//ApplyConst<vec3, IsConst>& m_Vec;
 
 		void Resize(size_t size)
 		{
@@ -217,7 +218,51 @@ struct TypeInfoHelper<vec<N,T,Q>>
 	using VecAccessor = TVecAccessor<ContainerAccessor, false>;
 	using ConstVecAccessor = TVecAccessor<ConstContainerAccessor, true>;
 			
-	inline static ContainerTypeInfoImpl<Type, T, VecAccessor, ConstVecAccessor> const s_TypeInfo{ NAME.str, sizeof(Type), ContainerTypeInfo::NONE };
+	inline static ContainerTypeInfoImpl<Type, T, VecAccessor, ConstVecAccessor> const s_TypeInfo{ NAME.str, ContainerTypeInfo::NONE };
+};
+
+template<u32 M, u32 N, typename T, glm::qualifier Q>
+struct TypeInfoHelper<mat<M, N,T,Q>>
+{
+	constexpr static auto const NAME = VecNames<N,T,Q>::NAME;
+	constexpr static u64 ID = crc64(NAME);
+
+	using Type = mat<M,N,T,Q>;
+	
+	template<typename TParent, bool IsConst>
+	class TVecAccessor : public TParent
+	{
+	public:
+		using cmat = ApplyConst<mat<M,N,T,Q>, IsConst>;
+		TVecAccessor(cmat& v)
+			: m_Vec(v) {}
+
+		TVecAccessor(TReflectedValue<IsConst>& v)
+			: m_Vec(v.GetAs<Type>()) {}
+
+		TReflectedValue<IsConst> GetAt(size_t pos) override
+		{
+			ZE_ASSERT(pos < M * N);
+			return TReflectedValue<IsConst>::From(m_Vec[pos % M][pos / M]);
+		}
+
+		size_t GetSize() const override
+		{
+			return M * N;
+		}
+
+		void Resize(size_t size)
+		{
+			ZE_ASSERT(false);
+		}
+		
+		cmat& m_Vec;
+	};
+
+	using VecAccessor = TVecAccessor<ContainerAccessor, false>;
+	using ConstVecAccessor = TVecAccessor<ConstContainerAccessor, true>;
+			
+	inline static ContainerTypeInfoImpl<Type, T, VecAccessor, ConstVecAccessor> const s_TypeInfo{ NAME.str, ContainerTypeInfo::NONE };
 };
 
 template<typename TEntry>
@@ -275,6 +320,6 @@ struct TypeInfoHelper<Vector<TEntry>>
 
 		Type& m_Vec;
 	};
-	inline static ContainerTypeInfoImpl<Type, TEntry, VectorAccessor, ConstVectorAccessor> const s_TypeInfo{ NAME.str, sizeof(Type), ContainerTypeInfo::RESIZABLE };
+	inline static ContainerTypeInfoImpl<Type, TEntry, VectorAccessor, ConstVectorAccessor> const s_TypeInfo{ NAME.str, ContainerTypeInfo::RESIZABLE };
 };	
 

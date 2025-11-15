@@ -65,7 +65,7 @@ void JsonDeserializer::DeserializePointer(ReflectedValue value, json const& data
 	{
 		return;
 	}
-	TypeInfo const* type = FindTypeInfo(data["type"]);
+	TypeInfo const* type = FindTypeInfo(data["type"].get<String>());
 	if (type == nullptr)
 	{
 		return;

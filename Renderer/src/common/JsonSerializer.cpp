@@ -3,7 +3,7 @@
 #include <fstream>
 #include "core/PointerTypeInfo.h"
 
-bool ShouldSerializeType(TypeInfo const& type)
+static bool ShouldSerializeType(TypeInfo const& type)
 {
 	if (type.IsClass())
 	{
@@ -17,7 +17,6 @@ bool ShouldSerializeType(TypeInfo const& type)
 	{
 		return true;
 	}
-
 }
 
 bool ShouldSerialize(ConstReflectedValue value)
@@ -78,7 +77,7 @@ json JsonSerializer::SerializeClass(ConstClassValuePtr value)
 		auto child = prop.Access(actual);
 		if (ShouldSerialize(child))
 		{
-			j[prop.GetName()] = Serialize(child);
+			j[prop.GetName().c_str()] = Serialize(child);
 		}
 	});
 	return j;
@@ -128,7 +127,7 @@ json JsonSerializer::SerializePointer(ConstReflectedValue value)
 		auto target = typ.GetConst(value);
 		if (ShouldSerialize(target))
 		{
-			j["type"] = target.GetRuntimeType().GetName();
+			j["type"] = target.GetRuntimeType().GetNameStr();
 			j["value"] = Serialize(target);
 		}
 	}

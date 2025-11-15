@@ -1,9 +1,11 @@
 #pragma once
 #include "core/TypeInfo.h"
+#include "core/TypeTraits.h"
 #include <variant>
 #include <array>
 #include <optional>
 #include <span>
+#include "container/Vector.h"
 
 
 #define FOR_EACH_METADATA(X) \
@@ -24,9 +26,9 @@ enum class EMemberMetadata : u32
 
 class MemberMetadata
 {
-	ZE_COPY_PROTECT(MemberMetadata);
+//	ZE_COPY_PROTECT(MemberMetadata);
 public:
-	RMOVE_DEFAULT(MemberMetadata);
+//	RMOVE_DEFAULT(MemberMetadata);
 
 	using DatumValue = std::variant<int,double,String,bool>;
 	class Datum
@@ -177,7 +179,10 @@ public:
 		return TClassValuePtr<IsConst> (this->m_Obj, GetRuntimeType());
 	}
 
-	ClassTypeInfo const& GetRuntimeType() const;
+	ClassTypeInfo const& GetRuntimeType() const
+	{
+		return GetType().GetRuntimeType(*this);
+	}
 
 	//TClassValuePtr(Ptr object, ClassTypeInfo const* typ)
 	//	: TValuePtr(object, typ)
@@ -268,6 +273,11 @@ public:
 		: m_Name(name), m_Type(&type), m_Const(isConst), m_Meta(std::move(meta)), m_Offset(offset), m_Setter(setter) {}
 
 	Name GetName() const { return m_Name; }
+	String GetNameStr() const
+	{
+		return m_Name.ToString();
+	}
+
 	TypeInfo const&		  GetType() const { return *m_Type; }
 	bool				  IsConst() const { return m_Const; }
 	ReflectedValue		  Access(ClassValuePtr const& obj) const;
@@ -290,8 +300,8 @@ FLAG_ENUM(EClassFlags)
 class ClassTypeInfo : public TypeInfo
 {
 public:
-	ClassTypeInfo(Name name, size_t size, ClassTypeInfo const* parent, ETypeFlags typeFlags, EClassFlags classFlags, Vector<PropertyInfo>&& attrs)
-		: TypeInfo(name, size, ETypeCategory::CLASS, typeFlags), m_Parent(parent), m_Properties(std::move(attrs)), mClassFlags(classFlags) {}
+	ClassTypeInfo(Name name, size_t size, size_t alignment, ClassTypeInfo const* parent, ETypeFlags typeFlags, EClassFlags classFlags, Vector<PropertyInfo>&& attrs)
+		: TypeInfo(name, size, alignment, ETypeCategory::CLASS, typeFlags), m_Parent(parent), m_Properties(std::move(attrs)), mClassFlags(classFlags) {}
 
 	virtual bool Contains(TypeInfo const& cls) const override {
 		return cls.GetTypeCategory() == ETypeCategory::CLASS && InheritsFrom(static_cast<ClassTypeInfo const&>(cls));
@@ -312,12 +322,7 @@ public:
 		}
 	}
 
-	ClassTypeInfo const& GetRuntimeType(ConstReflectedValue val) const override
-	{
-		ZE_ASSERT(val.GetType() == *this);
-		return ConstClassValuePtr(val).GetRuntimeType();
-	}
-
+	ClassTypeInfo const& GetRuntimeType(ConstReflectedValue val) const override;
 
 	ClassTypeInfo const* GetParent() const { return m_Parent; }
 
@@ -334,6 +339,29 @@ public:
 		}
 	}
 
+	template<typename TFunc>
+	bool ForEachPropertyWithBreak(TFunc const& func) const
+	{
+		if (m_Parent != nullptr)
+		{
+			if (m_Parent->ForEachPropertyWithBreak(func))
+			{
+				return true;
+			}
+		}
+		for (auto const& prop : m_Properties)
+		{
+			if (func(prop))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	const PropertyInfo* FindProperty(Name name) const;
+
+
 	Vector<ClassTypeInfo const*> const& GetAllChildren() const;
 	Vector<ClassTypeInfo const*> const& GetImmediateChildren() const;
 
@@ -349,8 +377,6 @@ protected:
 	mutable Vector<ClassTypeInfo const*> m_AllChildren;
 	mutable bool m_FoundChildren = false;
 	EClassFlags mClassFlags = EClassFlags::None;
-
-public:
 };
 
 template<typename T>
@@ -377,7 +403,7 @@ class ClassTypeInfoImpl : public ClassTypeInfo
 {
 public:
 	ClassTypeInfoImpl(Name name, ClassTypeInfo const* parent, EClassFlags classFlags, Properties&& attrs)
-		: ClassTypeInfo(name, sizeof(TClass), parent, ComputeFlags<TClass>(), classFlags, std::move(attrs)) {}
+		: ClassTypeInfo(name, sizeof(TClass), alignof(TClass), parent, ComputeFlags<TClass>(), classFlags, std::move(attrs)) {}
 
 	ReflectedValue Construct(void* location) const override
 	{
@@ -418,6 +444,31 @@ public:
 			ZE_ASSERT(false, "Not copyable");
 		}
 	}
+
+	void Serialize(class Serializer& serializer, void* val) const override
+	{
+		if constexpr (TClassTypeTraits<TClass>::HasSerialize)
+		{
+			reinterpret_cast<TClass*>(val)->Serialize(serializer);
+		}
+		else
+		{
+			serializer.SerializeGeneralClass(ClassValuePtr{val, *this});
+		}
+	}
+
+	void* NewOperator() const override
+	{
+		if constexpr (std::constructible_from<TClass>)
+		{
+			return new TClass;
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
 };
 
 
@@ -475,8 +526,7 @@ static auto s_##name = ConstructorHelper([] { block; });
 //	template<>\
 //	DECLARE_CLASS_TYPEINFO_TEMPLATE_(typ)
 //#define DECLARE_CLASS_TYPEINFO_TEMPLATE_(typ)
-#define DECLARE_CLASS_TYPEINFO_(typ)\
-	struct TypeInfoHelper           \
+#define DECLARE_CLASS_TYPEINFO_BODY(typ)\
 	{                               \
 		IF_CT_TYPEID(constexpr static u64 ID = #typ ""_hash;)\
 		constexpr static auto const NAME = Static(#typ);\
@@ -485,6 +535,20 @@ static auto s_##name = ConstructorHelper([] { block; });
 		static MyClassInfo		MakeTypeInfo();\
 		static MyClassInfo const	s_TypeInfo;\
 	};
+
+#define DECLARE_CLASS_TYPEINFO_(typ) struct TypeInfoHelper\
+	DECLARE_CLASS_TYPEINFO_BODY(typ)
+#define DECLARE_CLASS_TYPEINFO_EXT(typ)\
+	template<> struct TypeInfoHelper<typ>\
+		DECLARE_CLASS_TYPEINFO_BODY(typ)
+
+
+
+#define DECLARE_STI_EXTERNAL(Class, Parent)\
+public:\
+	using Super = Parent;\
+	ClassTypeInfo const& GetTypeInfo() const; \
+	static ClassTypeInfo const& StaticClass();
 
 #define DECLARE_STI(Class, Parent)\
 public:\
@@ -514,7 +578,7 @@ public:\
 		return ::GetClassTypeInfo<Class>();\
 	}\
 	temp\
-	ClassTypeInfoImpl<Class> const Class::TypeInfoHelper::s_TypeInfo = MakeTypeInfo();\
+	ClassTypeInfoImpl<Class> const Class::TypeInfoHelper::s_TypeInfo = Class::TypeInfoHelper::MakeTypeInfo();\
 	temp\
 	ClassTypeInfoImpl<Class> Class::TypeInfoHelper::MakeTypeInfo() {\
 		Name name = #Class;\
@@ -522,7 +586,12 @@ public:\
 		auto const* parent = MaybeGetClassTypeInfo<Class::Super>();\
 		EClassFlags classFlags {__VA_ARGS__};
 
-#define DEFINE_CLASS_TYPEINFO(Class, ...)\
+
+#define DEFINE_CLASS_TYPEINFO(Class, ...) DEFINE_CLASS_TYPEINFO_(Class, Class::TypeInfoHelper, __VA_ARGS__)
+
+#define DEFINE_CLASS_TYPEINFO_EXT(Class, ...) DEFINE_CLASS_TYPEINFO_(Class, TypeInfoHelper<Class>, __VA_ARGS__)
+
+#define DEFINE_CLASS_TYPEINFO_(Class, Helper, ...)\
 	ClassTypeInfo const& Class::GetTypeInfo() const\
 	{                                  \
 		return ::GetClassTypeInfo<Class>();\
@@ -531,8 +600,8 @@ public:\
 	{                                        \
 		return ::GetClassTypeInfo<Class>();\
 	}\
-	ClassTypeInfoImpl<Class> const Class::TypeInfoHelper::s_TypeInfo = MakeTypeInfo();\
-	ClassTypeInfoImpl<Class> Class::TypeInfoHelper::MakeTypeInfo() {\
+	ClassTypeInfoImpl<Class> const Helper::s_TypeInfo = Helper::MakeTypeInfo();\
+	ClassTypeInfoImpl<Class> Helper::MakeTypeInfo() {\
 		Name name = #Class;\
 		ClassTypeInfo::Properties attrs;\
 		auto const* parent = MaybeGetClassTypeInfo<Class::Super>();\

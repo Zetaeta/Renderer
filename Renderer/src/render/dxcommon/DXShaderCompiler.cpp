@@ -153,10 +153,8 @@ SmallVector<IShaderReflector::CBDesc, 4> DX11ShaderReflector::GetConstantBuffers
 	return result;
 }
 
-DX11ShaderReflector::DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflection) :mReflection(std::move(reflection))
-{
-
-}
+DX11ShaderReflector::DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflection)
+ :mReflection(std::move(reflection)) {}
 
 void DX11ShaderReflector::GetBindingInfo(_Out_ SmallVector<SRVDesc, 4>& srvs, _Out_ SmallVector<UAVDesc, 4>& uavs)
 {

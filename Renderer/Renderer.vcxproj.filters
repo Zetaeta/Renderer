@@ -114,7 +114,7 @@
     <ClInclude Include="src\core\Transform.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="src\core\TypeInfo.h">
+    <ClInclude Include="src\core\TypeInfoBase.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\core\TypeInfoTest.h">
@@ -511,6 +511,15 @@
     <ClInclude Include="src\scene\DrawableComponent.h" />
     <ClInclude Include="src\render\shaders\ShaderCompiler.h" />
     <ClInclude Include="src\core\String.h" />
+    <ClInclude Include="src\render\shaders\VertexFactory.h" />
+    <ClInclude Include="src\core\StaticString.h" />
+    <ClInclude Include="src\common\Serializer.h" />
+    <ClInclude Include="src\core\TypeInfo.h" />
+    <ClInclude Include="src\core\Core.h" />
+    <ClInclude Include="src\core\NameBase.h" />
+    <ClInclude Include="src\core\ClassTypeInfoFwd.h" />
+    <ClInclude Include="src\container\Span.h" />
+    <ClInclude Include="src\core\Concepts.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">
@@ -800,6 +809,9 @@
     <ClCompile Include="src\scene\DrawableComponent.cpp" />
     <ClCompile Include="src\render\shaders\ShaderCompiler.cpp" />
     <ClCompile Include="src\core\String.cpp" />
+    <ClCompile Include="src\core\Name.cpp" />
+    <ClCompile Include="src\common\Serializer.cpp" />
+    <ClCompile Include="src\core\ContainerTypeInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\2D_PS.hlsl">

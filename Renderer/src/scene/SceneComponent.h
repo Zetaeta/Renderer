@@ -158,7 +158,7 @@ protected:
 	}
 
 	RefPtr<ScreenObject> mScreenObj;
-	std::string			   m_Name;
+	Name			   m_Name;
 	RotTransform			   m_Transform;
 	std::vector<SceneComponent::Owner> m_Children;
 	SceneComponent*		   m_Parent = nullptr;

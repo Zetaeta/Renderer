@@ -34,8 +34,8 @@ public:
 		OWNING = 2
 	};
 
-	PointerTypeInfo(Name name, size_t size, ETypeFlags typeFlags, EPtrFlags flags, TypeInfo const& target)
-		: TypeInfo(name, size, ETypeCategory::POINTER, typeFlags), m_TargetType(target) {}
+	PointerTypeInfo(Name name, size_t size, size_t alignment, ETypeFlags typeFlags, EPtrFlags flags, TypeInfo const& target)
+		: TypeInfo(name, size, alignment, ETypeCategory::POINTER, typeFlags), m_TargetType(target) {}
 
 	virtual bool		  IsNull(ConstReflectedValue ptr) const = 0;
 	virtual ConstReflectedValue GetConst(ConstReflectedValue ptr) const = 0;
@@ -70,8 +70,8 @@ class TPtrTypeInfo : public PointerTypeInfo
 	using T = std::remove_reference_t<decltype(*std::declval<TPtr>())>;
 	constexpr static bool s_ConstTarget = std::is_const_v<T>;
 public:
-	TPtrTypeInfo()
-		: PointerTypeInfo(TypeInfoHelper<TPtr>::NAME.str, sizeof(TPtr), ComputeFlags<TPtr>(), PointerTypeInfo::EPtrFlags((s_ConstTarget ? CONST_TARGET : NONE) | OWNING), GetTypeInfo<T>())
+	TPtrTypeInfo(Name name = TypeInfoHelper<TPtr>::NAME.str)
+		: PointerTypeInfo(name, sizeof(TPtr), alignof(TPtr), ComputeFlags<TPtr>(), PointerTypeInfo::EPtrFlags((s_ConstTarget ? CONST_TARGET : NONE) | OWNING), GetTypeInfo<T>())
 	{
 	}
 
@@ -86,13 +86,16 @@ public:
 		return ConstReflectedValue::From ( **static_cast<TPtr const*>(ptr.GetPtr()) );
 	}
 
+	void* NewOperator() const
+	{
+		return new T;
+	}
+
 	bool New(ReflectedValue holder, TypeInfo const& newType) const override
 	{
-		ZE_ASSERT(holder.GetType().IsDefaultConstructible());
-		void* storage = new u8[newType.GetSize()];
-		newType.Construct(storage);
+		ZE_ASSERT(holder.GetType() == *this);
 		TPtr& uptr = holder.GetAs<TPtr>();
-		uptr = TPtr { static_cast<T*>(storage) };
+		uptr = TPtr { static_cast<T*>(newType.NewOperator()) };
 		return true;
 	}
 
@@ -104,7 +107,7 @@ public:
 		}
 		else
 		{
-			ZE_ASSERT(false, "Can't copy %s", TypeInfoHelper<T>::Name.str);
+			ZE_ASSERT(false, "Can't copy %s", GetTypeInfoHelper<T>::NAME.str);
 		}
 	}
 
@@ -119,6 +122,16 @@ public:
 		ZE_ASSERT(from.GetType() == *this && to.GetType() == *this);
 		to.GetAs<TPtr>() = std::move(from.GetAs<TPtr>());
 	}
+
+	void Serialize(class Serializer& serializer, void* val)
+	{
+		ZE_ASSERT(false);
+	}
+
+	void Serialize(class Serializer& serializer, void* val) const override
+	{
+		ZE_ASSERT(false);
+	}
 };
 
 template<typename T>
@@ -132,11 +145,11 @@ struct TypeInfoHelper<std::unique_ptr<T>>
 	using UPtr = std::unique_ptr<T>;
 	using Type = std::unique_ptr<T>;
 
-	class UniquePtrTypeInfo : public PointerTypeInfo
+	class UniquePtrTypeInfo : public TPtrTypeInfo<UPtr>
 	{
 	public:
 		UniquePtrTypeInfo()
-			: PointerTypeInfo(NAME.str, sizeof(UPtr), ComputeFlags<Type>(), PointerTypeInfo::EPtrFlags((s_ConstTarget ? CONST_TARGET : NONE) | OWNING), GetTypeInfo<T>())
+			: TPtrTypeInfo<UPtr>(NAME.str)
 		{
 		}
 
@@ -151,31 +164,71 @@ struct TypeInfoHelper<std::unique_ptr<T>>
 			return ConstReflectedValue::From ( **static_cast<UPtr const*>(ptr.GetPtr()) );
 		}
 
-		bool New(ReflectedValue holder, TypeInfo const& newType) const override
-		{
-			ZE_ASSERT(holder.GetType().IsDefaultConstructible());
-			void* storage = new u8[newType.GetSize()];
-			newType.Construct(storage);
-			UPtr& uptr = holder.GetAs<UPtr>();
-			uptr = UPtr { static_cast<T*>(storage) };
-			return true;
-		}
+		//bool New(ReflectedValue holder, TypeInfo const& newType) const override
+		//{
+		//	ZE_ASSERT(holder.GetType().IsDefaultConstructible());
+		//	void* storage = new u8[newType.GetSize()];
+		//	newType.Construct(storage);
+		//	UPtr& uptr = holder.GetAs<UPtr>();
+		//	uptr = UPtr { static_cast<T*>(storage) };
+		//	return true;
+		//}
 
-		void Copy(ConstReflectedValue const& from, ReflectedValue const& to) const override
-		{
-			ZE_ASSERT(false, "Can't copy unique ptr");
-		}
+		//void Copy(ConstReflectedValue const& from, ReflectedValue const& to) const override
+		//{
+		//	ZE_ASSERT(false, "Can't copy unique ptr");
+		//}
 
-		ReflectedValue Construct(void* location) const override
-		{
-			T* value = new (location) T;
-			return ReflectedValue {value, this};
-		}
+		//ReflectedValue Construct(void* location) const override
+		//{
+		//	T* value = new (location) T;
+		//	return ReflectedValue {value, this};
+		//}
 
 		void Move(ReflectedValue const& from, ReflectedValue const& to) const override
 		{
 			ZE_ASSERT(from.GetType() == *this && to.GetType() == *this);
 			to.GetAs<UPtr>() = std::move(from.GetAs<UPtr>());
+		}
+
+		TypeInfo const& GetInnerType()
+		{
+			return GetTypeInfo<T>();
+		}
+
+		void Serialize(class Serializer& serializer, void* val) const override
+		{
+			ReflectedValue value(val, this);
+			TypeInfo const* const nullType = &NullTypeInfo();
+			TypeInfo const* innerType = nullType;
+			UPtr& pointer = value.GetAs<UPtr>();
+			if (pointer != nullptr && !serializer.IsLoading())
+			{
+				innerType = &value.GetRuntimeType();
+			}
+			serializer.EnterPointer(innerType);
+			if (serializer.IsLoading())
+			{
+				if (innerType == nullType)
+				{
+					pointer = nullptr;
+				}
+				else
+				{
+					ReflectedValue pointedAt = this->Get(value);
+					if (pointedAt || pointedAt.GetRuntimeType() != *innerType)
+					{
+						this->New(value, *innerType);
+					}
+
+					innerType->Serialize(serializer, &*pointer);
+				}
+			}
+			else
+			{
+				serializer << *pointer;
+			}
+			serializer.LeavePointer();
 		}
 	};
 	inline static UniquePtrTypeInfo const  s_TypeInfo;

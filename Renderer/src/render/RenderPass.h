@@ -14,7 +14,7 @@ class RGBuilder;
 class RenderPass
 {
 public:
-	RenderPass(RenderContext* rCtx, String&& name = "");
+	RenderPass(RenderContext* rCtx, Name name = "");
 	virtual ~RenderPass() {}
 
 	void ExecuteWithProfiling(IRenderDeviceCtx& deviceCtx)
@@ -37,9 +37,9 @@ public:
 		mEnabled = enabled;
 	}
 
-	const String& GetName() const
+	String GetName() const
 	{
-		return PassName;
+		return PassName.ToString();
 	}
 
 	IRenderDeviceCtx* DeviceCtx();
@@ -57,7 +57,7 @@ public:
 #endif
 
 protected:
-	String PassName;
+	Name PassName;
 	RenderContext* mRCtx = nullptr;
 	IRenderDeviceCtx* mDeviceCtx = nullptr;
 	bool mEnabled = true;

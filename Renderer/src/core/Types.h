@@ -5,15 +5,13 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include <span>
+#include "container/Span.h"
+#include "Name.h"
 
 template<typename T>
 using Vector = std::vector<T>;
 
 using String = std::string;
-
-template<typename T>
-using Span = std::span<T>;
 
 
 template<typename T>
@@ -53,12 +51,12 @@ Span<T> Single(T& value)
 //};
 
 
-using Name = String;
+//using Name = String;
 
-inline const char* GetNameData(Name const& name)
-{
-	return name.c_str();
-}
+//inline const char* operator*(const String& str)
+//{
+//	return str.c_str();
+//}
 
 template<typename T>
 using OwningPtr = std::unique_ptr<T>;

@@ -2,6 +2,7 @@
 
 #include "BaseDefines.h"
 #include "CoreTypes.h"
+#include "Core.h"
 #include <glm/gtc/quaternion.hpp>
 #include <glm/ext/quaternion_float.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
@@ -10,7 +11,6 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <bit>
-#include "Utils.h"
 
 
 #define ASSERT(...) assert(__VA_ARGS__)

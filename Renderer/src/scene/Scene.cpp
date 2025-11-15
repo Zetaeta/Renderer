@@ -86,7 +86,7 @@ Scene::Scene(AssetManager* assMan) : m_AssetManager(assMan), mDataInterface(std:
 //
 //}
 
-Name Scene::MakeName(String base)
+Name Scene::MakeName(Name base)
 {
 	if (!IsObjNameTaken(base))
 	{
@@ -115,7 +115,7 @@ bool Scene::IsObjNameTaken(Name name)
 
 void Scene::InsertCompoundMesh(CompoundMesh::Ref cmesh)
 {
-	auto& obj = m_Objects.emplace_back(make_unique<SceneObject>(this,cmesh->name));
+	auto& obj = m_Objects.emplace_back(std::make_unique<SceneObject>(this,cmesh->name));
 	auto& smc = obj->SetRoot<StaticMeshComponent>();
 	smc.SetMesh(cmesh);
 	//obj.root
@@ -182,7 +182,7 @@ SceneObject* Scene::CreateObject(ClassTypeInfo const& type)
 	auto& ptr = m_Objects.emplace_back();
 	auto const& ptrType = static_cast<PointerTypeInfo const&>(::GetTypeInfo(ptr));
 	ptrType.New(ReflectedValue::From(ptr), type);
-	ptr->SetName(MakeName(type.GetName()));
+	ptr->SetName(type.GetName());
 	ptr->SetScene(this);
 	ptr->Initialize();
 	return ptr.get();

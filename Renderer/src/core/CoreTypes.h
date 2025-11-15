@@ -16,3 +16,5 @@ using uint4 = uvec4;
 
 
 using CompileTimeString = char const*;
+
+class Name;

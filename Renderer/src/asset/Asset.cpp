@@ -4,7 +4,7 @@
 
 namespace fs = std::filesystem;
 
-AssetPath::AssetPath(Name primaryPath, Name subPath /*= {}*/)
+AssetPath::AssetPath(String primaryPath, String subPath /*= {}*/)
 	: PrimaryPath(primaryPath), SubPath(subPath)
 {
 	if (SubPath.empty() && !PrimaryPath.empty())
@@ -58,7 +58,7 @@ AssetPath AssetPath::GetAssetRootPath() const
 	return AssetPath(PrimaryPath);
 }
 
-AssetPath AssetPath::WithSubpath(Name subPath)
+AssetPath AssetPath::WithSubpath(String subPath)
 {
 	return AssetPath(PrimaryPath, subPath);
 }

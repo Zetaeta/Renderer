@@ -11,7 +11,7 @@ class IShaderReflector
 public:
 	struct CBDesc
 	{
-		Name Name;
+		String Name;
 		u32 Size;
 	};
 

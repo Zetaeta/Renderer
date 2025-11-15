@@ -18,7 +18,7 @@ IRenderDevice* RenderPass::Device()
 }
 
 
-RenderPass::RenderPass(RenderContext* rCtx, String&& name /*= ""*/) : mRCtx(rCtx), PassName(std::move(name))
+RenderPass::RenderPass(RenderContext* rCtx, Name name /*= ""*/) : mRCtx(rCtx), PassName(std::move(name))
 {
 //	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 	wchar_t buffer[64];

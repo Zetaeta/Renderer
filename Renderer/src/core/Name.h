@@ -1,13 +1,22 @@
 #pragma once
 
-#include <glm/fwd.hpp>
-using namespace glm;
+#include "container/Vector.h"
+#include "Hash.h"
+#include "NameBase.h"
+#include "ClassTypeInfo.h"
 
-class Name
+inline const char* GetNameData(Name const& name)
 {
-	Name(char const* str) 
+	return name.c_str();
+}
+
+template<>
+struct std::hash<Name>
+{
+	size_t operator()(const Name& name) const
 	{
+		return CombineHash(name.GetHash(), name.GetIndex());
 	}
-	u64 Hash;
 };
 
+DECLARE_CLASS_TYPEINFO_EXT(Name);

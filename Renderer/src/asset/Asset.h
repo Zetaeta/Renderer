@@ -13,7 +13,7 @@ struct AssetPath
 {
 	DECLARE_STI_NOBASE(AssetPath);
 	AssetPath() = default;
-	explicit AssetPath(Name primaryPath, Name subPath = {});
+	explicit AssetPath(String primaryPath, String subPath = {});
 
 	EAssetSource GetSource() const;
 	
@@ -29,7 +29,7 @@ struct AssetPath
 
 	AssetPath GetAssetRootPath() const;
 
-	AssetPath WithSubpath(Name subPath);
+	AssetPath WithSubpath(String subPath);
 
 	static AssetPath Content(const String& pathFromContent);
 	static AssetPath ContentFile(const String& filePath);
@@ -42,8 +42,8 @@ struct AssetPath
 	}
 
 public:
-	Name PrimaryPath;
-	Name SubPath;
+	String PrimaryPath;
+	String SubPath;
 };
 
 template<>

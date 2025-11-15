@@ -2,6 +2,7 @@
 #include "RndFwd.h"
 #include "container/Vector.h"
 #include "RenderingThread.h"
+#include "core/Types.h"
 
 namespace rnd
 {

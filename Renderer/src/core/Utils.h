@@ -1,119 +1,10 @@
 #pragma once
 #include "CoreTypes.h"
 #include "core/Types.h"
+#include "core/Core.h"
+#include "core/Concepts.h"
 #include <string>
 #include <vector>
-
-#define Zero(x) memset(&x, 0, sizeof(x))
-
-#define ZE_COPY_PROTECT(ClassName) ClassName(ClassName const& other) = delete;\
-								ClassName& operator=(ClassName const& other) = delete;
-#define ZE_MOVE_PROTECT(ClassName) ClassName(ClassName&& other) = delete;\
-								ClassName& operator=(ClassName&& other) = delete;
-#define RCOPY_MOVE_PROTECT(ClassName) ZE_COPY_PROTECT(ClassName) ZE_MOVE_PROTECT(ClassName)
-
-#define RCOPY_DEFAULT(ClassName) ClassName(ClassName const& other) = default;\
-								ClassName& operator=(ClassName const& other) = default;
-
-#define RMOVE_DEFAULT(ClassName) ClassName(ClassName&& other) noexcept = default;\
-								ClassName& operator=(ClassName&& other) noexcept = default;
-
-void AssertionFailed(bool fatal, const char* file, u32 line, const char* fmt, ...);
-
-#define RASSERT_IMPL(expr, stringexpr, fatal, ...)\
-	if (!(expr))\
-	{\
-		AssertionFailed(true, __FILE__, __LINE__, "Assertion failed: " stringexpr, __VA_ARGS__);\
-		__debugbreak();\
-		if (fatal)\
-		{                                                                                        \
-			std::terminate();\
-		}\
-	}
-
-#define ZE_ASSERT(expr, ...) RASSERT_IMPL(expr, #expr, true, __VA_ARGS__)
-#define Assertf(expr, msg, ...) RASSERT_IMPL(expr, msg, true, __VA_ARGS__)
-// An assertion that will always evaluate the containing expression even if assertions are disabled
-#define CHECK_SUCCEEDED(expr, ...) RASSERT_IMPL(expr, #expr, true, __VA_ARGS__)
-#define ZE_ASSERT_DEBUG(expr, ...) ZE_ASSERT(expr, __VA_ARGS__)
-#define RASSERT_IMPL_INLINE(expr, str, fatal, ...)  ((expr) || ([&] { RASSERT_IMPL(false, str, fatal, __VA_ARGS__); return false; })())
-#define RCHECK(expr, ...) RASSERT_IMPL_INLINE(expr, #expr, true, __VA_ARGS__)
-#define ZE_ENSURE(expr) RASSERT_IMPL_INLINE(expr, #expr, false)
-#define ZE_Ensuref(expr, format, ...) RASSERT_IMPL_INLINE(expr, #expr, false, __VA_ARGS__)
-#define ZE_REQUIRE(expr, ...) \
-	if (!ZE_ENSURE(expr))              \
-	{                         \
-		return __VA_ARGS__;\
-	}
-
-#define NULL_OR(ptr, expr) (((ptr) == nullptr) ? nullptr : ((ptr)->expr))
-
-template<typename TEnum>
-constexpr auto Denum(TEnum e)
-{
-	return static_cast<std::underlying_type_t<TEnum>>(e);
-}
-
-#define DECLARE_ENUM_OP(EType, op)\
-	constexpr EType operator op (EType a, EType b) \
-	{                                 \
-		return EnumCast<EType>(Denum(a) op Denum(b));      \
-	}\
-	constexpr EType operator op (EType a, std::underlying_type_t<EType> b) \
-	{                                 \
-		return EnumCast<EType>(Denum(a) op b);      \
-	}
-
-#define DECLARE_ENUM_ASSOP(EType, op, assop)\
-	constexpr EType& operator assop (EType& a, EType b) \
-	{                                 \
-		return (a = a op b);\
-	}
-
-#define FLAG_ENUM(EType)\
-	DECLARE_ENUM_OP(EType, |)\
-	DECLARE_ENUM_OP(EType, &)\
-	DECLARE_ENUM_OP(EType, ^)\
-	DECLARE_ENUM_ASSOP(EType, |, |=)\
-	DECLARE_ENUM_ASSOP(EType, &, &=)\
-	DECLARE_ENUM_ASSOP(EType, ^, ^=)\
-	constexpr bool operator==(EType enumVal, std::underlying_type_t<EType> other)\
-	{\
-		return Denum(enumVal) == other;\
-	}\
-	constexpr bool operator!=(EType enumVal, std::underlying_type_t<EType> other)\
-	{\
-		return Denum(enumVal) != other;\
-	}\
-	constexpr bool operator !(EType enumVal)\
-	{\
-		return enumVal == 0;\
-	}\
-	constexpr EType operator~(EType enumVal)\
-	{\
-		return EnumCast<EType>(~Denum(enumVal));\
-	}\
-
-#define DECLARE_ENUM_UNOP(EType, op, valop)\
-	constexpr EType& operator op(EType& val)\
-	{                                \
-		return (val = EnumCast<EType>(Denum(val) valop));\
-	}
-
-#define ITER_ENUM(EType)\
-	DECLARE_ENUM_UNOP(EType, ++, +1)\
-	DECLARE_ENUM_UNOP(EType, --, -1)
-
-#define POD_EQUALITY(Type)\
-	bool operator==(Type const& other) const\
-	{\
-		static_assert(sizeof(*this) == sizeof(Type));\
-		return memcmp(this, &other, sizeof(Type)) == 0;\
-	}\
-	bool operator!=(Type const& other) const\
-	{\
-		return !(*this == other);\
-	}
 
 
 template<typename TInt>
@@ -158,20 +49,6 @@ private:
 	iterator begin_;
 	iterator end_;
 };
-
-template <typename T, bool IsConst>
-struct TApplyConst
-{
-	using Type = T;
-};
-template <typename T >
-struct TApplyConst<T, true>
-{
-	using Type = const T;
-};
-
-template <typename T, bool IsConst>
-using ApplyConst = typename TApplyConst<T,IsConst>::Type;
 
 template <typename TCont>
 class BracketAccessed
@@ -339,64 +216,6 @@ TTo Convert(TFrom const& in)
 	return Convert(in, out);
 }
 
-template <unsigned N>
-struct StaticString
-{
-	constexpr StaticString() {}
-	constexpr StaticString(char (&other)[N])
-	{
-		for (int i=0; i<N; ++i)
-		{
-			str[i] = other[i];
-		}
-	}
-
-	char str[N];
-};
-
-
-template<unsigned N>
-constexpr auto Static(char const (&str)[N])
-{
-	StaticString <N> result;
-	for (int i=0; i<N; ++i)
-	{
-		result.str[i] = str[i];
-	}
-	return result;
-}
-
-
-//template<char... cs>
-//constexpr auto operator ""_static() -> StaticString < sizeof...(cs) + 1>
-//{
-//
-//	result.str[sizeof...(cs)] = '\0';
-//	char* dst = result.str;
-//	for (char c : {cs...})
-//	{
-//		*dst++ = c;
-//	}
-//	return result;
-//}
-
-template <unsigned... Len>
-constexpr auto concat(const char (&... strings)[Len])
-{
-	constexpr unsigned N = (... + Len) - sizeof...(Len);
-	StaticString<N + 1>	   result = {};
-	result.str[N] = '\0';
-
-	char* dst = result.str;
-	for (const char* src : { strings... })
-	{
-		for (; *src != '\0'; src++, dst++)
-		{
-			*dst = *src;
-		}
-	}
-	return result;
-}
 
 // https://stackoverflow.com/questions/23999573/convert-a-number-to-a-string-literal-with-constexpr
 namespace detail
@@ -470,35 +289,9 @@ inline bool IsValid(std::unique_ptr<T> const& ptr)
 }
 
 
-template<typename T, typename TFrom>
-constexpr T EnumCast(TFrom from)
-{
-	return static_cast<T>(from);
-}
-
-template<typename E>
-bool HasAnyFlags(E val, E flag)
-{
-	return !!(val & flag);
-}
-
-inline bool HasAnyFlags(u32 val, u32 flag)
-{
-	return val & flag;
-}
-
-template<typename E>
-bool HasAllFlags(E val, E flags)
-{
-	return (val & flags) == flags;
-}
-
 
 template<typename T>
 using RefWrap = std::reference_wrapper<T>;
-
-template<typename Derived, typename Base>
-concept DerivedStrip = std::derived_from<std::remove_cvref_t<Derived>, Base>;
 
 bool FindIgnoreCase(const std::string_view& haystack, const std::string_view& needle);
 
