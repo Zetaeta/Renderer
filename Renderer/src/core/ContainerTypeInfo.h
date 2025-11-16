@@ -167,7 +167,7 @@ struct VecNames<N, float, defaultp>
 \
 			void Resize(size_t size)\
 			{\
-				ZE_ASSERT (false);\
+				ZE_ASSERT (size == SIZE);\
 			}\
 			\
 			CEntry* m_Start;\
@@ -209,7 +209,7 @@ struct TypeInfoHelper<vec<N,T,Q>>
 
 		void Resize(size_t size)
 		{
-			ZE_ASSERT(false);
+			ZE_ASSERT(size == N);
 		}
 		
 		cvec& m_Vec;

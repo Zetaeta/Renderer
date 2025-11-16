@@ -60,7 +60,8 @@ public:
 	u32 mHash;
 	u32 mIndex;
 private:
-	void FinishConstructing(String&& str);
+	template<typename T>
+	void FinishConstructing(T&& str);
 };
 
 template<>

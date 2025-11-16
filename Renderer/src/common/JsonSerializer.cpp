@@ -36,6 +36,7 @@ PRIMITIVE_TYPES
 #undef X
 
 JsonSerializer::JsonSerializer()
+	: Serializer(ESerializerFlags::Storing)
 {
 	Stack.push_back({&Root, EStackItemType::Unset});
 }
@@ -103,7 +104,7 @@ bool JsonSerializer::ReadNextMapKey(std::string_view& key)
 	ZE_ASSERT(false);
 }
 
-void JsonSerializer::EnterPointer(const TypeInfo* innerType)
+void JsonSerializer::EnterPointer(TypeInfo const*& innerType)
 {
 	json& jsonWrapper = Next();
 	jsonWrapper["type"] = innerType->GetNameStr();
@@ -127,7 +128,7 @@ void JsonSerializer::SetType(EStackItemType& inOutType, EStackItemType setType)
 	inOutType = setType;
 }
 
-JsonSerializer::JsonStackItem& JsonSerializer::Top()
+JsonSerializer::StackItem& JsonSerializer::Top()
 {
 	ZE_ASSERT(Stack.size() > 0);
 

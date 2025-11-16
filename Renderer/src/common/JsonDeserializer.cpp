@@ -4,73 +4,131 @@
 
 
 
+JsonDeserializer::JsonDeserializer(const json& jsonVal)
+	:Serializer(ESerializerFlags::Loading)
+{
+	mStack.push_back({&jsonVal});
+}
+
 bool JsonDeserializer::Read(ReflectedValue value, std::string const& file)
 {
 	std::ifstream i(file);
 	if (!i) return false;
-	JsonDeserializer jd;
 	json j;
 	i >> j;
+	JsonDeserializer jd(j);
 	jd.Deserialize(value, j);
 	return true;
 }
 
-void JsonDeserializer::DeserializeContainer(ReflectedValue value, json const& data)
+void JsonDeserializer::Deserialize(ReflectedValue value, json const& data)
 {
-	ContainerTypeInfo const& typ = static_cast<ContainerTypeInfo const&>(value.GetType());
-	auto acc = typ.CreateAccessor(value);
-	if (typ.HasFlag(ContainerTypeInfo::RESIZABLE))
+	value.GetRuntimeType().Serialize(*this, const_cast<void*>(value.GetPtr()));
+}
+
+void JsonDeserializer::SerializeString(String& str)
+{
+	str = Next();
+}
+
+
+#define X(PrimType	)\
+	JsonDeserializer& JsonDeserializer::operator<<(PrimType& num)\
+	{                                                        \
+		num = Next();\
+		return *this;\
+	}
+
+PRIMITIVE_TYPES
+
+#undef X
+
+void JsonDeserializer::EnterArray(int& ArrayNum)
+{
+	auto& entry = Top();
+	if (ZE_ENSURE(entry.Item->is_array()))
 	{
-		acc->Resize(data.size());
+		ArrayNum = NumCast<int>(entry.Item->size());
+		entry.It = entry.Item->begin();
 	}
 	else
 	{
-		ZE_ASSERT(acc->GetSize() == data.size());
+		ArrayNum = 0;
 	}
-	for (int i = 0; i < acc->GetSize(); ++i)
-	{
-		Deserialize(acc->GetAt(i), data[i]);
-		
-	}
-	
 }
 
-void JsonDeserializer::DeserializeClass(ReflectedValue value, json const& data)
+void JsonDeserializer::LeaveArray()
 {
-	ClassTypeInfo const& type = static_cast<ClassTypeInfo const&>(value.GetRuntimeType());
-	type.ForEachProperty([this, value, &data] (PropertyInfo const& prop)
-	{
-		auto it = data.find(prop.GetName());
-		if (it != data.end())
-		{
-			Deserialize(prop.Access(value), *it);
-		}
-	});
+	ZE_ASSERT(Top().Item->is_array());
+	mStack.pop_back();
 }
 
-void JsonDeserializer::DeserializeBasic(ReflectedValue value, json const& data)
+void JsonDeserializer::EnterStringMap()
 {
-	auto const& typ = value.GetType();
-#define X(basic) if (typ == GetTypeInfo<basic>())\
-	{                                \
-		value.GetAs<basic>() = data.get<basic>(); \
-	}
-	BASIC_TYPES
-#undef X
+	auto& entry = Top();
+	ZE_ENSURE(entry.Item->is_object());
+	entry.It = entry.Item->begin();
 }
 
-void JsonDeserializer::DeserializePointer(ReflectedValue value, json const& data)
+bool JsonDeserializer::ReadNextMapKey(std::string_view& key)
 {
-	if (data == json{})
+	auto& entry = Top();
+	if (entry.It == entry.Item->end())
 	{
-		return;
+		return false;
 	}
-	TypeInfo const* type = FindTypeInfo(data["type"].get<String>());
-	if (type == nullptr)
+	else
 	{
-		return;
+		key = entry.It.key();
+		const json& val = entry.It.value();
+		entry.It++;
+		mStack.push_back({&val});
+		return true;
 	}
-	PointerTypeInfo const& typ = static_cast<PointerTypeInfo const&>(value.GetType());
-	typ.New(value, *type);
-	Deserialize(typ.Get(value).Downcast(), data["value"]);
+}
+
+void JsonDeserializer::EnterPointer(TypeInfo const*& innerType)
+{
+	auto& wrapper = Next();
+	auto it = wrapper.find("type");
+	auto* type = FindTypeInfo(std::string_view(*it));
+	if (type && type != &NullTypeInfo())
+	{
+		innerType = type;
+		ZE_ASSERT(it != wrapper.end());
+		mStack.push_back({&*wrapper.find("value")});
+	}
+	else
+	{
+		innerType = &NullTypeInfo();
+	}
+}
+
+void JsonDeserializer::LeavePointer()
+{
+}
+
+void JsonDeserializer::LeaveStringMap()
+{
+	ZE_ASSERT(Top().Item->is_object());
+	mStack.pop_back();
+}
+
+json const& JsonDeserializer::Next()
+{
+	auto& entry = Top();
+	if (entry.Item->is_array())
+	{
+		ZE_ASSERT(entry.It != entry.Item->end());
+		return *(entry.It++);
+		//ZE_ASSERT(entry.Item->is_array() && entry.ArrayIndex < entry.Item->size());
+		//return (*entry.Item)[entry.ArrayIndex++];
+	}
+	else
+	{
+//		ZE_ASSERT(entry.Type == EStackItemType::Unset);
+		json const& value = *entry.Item;
+		mStack.pop_back();
+		return value;
+	}
 }

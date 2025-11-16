@@ -17,6 +17,9 @@ using NoneTypeInfoType = std::nullptr_t;
 class Serializer
 {
 public:
+	Serializer(ESerializerFlags flags)
+		: mFlags(flags) {}
+
 #define X(type)\
 	virtual Serializer& operator<<(type& val)\
 	{\
@@ -67,7 +70,7 @@ public:
 	// Returned view is guaranteed to be valid until next call to ReadNextMapKey/LeaveStringMap
 	virtual bool ReadNextMapKey(std::string_view& key) { return {}; }
 
-	virtual void EnterPointer(const TypeInfo* innerType) = 0;
+	virtual void EnterPointer(const TypeInfo*& innerType) = 0;
 	virtual void LeavePointer() {}
 	virtual void LeaveStringMap() {}
 

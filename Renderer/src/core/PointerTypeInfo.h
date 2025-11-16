@@ -129,9 +129,10 @@ public:
 		TypeInfo const* const nullType = &NullTypeInfo();
 		TypeInfo const* innerType = nullType;
 		TPtr& pointer = value.GetAs<TPtr>();
+		ReflectedValue pointedAt = this->Get(value);
 		if (pointer != nullptr && !serializer.IsLoading())
 		{
-			innerType = &value.GetRuntimeType();
+			innerType = &pointedAt.GetRuntimeType();
 		}
 		serializer.EnterPointer(innerType);
 		if (serializer.IsLoading())
@@ -142,8 +143,7 @@ public:
 			}
 			else
 			{
-				ReflectedValue pointedAt = this->Get(value);
-				if (pointedAt || pointedAt.GetRuntimeType() != *innerType)
+				if (!pointedAt || pointedAt.GetRuntimeType() != *innerType)
 				{
 					this->New(value, *innerType);
 				}

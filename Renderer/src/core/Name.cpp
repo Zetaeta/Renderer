@@ -42,7 +42,8 @@ Name::Name(String&& str)
 	FinishConstructing(std::move(str));
 }
 
-void Name::FinishConstructing(String&& string)
+template<typename T>
+void Name::FinishConstructing(T&& string)
 {
 	std::scoped_lock lock(gNameTableMtx);
 	NameHashList& entry = gNameTable[mHash];
@@ -51,10 +52,10 @@ void Name::FinishConstructing(String&& string)
 		if (entry.Strings[i] == string)
 		{
 			mIndex = i;
-			break;
+			return;
 		}
 	}
-	entry.Strings.push_back(std::move(string));
+	entry.Strings.emplace_back(std::forward<T>(string));
 	mIndex = static_cast<u32>(entry.Strings.size() - 1);
 }
 

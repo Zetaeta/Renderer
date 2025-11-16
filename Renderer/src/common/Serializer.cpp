@@ -46,11 +46,15 @@ void Serializer::SerializeGeneralClass(ClassValuePtr value)
 		while (ReadNextMapKey(key))
 		{
 			Name keyName(key);
-			if (PropertyInfo const* prop = actual.GetType().FindProperty(keyName))
+			if (PropertyInfo const* prop = &actual.GetType().FindPropertyChecked(keyName); ZE_ENSURE(prop))
 			{
 				if (ShouldSerialize(*prop))
 				{
 					prop->GetType().Serialize(*this, prop->Access(actual)); 
+				}
+				else
+				{
+					ZE_ASSERT(false);
 				}
 			}
 		}

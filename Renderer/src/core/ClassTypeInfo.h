@@ -360,6 +360,7 @@ public:
 	}
 
 	const PropertyInfo* FindProperty(Name name) const;
+	const PropertyInfo& FindPropertyChecked(Name name) const;
 
 
 	Vector<ClassTypeInfo const*> const& GetAllChildren() const;

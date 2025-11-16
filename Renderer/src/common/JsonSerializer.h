@@ -24,7 +24,7 @@ public:
 	void EnterStringMap() override;
 	void SerializeMapKey(std::string_view str) override;
 	bool ReadNextMapKey(std::string_view& key) override;
-	void EnterPointer(const TypeInfo* innerType) override;
+	void EnterPointer(const TypeInfo*& innerType) override;
 	void LeavePointer() override;
 	void LeaveStringMap() override;
 
@@ -35,15 +35,6 @@ public:
 
 
  private:
-	json SerializeContainer(ConstReflectedValue value);
-
-	json SerializeClass(ConstClassValuePtr value);
-	
-	json SerializeBasic(ConstReflectedValue value);
-
-	json SerializePointer(ConstReflectedValue value);
-
-
 protected:
 	enum class EStackItemType : u8
 	{
@@ -52,7 +43,7 @@ protected:
 		Array,
 		Value
 	};
-	struct JsonStackItem
+	struct StackItem
 	{
 		json* Item = nullptr;
 		EStackItemType Type = EStackItemType::Unset;
@@ -60,10 +51,10 @@ protected:
 
 	void SetType(EStackItemType& inOutType, EStackItemType setType);
 
-	JsonStackItem& Top();
+	StackItem& Top();
 	json& Next();
 
-	Vector<JsonStackItem> Stack;
+	Vector<StackItem> Stack;
 	json Root;
 };
 

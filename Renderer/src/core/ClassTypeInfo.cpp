@@ -38,3 +38,10 @@ ClassTypeInfo const& ClassTypeInfo::GetRuntimeType(ConstReflectedValue val) cons
 		return *this;
 	}
 }
+
+const PropertyInfo& ClassTypeInfo::FindPropertyChecked(Name name) const
+{
+	auto* result = FindProperty(name);
+	ZE_ASSERT(result);
+	return *result;
+}
