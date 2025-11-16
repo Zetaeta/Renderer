@@ -50,7 +50,7 @@ class SceneObject : public BaseSerialized, public std::enable_shared_from_this<S
 	template <typename TComp, typename... TArgs>
 	TComp& SetRoot(TArgs&&... args)
 	{
-		root = std::make_unique<TComp>(this, std::forward<TArgs>(args)...);
+		root = std::make_shared<TComp>(this, std::forward<TArgs>(args)...);
 		OnSetRoot();
 		return static_cast<TComp&>(*root);
 	}

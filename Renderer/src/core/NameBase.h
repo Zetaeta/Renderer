@@ -3,6 +3,7 @@
 #include <string>
 #include "core/CoreTypes.h"
 #include "core/ClassTypeInfoFwd.h"
+#include "TypeTraits.h"
 
 using String = std::string;
 
@@ -51,6 +52,8 @@ public:
 		return mHash == 0;
 	}
 
+	void Serialize(class Serializer& serializer);
+
 	u32 GetHash() const { return mHash; }
 	u32 GetIndex() const { return mIndex; }
 	private:
@@ -58,6 +61,15 @@ public:
 	u32 mIndex;
 private:
 	void FinishConstructing(String&& str);
+};
+
+template<>
+struct TClassTypeTraits<Name> : public TClassTypeTraitsBase<Name>
+{
+	enum
+	{
+		HasSerialize = true
+	};
 };
 
 //DECLARE_CLASS_TYPEINFO()

@@ -24,114 +24,130 @@ bool ShouldSerialize(ConstReflectedValue value)
 	return ShouldSerializeType(value.GetRuntimeType());
 }
 
+#define X(PrimType	)\
+	JsonSerializer& JsonSerializer::operator<<(PrimType& num)\
+	{                                                        \
+		Next() = json(num);\
+		return *this;\
+	}
+
+PRIMITIVE_TYPES
+
+#undef X
+
+JsonSerializer::JsonSerializer()
+{
+	Stack.push_back({&Root, EStackItemType::Unset});
+}
+
+JsonSerializer::~JsonSerializer()
+{
+	ZE_ASSERT(Stack.empty());
+}
+
 void JsonSerializer::Dump(ConstReflectedValue value, std::string file)
 {
 	JsonSerializer ser;
 	json			  j = ser.Serialize(value);
 	std::ofstream o(file);
+#ifdef _DEBUG
+	o << j.dump(2) << std::endl;
+#else
+	#error hi
 	o << j << std::endl;
+#endif
 	o.close();
 }
 
-json JsonSerializer::Serialize(ConstReflectedValue value)
+json const& JsonSerializer::Serialize(ConstReflectedValue value)
 {
-	switch (value.GetType().GetTypeCategory())
-	{
-		case ETypeCategory::BASIC:
-			return SerializeBasic(value);
-		case ETypeCategory::CONTAINER:
-			return SerializeContainer(value);
-		case ETypeCategory::CLASS:
-			return SerializeClass(value);
-		case ETypeCategory::POINTER:
-			return SerializePointer(value);
-		default:
-			break;
-	}
-	return json{};
+	value.GetRuntimeType().Serialize(*this, const_cast<void*>(value.GetPtr()));
+	return Root;
 }
 
-json JsonSerializer::SerializeContainer(ConstReflectedValue value)
+void JsonSerializer::SerializeString(String& str)
 {
-	json					 j = json::array();
-	ContainerTypeInfo const& typ = static_cast<ContainerTypeInfo const&>(value.GetType());
-	auto accessor = typ.CreateAccessor(value);
-	size_t size = accessor->GetSize();
-	for (int i = 0; i < size; ++i)
-	{
-		auto child = accessor->GetAt(i);
-		if (ShouldSerialize(child))
-		{
-			j.push_back(Serialize(child));
-		}
-	}
-	return j;
+	Next() = json(str);
 }
 
-json JsonSerializer::SerializeClass(ConstClassValuePtr value)
+void JsonSerializer::EnterArray(int& ArrayNum)
 {
-	json j = json::object();
-	ConstClassValuePtr actual = value.Downcast();
-	actual.GetType().ForEachProperty([this, actual, &j](PropertyInfo const& prop)
-	{
-		auto child = prop.Access(actual);
-		if (ShouldSerialize(child))
-		{
-			j[prop.GetName().c_str()] = Serialize(child);
-		}
-	});
-	return j;
+	auto& entry = Top();
+	SetType(entry.Type, EStackItemType::Array);
+	*entry.Item = json::array();
 }
 
-json JsonSerializer::SerializeBasic(ConstReflectedValue value)
+void JsonSerializer::LeaveArray()
 {
-	TypeInfo const& typ = value.GetType();
-#define X(Type)                        \
-	if (typ == GetTypeInfo<Type>())       \
-	{                                     \
-		return json(value.GetAs<Type>()); \
-	}
-	BASIC_TYPES
-#undef X
-	//CASE(int);
-	//CASE(bool);
-	//CASE(double);
-	//CASE(float);
-	//CASE(bool);
-	//CASE(u32);
-	//CASE(u64);
-	//CASE(s64);
-	//CASE(s8);
-	//CASE(u8);
-	//CASE(u16);
-	//CASE(s16);
-	return json{};
-	// if (typ == GetTypeInfo<int>())
-	//{
-	//	return json (value.GetAs<int>());
-	// }
+	Stack.pop_back();
 }
 
-json JsonSerializer::SerializePointer(ConstReflectedValue value)
+void JsonSerializer::EnterStringMap()
 {
-	json j;
-	PointerTypeInfo const& typ = static_cast<PointerTypeInfo const&>(value.GetType());
+	auto& entry = Top();
+	SetType(entry.Type, EStackItemType::Map);
+	*entry.Item = json::object();
+}
 
-	if (typ.IsNull(value))
+void JsonSerializer::SerializeMapKey(std::string_view str)
+{
+	auto& entry = Top();
+	ZE_ASSERT(entry.Type == EStackItemType::Map);
+	json& newEntry = (*entry.Item)[str];
+	
+	Stack.push_back({&newEntry, EStackItemType::Unset});
+}
+
+bool JsonSerializer::ReadNextMapKey(std::string_view& key)
+{
+	ZE_ASSERT(false);
+}
+
+void JsonSerializer::EnterPointer(const TypeInfo* innerType)
+{
+	json& jsonWrapper = Next();
+	jsonWrapper["type"] = innerType->GetNameStr();
+	json& inner = jsonWrapper["value"];
+	Stack.push_back({&inner, EStackItemType::Unset});
+}
+
+void JsonSerializer::LeavePointer()
+{
+}
+
+void JsonSerializer::LeaveStringMap()
+{
+	ZE_ASSERT(Top().Type == EStackItemType::Map);
+	Stack.pop_back();
+}
+
+void JsonSerializer::SetType(EStackItemType& inOutType, EStackItemType setType)
+{
+	ZE_ASSERT(inOutType == EStackItemType::Unset);
+	inOutType = setType;
+}
+
+JsonSerializer::JsonStackItem& JsonSerializer::Top()
+{
+	ZE_ASSERT(Stack.size() > 0);
+
+	return Stack[Stack.size() - 1];
+}
+
+json& JsonSerializer::Next()
+{
+	auto& entry = Top();
+	if (entry.Type == EStackItemType::Array)
 	{
-		j["type"] = "nullptr";
-		j["value"] = {};
+		json& arrayEntry = entry.Item->emplace_back();
+		return arrayEntry;
 	}
 	else
 	{
-		auto target = typ.GetConst(value);
-		if (ShouldSerialize(target))
-		{
-			j["type"] = target.GetRuntimeType().GetNameStr();
-			j["value"] = Serialize(target);
-		}
+		ZE_ASSERT(entry.Type == EStackItemType::Unset);
+		json& value = *entry.Item;
+		Stack.pop_back();
+		return value;
 	}
-
-	return j;
 }
 

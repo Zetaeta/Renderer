@@ -123,14 +123,39 @@ public:
 		to.GetAs<TPtr>() = std::move(from.GetAs<TPtr>());
 	}
 
-	void Serialize(class Serializer& serializer, void* val)
-	{
-		ZE_ASSERT(false);
-	}
-
 	void Serialize(class Serializer& serializer, void* val) const override
 	{
-		ZE_ASSERT(false);
+		ReflectedValue value(val, this);
+		TypeInfo const* const nullType = &NullTypeInfo();
+		TypeInfo const* innerType = nullType;
+		TPtr& pointer = value.GetAs<TPtr>();
+		if (pointer != nullptr && !serializer.IsLoading())
+		{
+			innerType = &value.GetRuntimeType();
+		}
+		serializer.EnterPointer(innerType);
+		if (serializer.IsLoading())
+		{
+			if (innerType == nullType)
+			{
+				pointer = nullptr;
+			}
+			else
+			{
+				ReflectedValue pointedAt = this->Get(value);
+				if (pointedAt || pointedAt.GetRuntimeType() != *innerType)
+				{
+					this->New(value, *innerType);
+				}
+
+				innerType->Serialize(serializer, &*pointer);
+			}
+		}
+		else
+		{
+			serializer << *pointer;
+		}
+		serializer.LeavePointer();
 	}
 };
 
@@ -196,40 +221,6 @@ struct TypeInfoHelper<std::unique_ptr<T>>
 			return GetTypeInfo<T>();
 		}
 
-		void Serialize(class Serializer& serializer, void* val) const override
-		{
-			ReflectedValue value(val, this);
-			TypeInfo const* const nullType = &NullTypeInfo();
-			TypeInfo const* innerType = nullType;
-			UPtr& pointer = value.GetAs<UPtr>();
-			if (pointer != nullptr && !serializer.IsLoading())
-			{
-				innerType = &value.GetRuntimeType();
-			}
-			serializer.EnterPointer(innerType);
-			if (serializer.IsLoading())
-			{
-				if (innerType == nullType)
-				{
-					pointer = nullptr;
-				}
-				else
-				{
-					ReflectedValue pointedAt = this->Get(value);
-					if (pointedAt || pointedAt.GetRuntimeType() != *innerType)
-					{
-						this->New(value, *innerType);
-					}
-
-					innerType->Serialize(serializer, &*pointer);
-				}
-			}
-			else
-			{
-				serializer << *pointer;
-			}
-			serializer.LeavePointer();
-		}
 	};
 	inline static UniquePtrTypeInfo const  s_TypeInfo;
 };

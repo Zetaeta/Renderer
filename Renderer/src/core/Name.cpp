@@ -73,6 +73,22 @@ char const* Name::c_str() const
 	// TODO : not thread safe with SSO due to SmallVector
 }
 
+void Name::Serialize(Serializer& serializer)
+{
+	if (serializer.IsLoading())
+	{
+		String str;
+		serializer.SerializeString(str);
+		*this = Name(str);
+	}
+	else
+	{
+		String str = ToString();
+		serializer.SerializeString(str);
+	}
+}
+
+
 DEFINE_CLASS_TYPEINFO_EXT(Name)
 END_CLASS_TYPEINFO()
 
