@@ -10,10 +10,10 @@ using Microsoft::WRL::ComPtr;
 
 #define HR_ERR_CHECK(expr) \
 	{\
-		HRESULT hr = expr;\
-		if (FAILED(hr))       \
+		HRESULT _hr = expr;\
+		if (FAILED(_hr))       \
 		{                     \
-			_com_error err(hr);\
+			_com_error err(_hr);\
 			LPCTSTR errMsg = err.ErrorMessage();\
 			RLOG(LogGlobal, Error,"Error: %S", errMsg);\
 			assert(false);\

@@ -78,6 +78,19 @@ Vector<String> CommandLine::GetValues(StringView key) const
 	return result;
 }
 
+bool CommandLine::HasArg(StringView arg) const
+{
+	for (const auto& myArg : argv)
+	{
+		if (EqualsIgnoreCase(myArg, arg))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 CommandLine::CommandLine()
 {
 	mValue = Platform::GetCmdLine();

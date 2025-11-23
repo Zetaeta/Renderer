@@ -34,9 +34,10 @@ struct DX11IndexedMesh : public IDeviceIndexedMesh
 class DX11Device : public IRenderDevice//, public IRenderResourceManager
 {
 public:
-	DX11Device(ID3D11Device* pDevice);
+	DX11Device();
 	~DX11Device();
-	ID3D11Device* mDevice;
+	ComPtr<ID3D11Device> mDevice;
+	ComPtr<ID3D11DeviceContext> mDeviceCtx;
 	DX11ShaderCompiler mCompiler;
 
 	void ProcessTextureCreations();
@@ -60,7 +61,7 @@ public:
 	}
 	ID3D11Device* GetD3D11Device()
 	{
-		return mDevice;
+		return mDevice.Get();
 	}
 
 	IDXGIFactory2* GetFactory();
@@ -74,7 +75,6 @@ protected:
 	SmallMap<VertAttDrawInfo, ComPtr<ID3D11InputLayout>> mInputLayouts;
 
 	DXGI_FORMAT GetFormatForType(TypeInfo const* type);
-
 	ComPtr<ID3D11Buffer> CreateVertexBuffer(VertexBufferData data);
 
 //	std::vector<ComPtr<ID3D11InputLayout>> mInputLayouts;
@@ -88,7 +88,7 @@ protected:
 
 	Vector<OwningPtr<DX11SwapChain>> mSwapChains;
 private:
-
+	void CreateDevice();
 };
 }
 }

@@ -40,12 +40,12 @@ ConfigVariableAuto<int> CVarImguiBackend("imgui.backend", 11, "Backend for imgui
 
 namespace  rnd::dx11
 {
-RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, bool createDx12 /*= false*/)
+RenderManagerDX11::RenderManagerDX11(Input* input, bool createDx12 /*= false*/)
 	: Super(input)
 {
 	if (!createDx12)
 	{
-		m_hardwareRenderer = std::make_unique<DX11Renderer>(&mScene, &m_Camera, 0, 0, device, context);
+		m_hardwareRenderer = std::make_unique<DX11Renderer>(&mScene, &m_Camera, 0, 0);
 		CreateIndependentViewport(m_hardwareRenderer.get(), L"DX11");
 	}
 	//auto& mWin11 = mWindows.emplace_back(std::make_unique<wnd::Window>(1500, 900, L"DX11"));

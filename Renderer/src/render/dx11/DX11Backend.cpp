@@ -10,8 +10,6 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <tchar.h>
-#include <dxgi1_3.h>
-#include <dxgidebug.h>
 
 #include "render/dx11/DX11Backend.h"
 #include "ImageRenderMgrDX11.h"
@@ -35,17 +33,10 @@ using namespace rnd;
 using namespace rnd::dx11;
 
 // Data
-static ComPtr<ID3D11Device>		   g_pd3dDevice = nullptr;
-static ID3D11DeviceContext*	   g_pContext = nullptr;
 //static IDXGISwapChain*		   g_pSwapChain = nullptr;
 static UINT					   g_ResizeWidth = 0, g_ResizeHeight = 0;
 static INT					   g_WindowPosX = 0, g_WindowPosY = 0;
 static UINT					   g_CurrWidth = 0, g_CurrHeight = 0;
-static ID3D11RenderTargetView* g_mainRenderTargetView = nullptr;
-
-ComPtr<ID3D11Texture2D> g_msaaRenderTarget;
-ComPtr<ID3D11RenderTargetView> g_msaaRenderTargetView;
-	ComPtr<ID3D11Texture2D> g_BackBuffer;
 
 // Forward declarations of helper functions
 bool		   CreateDeviceD3D();
@@ -69,57 +60,6 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 		Col col;
 	};
 
-void DrawTri(vec4 a, vec4 b, vec4 c)
-{
-
-	Vert const		  vertices[] = {
-		{a, {255,0,0, 1}}, {b,{0,255,0,1}}, {c,{0,0,255,1}}
-	};
-	ComPtr<ID3D11Buffer> vBuffer;
-
-	{
-		D3D11_BUFFER_DESC bd = {};
-		Zero(bd);
-		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		bd.Usage = D3D11_USAGE_DEFAULT;
-		bd.ByteWidth = sizeof(vertices);
-		bd.StructureByteStride = sizeof(Vert);
-		D3D11_SUBRESOURCE_DATA sd;
-		Zero(sd);
-		sd.pSysMem = &vertices;
-
-
-		HR_ERR_CHECK(g_pd3dDevice->CreateBuffer(&bd,&sd, &vBuffer));
-	}
-	const UINT stride = sizeof(Vert);
-	const UINT offset = 0;
-	g_pContext->IASetVertexBuffers(0, 1, vBuffer.GetAddressOf(), &stride, &offset);
-	g_pContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-
-	u16 const indices[] = {0,1,2};
-	ComPtr<ID3D11Buffer> iBuffer;
-
-	{
-		D3D11_BUFFER_DESC bd = {};
-		Zero(bd);
-		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		bd.Usage = D3D11_USAGE_DEFAULT;
-		bd.ByteWidth = sizeof(indices);
-		bd.StructureByteStride = sizeof(u16);
-		D3D11_SUBRESOURCE_DATA sd;
-		Zero(sd);
-		sd.pSysMem = &indices;
-
-		HR_ERR_CHECK(g_pd3dDevice->CreateBuffer(&bd, &sd, &iBuffer));
-	}
-	g_pContext->IASetIndexBuffer(iBuffer.Get(),DXGI_FORMAT_R16_UINT, 0);
-
-	//g_pContext->Draw((UINT)std::size(vertices), 0u);
-
-	g_pContext->DrawIndexed(Size(indices),0,0);
-
-}
 ComPtr<ID3D11DepthStencilView> dsv;
 
 DEFINE_LOG_CATEGORY_STATIC(LogDX11Backend)
@@ -201,12 +141,12 @@ int MainDX11(int argc, char** argv)
 	HWND hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui DirectX11 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
 	// Initialize Direct3D
-	if (!CreateDeviceD3D())
-	{
-		CleanupDeviceD3D();
-		::UnregisterClassW(wc.lpszClassName, wc.hInstance);
-		return 1;
-	}
+	//if (!CreateDeviceD3D())
+	//{
+	//	CleanupDeviceD3D();
+	//	::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+	//	return 1;
+	//}
 
 	// Show the window
 	//::ShowWindow(hwnd, SW_SHOWDEFAULT);
@@ -268,7 +208,7 @@ int MainDX11(int argc, char** argv)
 	InputImgui input;
 	{
 
-	RenderManagerDX11 renderMgr(g_pd3dDevice.Get(), g_pContext, &input, HasArg("-dx12", argc, argv));
+	RenderManagerDX11 renderMgr(&input, HasArg("-dx12", argc, argv));
 	Editor*			  editor = Editor::Create(&input, &renderMgr);
 	renderMgr.CreateInitialScene();
 //	std::shared_ptr<rnd::dx11::DX11Texture> bbTex = nullptr;
@@ -328,98 +268,70 @@ int MainDX11(int argc, char** argv)
 
 
 
-//a		g_pContext->OMSetRenderTargets(1, g_msaaRenderTargetView.GetAddressOf(), dsv.Get());
-		//g_pContext->OMSetRenderTargets(1, &g_mainRenderTargetView, nullptr);
-		//const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
-		//g_pContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color_with_alpha);
-		//g_pContext->ClearRenderTargetView(g_msaaRenderTargetView.Get(), clear_color_with_alpha);
-		//g_pContext->ClearDepthStencilView(dsv.Get(), D3D11_CLEAR_DEPTH, 1.f, 0);
-		// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-		//if (g_CurrHeight && g_CurrWidth) {
-			//renderMgr.m_hardwareRenderer->GetViewport()->UpdatePos({g_WindowPosX, g_WindowPosY});
-			static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
-			// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-			// because it would be confusing to have two docking targets within each others.
-			/**/ ImGuiWindowFlags window_flags = 0;//ImGuiWindowFlags_NoDocking;
-			//if (m_MenubarCallback)
-			//	window_flags |= ImGuiWindowFlags_MenuBar;
+		// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
+		// because it would be confusing to have two docking targets within each others.
+		/**/ ImGuiWindowFlags window_flags = 0;//ImGuiWindowFlags_NoDocking;
+		//if (m_MenubarCallback)
+		//	window_flags |= ImGuiWindowFlags_MenuBar;
 
-			const ImGuiViewport* viewport = ImGui::GetMainViewport();
-			 ImGui::SetNextWindowPos(viewport->WorkPos);
-			ImGui::SetNextWindowSize(viewport->WorkSize);
-			ImGui::SetNextWindowViewport(viewport->ID);
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-			window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-			window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoMouseInputs;
+		const ImGuiViewport* viewport = ImGui::GetMainViewport();
+		 ImGui::SetNextWindowPos(viewport->WorkPos);
+		ImGui::SetNextWindowSize(viewport->WorkSize);
+		ImGui::SetNextWindowViewport(viewport->ID);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoMouseInputs;
 
-			// When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
-			// and handle the pass-thru hole, so we ask Begin() to not render a background.
-			//if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-				window_flags |= ImGuiWindowFlags_NoBackground;
+		// When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
+		// and handle the pass-thru hole, so we ask Begin() to not render a background.
+		//if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+			window_flags |= ImGuiWindowFlags_NoBackground;
 
-			// Important: note that we proceed even if Begin() returns false (aka window is collapsed).
-			// This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
-			// all active windows docked into it will lose their parent and become undocked.
-			// We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
-			// any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::Begin("My DockSpace", nullptr, window_flags);
-			ImGui::PopStyleVar();
+		// Important: note that we proceed even if Begin() returns false (aka window is collapsed).
+		// This is because we want to keep our DockSpace() active. If a DockSpace() is inactive,
+		// all active windows docked into it will lose their parent and become undocked.
+		// We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
+		// any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::Begin("My DockSpace", nullptr, window_flags);
+		ImGui::PopStyleVar();
 
-			ImGui::PopStyleVar(2);
+		ImGui::PopStyleVar(2);
 
-			// Submit the DockSpace
-			ImGuiIO& io = ImGui::GetIO();
-			if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+		// Submit the DockSpace
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+		{
+			//ImGuiID dockspace_id = ImGui::GetID("VulkanAppDockspace");
+			//ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+			ImGui::DockSpaceOverViewport(0, viewport, dockspace_flags);
+		}
+		/* if (m_MenubarCallback)
+		{
+			if (ImGui::BeginMenuBar())
 			{
-				//ImGuiID dockspace_id = ImGui::GetID("VulkanAppDockspace");
-				//ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-				ImGui::DockSpaceOverViewport(0, viewport, dockspace_flags);
+				m_MenubarCallback();
+				ImGui::EndMenuBar();
 			}
-			/* if (m_MenubarCallback)
-			{
-				if (ImGui::BeginMenuBar())
-				{
-					m_MenubarCallback();
-					ImGui::EndMenuBar();
-				}
-			}*/
+		}*/
 
-			ImGui::End();
-			editor->Tick(0);
-			renderMgr.DrawUI();
+		ImGui::End();
+		editor->Tick(0);
+		renderMgr.DrawUI();
 
-			static float f = 0.0f;
-			static int	 counter = 0;
-
-		//}
+		static float f = 0.0f;
+		static int	 counter = 0;
 		ThreadImgui::EndFrame();
 
-//		auto rt = bbTex->GetRT()->GetData<ID3D11RenderTargetView>();
-//		g_pContext->OMSetRenderTargets(1, &rt, nullptr);
-		// Rendering
-//		renderMgr.m_hardwareRenderer->PreImgui();
-		//ImGui::Render();
-		//ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-		
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			//ImGui::UpdatePlatformWindows();
-			//ImGui::RenderPlatformWindowsDefault();
-		}
-
-//		g_pSwapChain->Present(1, 0); // Present with vsync
-									 // g_pSwapChain->Present(0, 0); // Present without vsync
 	}
 	Editor::Destroy();
 	}
 
 	// Cleanup
 	ImGui::DestroyContext();
-
-	CleanupDeviceD3D();
 
 	logThread.Flush();
 	logThread.RequestStop();
@@ -430,86 +342,6 @@ int MainDX11(int argc, char** argv)
 	return 0;
 }
 
-// Helper functions
-
-bool CreateDeviceD3D()
-{
-	// Setup swap chain
-
-	UINT createDeviceFlags = 0;
-	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
-	D3D_FEATURE_LEVEL		featureLevel;
-	const D3D_FEATURE_LEVEL featureLevelArray[2] = {
-		D3D_FEATURE_LEVEL_11_0,
-		D3D_FEATURE_LEVEL_10_0,
-	};
-	HRESULT res = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &g_pd3dDevice, &featureLevel, &g_pContext);
-	DXCALL(res);
-	//if (res == DXGI_ERROR_UNSUPPORTED) // Try high-performance WARP software driver if hardware is not available.
-	//	res = D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_WARP, nullptr, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, &g_pSwapChain, &g_pd3dDevice, &featureLevel, &g_pContext);
-	if (res != S_OK)
-		return false;
-
-	ComPtr<ID3D11Debug> debug;
-	if (SUCCEEDED(g_pd3dDevice.As(&debug)))
-	{
-		ComPtr<ID3D11InfoQueue> d3dInfoQueue;
-		if (SUCCEEDED(debug.As(&d3dInfoQueue)))
-		{
-			D3D11_MESSAGE_ID hide[] = {
-				D3D11_MESSAGE_ID_DEVICE_DRAW_RENDERTARGETVIEW_NOT_SET
-			};
-			D3D11_INFO_QUEUE_FILTER filter;
-			Zero(filter);
-			filter.DenyList.NumIDs = NumCast<u32>(std::size(hide));
-			filter.DenyList.pIDList = hide;
-			d3dInfoQueue->AddStorageFilterEntries(&filter);
-//			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
-//			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, true);
-		}
-	}
-
-//	CreateRenderTarget();
-	return true;
-}
-
-void CleanupDeviceD3D()
-{
-	CleanupRenderTarget();
-	//if (g_pSwapChain)
-	//{
-	//	g_pSwapChain->Release();
-	//	g_pSwapChain = nullptr;
-	//}
-	if (g_pContext)
-	{
-		g_pContext->Release();
-		g_pContext = nullptr;
-	}
-	if (g_pd3dDevice)
-	{
-		g_pd3dDevice = nullptr;
-	}
-	{
-		ComPtr<IDXGIDebug1> debug;
-		if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug))))
-		{
-			debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
-		}
-	}
-}
-
-
-void CleanupRenderTarget()
-{
-	g_BackBuffer = nullptr;
-	return;
-	if (g_mainRenderTargetView)
-	{
-		g_mainRenderTargetView->Release();
-		g_mainRenderTargetView = nullptr;
-	}
-}
 
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

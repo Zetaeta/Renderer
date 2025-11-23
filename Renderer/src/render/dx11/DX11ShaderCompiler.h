@@ -36,7 +36,8 @@ using DX11ComputeShader = DX11Shader<ID3D11ComputeShader>;
 class DX11ShaderCompiler final : public IShaderCompiler, public rnd::dx::FXCShaderCompiler
 {
 public:
-	DX11ShaderCompiler(ID3D11Device* device);
+	DX11ShaderCompiler();
+	void Init(ID3D11Device* device) { mDevice = device; }
 	OwningPtr<IDeviceShader> CompileShader(ShaderInstanceId const& id, const ShaderDesc& desc, const ShaderCompileEnv& env,
 		EShaderType ShaderType, VertexAttributeMask vsInputMask, OwningPtr<IShaderReflector>* outReflector, bool forceRecompile) override final;
 

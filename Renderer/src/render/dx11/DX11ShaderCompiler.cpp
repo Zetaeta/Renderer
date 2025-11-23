@@ -13,7 +13,7 @@ DEFINE_LOG_CATEGORY_STATIC(LogDX11Shader);
 
 constexpr bool ShaderCompileDebugging = true;
 
-DX11ShaderCompiler::DX11ShaderCompiler(ID3D11Device* device) : mDevice(device)
+DX11ShaderCompiler::DX11ShaderCompiler()
 {
 	mSrcDir = "src\\shaders";
 	mOutDir = "generated\\shaders";

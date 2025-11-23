@@ -44,6 +44,8 @@ public:
 
 	const Vector<String>& Argv() const { return argv; }
 
+	bool HasArg(StringView arg) const;
+
 private:
 	String mValue;
 	Vector<String> argv;

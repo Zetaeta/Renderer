@@ -20,7 +20,9 @@ public:
 
 	constexpr static u32 BufferSize = 3;
 	std::array<StartEndQuery, BufferSize> Queries;
-
+	std::array<u8, BufferSize> WasUsed; 
+	//u32 StartCount = 0;
+	//u32 EndCount = 0;
 };
 
 }

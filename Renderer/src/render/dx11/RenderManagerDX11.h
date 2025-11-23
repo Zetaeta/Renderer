@@ -13,7 +13,7 @@ class RenderManagerDX11 : public RenderManager
 public:
 	using Super = RenderManager;
 
-	RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, bool createDx12 = false);
+	RenderManagerDX11(Input* input, bool createDx12 = false);
 	~RenderManagerDX11();
 	
 	virtual void DrawFrameData() override;

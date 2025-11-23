@@ -33,7 +33,7 @@ using namespace rnd::dx11;
 class DX11Renderer : public IRenderer, public rnd::IRenderDeviceCtx, public DX11Device
 {
 public:
-	DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context);
+	DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height);
 
 	~DX11Renderer();
 
@@ -163,6 +163,8 @@ public:
 	{
 		return "D3D11";
 	}
+
+	bool IsFirstFrame() const { return mFrameNum <= 1; }
 
  private:
 	DX11Texture::Ref PrepareTexture(Texture const& tex, bool sRGB = false);

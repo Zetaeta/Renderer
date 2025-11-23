@@ -2,25 +2,80 @@
 #include "container/Vector.h"
 #include "asset/Texture.h"
 #include "DX11Swapchain.h"
+#include "common/CommandLine.h"
+
+#include "dxgidebug.h"
+#include <dxgi1_3.h>
 
 namespace rnd
 {
 namespace dx11
 {
 
-DX11Device::DX11Device(ID3D11Device* pDevice)
-	: IRenderDevice(&mCompiler), mDevice(pDevice), mCompiler(pDevice)
+DX11Device::DX11Device()
+	: IRenderDevice(&mCompiler)
 {
 	mSemanticsToMask["Position"] = VA_Position;
 	mSemanticsToMask["Normal"] = VA_Normal;
 	mSemanticsToMask["Tangent"] = VA_Tangent;
 	mSemanticsToMask["TexCoord"] = VA_TexCoord;
+
+	CreateDevice();
+	mCompiler.Init(mDevice.Get());
+}
+
+void DX11Device::CreateDevice()
+{
+	UINT createDeviceFlags = 0;
+	createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	D3D_FEATURE_LEVEL		featureLevel;
+	const D3D_FEATURE_LEVEL featureLevelArray[2] = {
+		D3D_FEATURE_LEVEL_11_0,
+		D3D_FEATURE_LEVEL_10_0,
+	};
+	HRESULT res = D3D11CreateDevice(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, createDeviceFlags,
+					featureLevelArray, 2, D3D11_SDK_VERSION, &mDevice, &featureLevel, &mDeviceCtx);
+	DXCALL(res);
+	if (res != S_OK)
+		ZE_ASSERT(false);
+
+	ComPtr<ID3D11Debug> debug;
+	if (SUCCEEDED(mDevice.As(&debug)))
+	{
+		ComPtr<ID3D11InfoQueue> d3dInfoQueue;
+		if (SUCCEEDED(debug.As(&d3dInfoQueue)))
+		{
+			D3D11_MESSAGE_ID hide[] = {
+				D3D11_MESSAGE_ID_DEVICE_DRAW_RENDERTARGETVIEW_NOT_SET
+			};
+			D3D11_INFO_QUEUE_FILTER filter;
+			Zero(filter);
+			filter.DenyList.NumIDs = NumCast<u32>(std::size(hide));
+			filter.DenyList.pIDList = hide;
+			d3dInfoQueue->AddStorageFilterEntries(&filter);
+			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+			if (CommandLine::Get().HasArg("-breakwarn"))
+			{
+				d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_WARNING, true);
+			}
+		}
+	}
 }
 
 DX11Device::~DX11Device()
 {
 	MatMgr.Release();
 	ResourceMgr.OnDevicesShutdown();
+
+	mDeviceCtx = nullptr;
+	mDevice = nullptr;
+	{
+		ComPtr<IDXGIDebug1> debug;
+		if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug))))
+		{
+			debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+		}
+	}
 }
 
 void DX11Device::ProcessTextureCreations()

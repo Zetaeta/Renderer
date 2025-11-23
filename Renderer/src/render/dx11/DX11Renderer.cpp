@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <format>
 #include <filesystem>
+#include <thread>
+#include <chrono>
 #include "scene/UserCamera.h"
 #include <utility>
 #include "render/dx11/DX11Backend.h"
@@ -32,6 +34,7 @@
 #include "DX11Swapchain.h"
 #include "platform/windows/Window.h"
 #include "backends/imgui_impl_win32.h"
+
 
 #pragma comment(lib, "dxguid.lib")
 
@@ -85,8 +88,8 @@ void DX11Renderer::PrepareShadowMaps()
 
 DECLARE_CLASS_TYPEINFO(PerInstancePSData);
 
- DX11Renderer::DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height, ID3D11Device* device, ID3D11DeviceContext* context)
-	: DX11Device(device), m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(device), pContext(context), m_Scene(scene), mCBPool(pDevice, this)
+ DX11Renderer::DX11Renderer(Scene* scene, UserCamera* camera, u32 width, u32 height)
+	: DX11Device(), m_Height(height), m_Width(width), m_Camera(camera), m_PixelWidth(width), pDevice(mDevice.Get()), pContext(mDeviceCtx.Get()), m_Scene(scene), mCBPool(pDevice, this)
 {
 	mCtx = &m_Ctx;
 	CBPool = &mCBPool;
@@ -616,42 +619,76 @@ DX11Texture::Ref DX11Renderer::PrepareTexture(Texture const& tex, bool sRGB /*= 
 	return result;
 }
 
-void DX11Renderer::ProcessTimers()
+template<typename T>
+bool GetQueryWithRetry(ID3D11DeviceContext* context, ID3D11Query* Query, T& outVal, UINT flags = 0)
 {
-	u32 frameIdx = mFrameNum % DX11Timer::BufferSize;
-	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
-	if ((pContext->GetData(DisjointQueries[frameIdx].Get(), &disjointData, sizeof(disjointData), 0) != S_OK)
-		|| disjointData.Disjoint)
+	HRESULT hres = S_FALSE;
+	for (;;)
 	{
-		for (u32 i = 0; i < mTimerPool.Size(); ++i)
+		hres = context->GetData(Query, &outVal, sizeof(T), 0);
+		HR_ERR_CHECK(hres);
+		if (hres == S_OK)
 		{
-			mTimerPool[i].GPUTimeMs = -1.f;
-		}
-		return;
-	}
-	for (u32 i = 0; i < mTimerPool.Size(); ++i)
-	{
-		if (!mTimerPool.IsInUse(i))
-		{
-			continue;
-		}
-		u64 start, end;
-		DX11Timer& timer = mTimerPool[i];
-		if (timer.GetRefCount() == 0)
-		{
-			mTimerPool.Release(i);
-			continue;
-		}
-
-		if ((pContext->GetData(timer.Queries[frameIdx].Start.Get(), &start, sizeof(u64), 0) == S_OK)
-			&& (pContext->GetData(timer.Queries[frameIdx].End.Get(), &end, sizeof(u64), 0) == S_OK))
-		{
-			timer.GPUTimeMs = NumCast<float>((double(end - start) * 1000.) / disjointData.Frequency);
+			return true;
 		}
 		else
 		{
-			timer.GPUTimeMs = 0;
+			using namespace std::chrono;
+			std::this_thread::sleep_for(5ms);
 		}
+	}
+	return false;
+}
+
+void DX11Renderer::ProcessTimers()
+{
+	if (mFrameNum <= 3)
+	{
+		return;
+	}
+	u32 frameIdx = mFrameNum % DX11Timer::BufferSize;
+	D3D11_QUERY_DATA_TIMESTAMP_DISJOINT disjointData;
+//	ZE_ENSURE(hr==S_OK);
+	GetQueryWithRetry(pContext, DisjointQueries[frameIdx].Get(), disjointData);
+	//if (disjointData.Disjoint)
+	//{
+	//	for (u32 i = 0; i < mTimerPool.Size(); ++i)
+	//	{
+	//		mTimerPool[i].GPUTimeMs = -1.f;
+	//	}
+	//	return;
+	//}
+	for (u32 i = 0; i < mTimerPool.Size(); ++i)
+	{
+		DX11Timer& timer = mTimerPool[i];
+//			ZE_ASSERT(timer.StartCount == timer.EndCount);
+		ZE_ASSERT((timer.WasUsed[frameIdx] % 2) == 0);
+		bool bGetResult = timer.WasUsed[frameIdx] > 0;
+
+		if (bGetResult)
+		{
+			u64 start, end;
+			GetQueryWithRetry(pContext, timer.Queries[frameIdx].Start.Get(), start);
+			GetQueryWithRetry(pContext, timer.Queries[frameIdx].End.Get(), end);
+			if (!disjointData.Disjoint)
+			{
+				timer.GPUTimeMs = NumCast<float>((double(end - start) * 1000.) / disjointData.Frequency);
+			}
+			else
+			{
+				timer.GPUTimeMs = -1;
+			}
+		}
+
+		if (mTimerPool.IsInUse(i))
+		{
+			if (timer.GetRefCount() == 0)
+			{
+				mTimerPool.Release(i);
+			}
+		}
+
+		mTimerPool[i].WasUsed[frameIdx] = 0;
 	}
 }
 
@@ -666,6 +703,55 @@ void DX11Renderer::EndFrameTimer()
 	StopTimer(mFrameTimer);
 	pContext->End(DisjointQueries[mFrameNum % DX11Timer::BufferSize].Get());
 }
+
+#if PROFILING
+GPUTimer* DX11Renderer::CreateTimer(const wchar_t* name)
+{
+	DX11Timer* timer;
+	u32 dontCare;
+	bool isNew = mTimerPool.Claim(dontCare, timer);
+	timer->Name = name;
+
+	if (isNew)
+	{
+		D3D11_QUERY_DESC desc {};
+		desc.Query = D3D11_QUERY_TIMESTAMP;
+		for (int i = 0; i < DX11Timer::BufferSize; ++i)
+		{
+			pDevice->CreateQuery(&desc, &timer->Queries[i].Start);
+			pDevice->CreateQuery(&desc, &timer->Queries[i].End);
+		}
+	}
+	return timer;
+}
+
+void DX11Renderer::StartTimer(GPUTimer* timer)
+{
+	u32 currFrameIdx = NumCast<u32>(mFrameNum % DX11Timer::BufferSize);
+	auto* dx11Timer = static_cast<DX11Timer*>(timer);
+	pContext->End(dx11Timer->Queries[currFrameIdx].Start.Get());
+//	++dx11Timer->StartCount;
+	dx11Timer->WasUsed[currFrameIdx] = 1;
+	if (mUserAnnotation)
+	{
+		mUserAnnotation->BeginEvent(timer->Name.c_str());
+	}
+}
+
+void DX11Renderer::StopTimer(GPUTimer* timer)
+{
+	u32 currFrameIdx = NumCast<u32>(mFrameNum % DX11Timer::BufferSize);
+	auto* dx11Timer = static_cast<DX11Timer*>(timer);
+	pContext->End(dx11Timer->Queries[currFrameIdx].End.Get());
+	ZE_ASSERT(dx11Timer->WasUsed[currFrameIdx] == 1);
+	dx11Timer->WasUsed[currFrameIdx] = 2;
+		//	++dx11Timer->EndCount;
+	if (mUserAnnotation)
+	{
+		mUserAnnotation->EndEvent();
+	}
+}
+#endif
 
 void DX11Renderer::UnregisterTexture(DX11Texture* tex)
 {
@@ -845,51 +931,12 @@ void DX11Renderer::ClearResourceBindings()
 	pContext->PSSetShaderResources(0, mMaxShaderResources[EShaderType::Pixel], dummyViews);
 	pContext->VSSetShaderResources(0, mMaxShaderResources[EShaderType::Vertex], dummyViews);
 	pContext->CSSetShaderResources(0, mMaxShaderResources[EShaderType::Compute], dummyViews);
-	pContext->CSSetUnorderedAccessViews(0, mMaxUAVs[EShaderType::Compute], reinterpret_cast<ID3D11UnorderedAccessView* const*>(ZerosArray), nullptr);
+	if (mMaxUAVs[EShaderType::Compute] > 0)
+	{
+		pContext->CSSetUnorderedAccessViews(0, mMaxUAVs[EShaderType::Compute], reinterpret_cast<ID3D11UnorderedAccessView* const*>(ZerosArray), nullptr);
+	}
 	pContext->OMSetRenderTargets(0, nullptr, nullptr);
 }
-
-#if PROFILING
-GPUTimer* DX11Renderer::CreateTimer(const wchar_t* name)
-{
-	DX11Timer* timer;
-	u32 dontCare;
-	bool isNew = mTimerPool.Claim(dontCare, timer);
-	timer->Name = name;
-
-	if (isNew)
-	{
-		D3D11_QUERY_DESC desc {};
-		desc.Query = D3D11_QUERY_TIMESTAMP;
-		for (int i = 0; i < DX11Timer::BufferSize; ++i)
-		{
-			pDevice->CreateQuery(&desc, &timer->Queries[i].Start);
-			pDevice->CreateQuery(&desc, &timer->Queries[i].End);
-		}
-	}
-	return timer;
-}
-
-void DX11Renderer::StartTimer(GPUTimer* timer)
-{
-	u32 currFrameIdx = NumCast<u32>(mFrameNum % DX11Timer::BufferSize);
-	pContext->End(static_cast<DX11Timer*>(timer)->Queries[currFrameIdx].Start.Get());
-	if (mUserAnnotation)
-	{
-		mUserAnnotation->BeginEvent(timer->Name.c_str());
-	}
-}
-
-void DX11Renderer::StopTimer(GPUTimer* timer)
-{
-	u32 currFrameIdx = NumCast<u32>(mFrameNum % DX11Timer::BufferSize);
-	pContext->End(static_cast<DX11Timer*>(timer)->Queries[currFrameIdx].End.Get());
-	if (mUserAnnotation)
-	{
-		mUserAnnotation->EndEvent();
-	}
-}
-#endif
 
 void DX11Renderer::SetPixelShader(PixelShader const* shader)
 {
