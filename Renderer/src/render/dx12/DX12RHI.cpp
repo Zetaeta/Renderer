@@ -58,7 +58,7 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 
 	ZE_ASSERT(sRHI == nullptr);
 	sRHI = this;
-	HR_ERR_CHECK(EnableExperimentalShaderModels());
+//	HR_ERR_CHECK(EnableExperimentalShaderModels());
 
 	CreateDeviceAndCmdQueue();
 	DX12DescriptorHeap::GetDescriptorSizes(mDevice.Get());
@@ -188,7 +188,6 @@ void DX12RHI::WaitAndReleaseFrameIdx(u32 frameIdx)
 
 void DX12RHI::StartFrame()
 {
-	WaitAndReleaseFrameIdx(mFrameIndex);
 	ProcessTimers();
 	if LIKELY(mCurrentFrame >= mNumBuffers + ReadbackCleanupDelay)
 	{
@@ -221,6 +220,7 @@ void DX12RHI::EndFrame()
 	HR_ERR_CHECK(mQueues.Direct->Signal(mFrameFence.Get(), mCurrentFrame));
 	++mCurrentFrame;
 	mFrameIndex = (mCurrentFrame) % mNumBuffers;
+	WaitAndReleaseFrameIdx(mFrameIndex);
 }
 
 void DX12RHI::WaitForGPU()
@@ -233,7 +233,7 @@ void DX12RHI::WaitForGPU()
 
 void DX12RHI::DeferredRelease(ComPtr<ID3D12Pageable>&& resource)
 {
-	mDeferredReleaseResources[mStartedFrameIndex].emplace_back(std::move(resource));
+	mDeferredReleaseResources[mFrameIndex].emplace_back(std::move(resource));
 }
 
 void DX12RHI::ProcessDeferredRelease(u32 frameIndex)

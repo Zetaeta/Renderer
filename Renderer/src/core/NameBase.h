@@ -57,8 +57,8 @@ public:
 	u32 GetHash() const { return mHash; }
 	u32 GetIndex() const { return mIndex; }
 	private:
-	u32 mHash;
-	u32 mIndex;
+	u32 mHash = 0;
+	u32 mIndex = 0;
 private:
 	template<typename T>
 	void FinishConstructing(T&& str);

@@ -4,6 +4,6 @@
 		<DisplayString>{*($T1*)Data}</DisplayString>
 	</Type>
 	<Type Name="Name">
-		<DisplayString>{gNameTable.operator[](mHash).Strings.operator[](mIndex)}</DisplayString>
+		<DisplayString>{gNameTable.find(mHash)->Strings.operator[](mIndex)}</DisplayString>
 	</Type>
 </AutoVisualizer>

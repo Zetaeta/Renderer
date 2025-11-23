@@ -43,11 +43,15 @@ namespace  rnd::dx11
 RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* context, Input* input, bool createDx12 /*= false*/)
 	: Super(input)
 {
-	m_hardwareRenderer = std::make_unique<DX11Renderer>(&mScene, &m_Camera, 0, 0, device, context);
+	if (!createDx12)
+	{
+		m_hardwareRenderer = std::make_unique<DX11Renderer>(&mScene, &m_Camera, 0, 0, device, context);
+		CreateIndependentViewport(m_hardwareRenderer.get(), L"DX11");
+	}
 	//auto& mWin11 = mWindows.emplace_back(std::make_unique<wnd::Window>(1500, 900, L"DX11"));
 	//m_hardwareRenderer->CreateSurface(mWin11.get())->CreateFullscreenViewport(&mScene, &m_Camera);
-	CreateIndependentViewport(m_hardwareRenderer.get(), L"DX11");
-	if (CVarImguiBackend.GetValueOnMainThread() == 11)
+	bool imgui11 = m_hardwareRenderer && CVarImguiBackend.GetValueOnMainThread() == 11;
+	if (imgui11)
 	{
 		m_hardwareRenderer->ImGuiInit(mWindows[0].get());
 	}
@@ -56,7 +60,7 @@ RenderManagerDX11::RenderManagerDX11(ID3D11Device* device, ID3D11DeviceContext* 
 		dx12Win = MakeOwning<dx12::DX12RHI>(1500, 900, L"DX12", TripleBuffered, &mScene, &m_Camera);
 		dx12LOR = dx12Win->GetLiveObjectReporter();
 		auto* window = CreateIndependentViewport(dx12Win.get(), L"DX12.1");
-		if (CVarImguiBackend.GetValueOnMainThread() == 12)
+		if (!imgui11)
 		{
 			dx12Win->ImGuiInit(window);
 		}
@@ -113,7 +117,7 @@ void rnd::dx11::RenderManagerDX11::OnRenderStart()
 	m_HwTimer.Reset();
 //	mScene.DataInterface().FlipBuffer_MainThread();
 	BufferedRenderInterface::FlipBuffer_MainThread();
-	if (m_hardwareRenderer->GetViewport() && !m_hardwareRenderer->GetViewport()->mRScene->IsInitialized())
+	if (m_hardwareRenderer && m_hardwareRenderer->GetViewport() && !m_hardwareRenderer->GetViewport()->mRScene->IsInitialized())
 	{
 		m_hardwareRenderer->GetViewport()->mRScene = RendererScene::Get(mScene, m_hardwareRenderer.get());
 	}

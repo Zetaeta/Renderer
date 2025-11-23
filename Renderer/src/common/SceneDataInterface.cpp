@@ -25,7 +25,6 @@ PrimitiveId SceneDataInterface::SceneData::AllocatePrimitiveSlot()
 
 PrimitiveId SceneDataInterface::AddPrimitive(PrimitiveComponent* component)
 {
-	;
 	auto& data = GetMainThreadData();
 	PrimitiveId newId = data.AllocatePrimitiveSlot();
 	data.Transforms[newId] = component->GetWorldTransform();

@@ -113,7 +113,7 @@ struct SceneletPart
 struct Scenelet : public Asset
 {
 	Scenelet(AssetPath const& path)
-		: Asset(path), m_Name(m_Name) {}
+		: Asset(path), m_Name(path.SubPath) {}
 	CompoundMesh::Ref FindMesh(String const& name);
 	SceneletPart m_Root;
 	Name m_Name;

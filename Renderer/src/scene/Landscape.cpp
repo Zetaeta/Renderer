@@ -109,13 +109,18 @@ Landscape::Landscape(Scene* scene, uvec2 extents /*= {1, 1}*/)
 
 bool LandscapeComponent::ShouldAddToScene()
 {
-	return true;
+	Landscape* landscape = GetOwner<Landscape>();
+	return landscape && landscape->mHeightmap;
 }
 
 RefPtr<rnd::IDrawable> LandscapeComponent::CreateDrawable()
 {
 	Landscape* landscape = GetOwner<Landscape>();
-	return new rnd::LandscapeDrawable(landscape->mHeightmap);
+	if (landscape->mHeightmap)
+	{
+		return new rnd::LandscapeDrawable(landscape->mHeightmap);
+	}
+	return nullptr;
 }
 
 DEFINE_CLASS_TYPEINFO(Landscape, EClassFlags::Transient)

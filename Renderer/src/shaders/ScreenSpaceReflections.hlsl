@@ -307,7 +307,7 @@ float3 CalcSSR(uint2 pixel)
         #if COMPUTE
             return visibility * reflectionStrength * inoutSceneColour[result.pos];
         #else
-            return visibility * reflectionStrength * //falloff*
+            return visibility * reflectionStrength * falloff*
             inSceneColour.Load(int3(result.pos, 0)).xyz;
         #endif
 

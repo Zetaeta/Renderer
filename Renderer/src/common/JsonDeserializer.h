@@ -41,11 +41,4 @@ public:
 		return mStack[mStack.size() - 1];
 	}
 
-	void DeserializeContainer(ReflectedValue value, json const& data);
-
-	void DeserializeClass(ReflectedValue value, json const& data);
-	
-	void DeserializeBasic(ReflectedValue value, json const& data);
-
-	void DeserializePointer(ReflectedValue value, json const& data);
 };
