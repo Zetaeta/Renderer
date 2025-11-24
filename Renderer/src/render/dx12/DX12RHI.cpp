@@ -27,6 +27,7 @@
 #include "backends/imgui_impl_dx12.cpp"
 #include "backends/imgui_impl_win32.h"
 #include "common/ImguiThreading.h"
+#include "common/CommandLine.h"
 
 #pragma comment(lib, "d3d12.lib")
 
@@ -99,6 +100,8 @@ DX12RHI::~DX12RHI()
 		ImGui_ImplDX12_Shutdown();
 		ImGui_ImplWin32_Shutdown();
 	}
+	HR_ERR_CHECK(mQueues.Direct->Signal(mFrameFence.Get(), mCurrentFrame));
+	WaitFence(mCurrentFrame);
 	mSwapChains.clear();
 	mContext = nullptr;
 	ResourceMgr.Teardown();
@@ -109,7 +112,7 @@ DX12RHI::~DX12RHI()
 	RendererScene::OnShutdownDevice(this);
 	mCBPool.ReleaseResources();
 	DX12SyncPointPool::Destroy();
-	WaitFence(mCurrentFrame - 1);
+//	WaitFence(mCurrentFrame);
 	mTest = nullptr;
 	mUploadBuffer = nullptr;
 	mReadbackBuffer = nullptr;
@@ -195,6 +198,8 @@ void DX12RHI::StartFrame()
 	}
 	mReadbackBuffer->PushFrame();
 	mStartedFrameIndex = mFrameIndex;
+
+	ResourceMgr.ProcessTextureCreations();
 }
 
 void DX12RHI::EndFrame()
@@ -254,7 +259,7 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 		{
 			debugController->EnableDebugLayer();
-			debugController->SetEnableGPUBasedValidation(false);
+			debugController->SetEnableGPUBasedValidation(CommandLine::Get().HasArg("-gpuvalidation"));
 			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 		}
 	}
@@ -745,6 +750,9 @@ ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc const& PSODesc)
 		desc.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT{});
 //		desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 		DXCALL(mDevice->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&pso)));
+		String name = std::format("{},{}", PSODesc.Shaders[EShaderType::Vertex] ? PSODesc.Shaders[EShaderType::Vertex]->mDebugName : String{},
+			PSODesc.Shaders[EShaderType::Pixel] ? PSODesc.Shaders[EShaderType::Pixel]->mDebugName : String{});
+		pso->SetName(ToWideString(name).c_str());
 	}
 
 	return pso.Get();
@@ -878,7 +886,6 @@ ID3D12PipelineState* DX12RHI::GetDefaultPSO()
 
 void DX12RHI::BeginFrame()
 {
-	IRenderDevice::BeginFrame();
 	Tick();
 }
 
