@@ -331,8 +331,13 @@ void DX12Texture::TransitionState(ID3D12GraphicsCommandList_* cmdList, D3D12_RES
 
 void DX12Texture::TransitionTo(ID3D12GraphicsCommandList_* cmdList, D3D12_RESOURCE_STATES toState)
 {
-	if (mLastState != toState)
+	if ((mLastState & toState) == 0) 
 	{
+		if (IsReadState(toState))
+		{
+			mUsedReadStates |= (toState & D3D12_RESOURCE_STATE_GENERIC_READ);
+			toState |= mUsedReadStates;
+		}
 		TransitionState(cmdList, mLastState, toState);
 	}
 }

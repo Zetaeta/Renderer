@@ -20,7 +20,8 @@ void DX12Context::SetShaderResources(EShaderType shader, ShaderResources srvs, u
 		//mGraphicsState.ShaderStates[shader].SRVs.insert(mGraphicsState.ShaderStates[shader].SRVs.end(), srvs.begin(), srvs.end());
 		mGraphicsState.ShaderStates[shader].DescTablesDirty = true;
 		mGraphicsState.mBindingsDirty = true;
-		BindAndTransition(mGraphicsState.ShaderStates[shader].SRVs, srvs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, startIdx);
+		auto requiredState = shader == EShaderType::Pixel ? D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE : D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+		BindAndTransition(mGraphicsState.ShaderStates[shader].SRVs, srvs, requiredState, startIdx);
 		//for (auto const& srv : srvs)
 		//{
 		//	if (srv.Resource)
@@ -93,40 +94,43 @@ void DX12Context::FinalizeGraphicsState()
 		return;
 	}
 
-	auto loc = rhi.GetResourceDescTableAlloc()->Reserve(NumCast<u32>(requiredResourceDescriptors));
-	mCmdList->SetDescriptorHeaps(1, &loc.Heap);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE dest(loc.CPUHandle);
-	CD3DX12_GPU_DESCRIPTOR_HANDLE tableStart(loc.GPUHandle);
-	for (auto stage = mGraphicsState.BeginActiveStages(); stage; ++stage)
+	if (requiredResourceDescriptors > 0)
 	{
-		if (stage->GetRequiredDescriptors() > 0)
+		auto loc = rhi.GetResourceDescTableAlloc()->Reserve(NumCast<u32>(requiredResourceDescriptors));
+		mCmdList->SetDescriptorHeaps(1, &loc.Heap);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dest(loc.CPUHandle);
+		CD3DX12_GPU_DESCRIPTOR_HANDLE tableStart(loc.GPUHandle);
+		for (auto stage = mGraphicsState.BeginActiveStages(); stage; ++stage)
 		{
-			u32 tableSize = 0;
-			auto numUAVs = min(stage->UAVs.size(), (u64) mGraphicsState.PSOState.RootSig.NumUAVs[stage.Shader]);
-			for (u32 i=0; i<numUAVs; ++i)
+			if (stage->GetRequiredDescriptors() > 0)
 			{
-				UnorderedAccessView& view = stage->UAVs[i];
-				auto src = view.Resource->GetUAV<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
-				rhi.Device()->CopyDescriptorsSimple(1,dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
+				u32 tableSize = 0;
+				auto numUAVs = min(stage->UAVs.size(), (u64) mGraphicsState.PSOState.RootSig.NumUAVs[stage.Shader]);
+				for (u32 i=0; i<numUAVs; ++i)
+				{
+					UnorderedAccessView& view = stage->UAVs[i];
+					auto src = view.Resource->GetUAV<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
+					rhi.Device()->CopyDescriptorsSimple(1,dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
+				}
+				for (ResourceView& view : stage->SRVs)
+				{
+					auto rsc = view.Resource ? view.Resource : GetRHI().BasicTextures.GetBlackTexture(&GetRHI());
+					auto src = rsc->GetShaderResource<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
+					rhi.Device()->CopyDescriptorsSimple(1,dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+					dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
+				}
+				s8 tablePos = mGraphicsState.RootSig().SRVTableIndices[stage.Shader];
+				if (tablePos >= 0)
+				{
+					mCmdList->SetGraphicsRootDescriptorTable(tablePos, tableStart);
+				}
+				else
+				{
+					ZE_ASSERT(false);
+				}
+				tableStart.Offset(NumCast<u32>(stage->SRVs.size() + stage->UAVs.size()), DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
 			}
-			for (ResourceView& view : stage->SRVs)
-			{
-				auto rsc = view.Resource ? view.Resource : GetRHI().BasicTextures.GetBlackTexture(&GetRHI());
-				auto src = rsc->GetShaderResource<D3D12_CPU_DESCRIPTOR_HANDLE>(view.ViewId);
-				rhi.Device()->CopyDescriptorsSimple(1,dest, src, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				dest.Offset(DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
-			}
-			s8 tablePos = mGraphicsState.RootSig().SRVTableIndices[stage.Shader];
-			if (tablePos >= 0)
-			{
-				mCmdList->SetGraphicsRootDescriptorTable(tablePos, tableStart);
-			}
-			else
-			{
-				ZE_ASSERT(false);
-			}
-			tableStart.Offset(NumCast<u32>(stage->SRVs.size() + stage->UAVs.size()), DX12DescriptorHeap::DescriptorSizes[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV]);
 		}
 	}
 }

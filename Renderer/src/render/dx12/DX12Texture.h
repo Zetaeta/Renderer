@@ -113,6 +113,7 @@ private:
 	SmallVector<D3D12_CPU_DESCRIPTOR_HANDLE, 5> mAdditionalUAVs;
 	Vector<D3D12_CPU_DESCRIPTOR_HANDLE> mAdditionalSRVs;
 	D3D12_RESOURCE_STATES mLastState = D3D12_RESOURCE_STATE_COMMON;
+	D3D12_RESOURCE_STATES mUsedReadStates {};
 	//IDepthStencil::Ref mDsv;
 	//IRenderTarget::Ref mRtv;
 	std::variant<EmptyStruct, DX12DepthStencil, DX12RenderTarget> mRtvOrDsv;
