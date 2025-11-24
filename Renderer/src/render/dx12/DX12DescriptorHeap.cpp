@@ -58,7 +58,7 @@ String DX12DescriptorHeap::GetHeapName() const
 	switch (Type)
 	{
 	case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
-		type = "SRV/UAV?CBV";
+		type = "SRV/UAV/CBV";
 		break;
 	case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
 		type = "Sampler";
@@ -77,10 +77,10 @@ String DX12DescriptorHeap::GetHeapName() const
 	switch (Flags)
 	{
 	case D3D12_DESCRIPTOR_HEAP_FLAG_NONE:
-		visibility = "(non-shader visibile)";
+		visibility = "(non-shader visible)";
 		break;
 	case D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE:
-		visibility = "(shader visibile)";
+		visibility = "(shader visible)";
 		break;
 	default:
 		break;

@@ -33,6 +33,11 @@ constexpr bool IsValid(D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle)
 	return cpuHandle.ptr != 0;
 }
 
+inline bool IsReadState(D3D12_RESOURCE_STATES state)
+{
+	return (state & ~D3D12_RESOURCE_STATE_GENERIC_READ) == 0;
+}
+
 ID3D12Resource_* GetD3D12Resource(IDeviceResource* resource);
 
 ID3D12Device_* GetD3D12Device();
