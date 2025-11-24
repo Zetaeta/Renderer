@@ -26,6 +26,7 @@ public:
 	LandscapeComponent(Args&&... args)
 		: Super(std::forward<Args>(args)...)
 	{
+		CastShadows = false;
 	}
 	bool ShouldAddToScene() override;
 

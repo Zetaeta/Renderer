@@ -31,6 +31,7 @@ PrimitiveId SceneDataInterface::AddPrimitive(PrimitiveComponent* component)
 	if (StaticMeshComponent* smc = Cast<StaticMeshComponent>(component))
 	{
 		SMCreationData& creationData = data.AddedStaticMeshes.emplace_back();
+		creationData.PrimInfo.Init(component);
 		creationData.ScreenId = component->GetScreenId();
 		creationData.Id = newId;
 		creationData.Mesh = smc->GetMeshRef();
@@ -46,6 +47,7 @@ PrimitiveId SceneDataInterface::AddPrimitive(PrimitiveComponent* component)
 	{
 //		if (auto Drawable = component->CreateDrawable())
 		auto& creationData = data.AddedCustomDrawables.emplace_back();
+		creationData.PrimInfo.Init(component);
 		creationData.ScreenId = component->GetScreenId();
 		rnd::ForEachDevice([&](rnd::IRenderDevice* device, u32 i)
 		{
@@ -77,4 +79,9 @@ void SceneDataInterface::FlipFrameBuffers(u32 from, u32 to)
 	{
 		mData[to].TransformsDirty[i] = false;
 	}
+}
+
+void PrimitiveInfo::Init(DrawableComponent* component)
+{
+	CastShadows = component->CastShadows;
 }

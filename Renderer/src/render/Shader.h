@@ -9,6 +9,7 @@
 #include "RenderEnums.h"
 #include "core/ClassTypeInfo.h"
 #include "DeviceResource.h"
+#include "core/String.h"
 
 #ifndef SHADER_PARAMETER_VALIDATION
 	#define SHADER_PARAMETER_VALIDATION defined(_DEBUG)
@@ -221,6 +222,8 @@ public:
 	{
 		return mRequirements;
 	}
+
+	DebugName mDebugName;
 protected:
 	ShaderRequirements mRequirements;
 	OwningPtr<IDeviceShader> DeviceShader;

@@ -26,6 +26,12 @@ constexpr PrimitiveId InvalidPrimId()
 	return (PrimitiveId) -1;
 }
 
+struct PrimitiveInfo
+{
+	void Init(DrawableComponent* component);
+	uint8 CastShadows : 1 = true;
+};
+
 /**
  * 
  */
@@ -55,6 +61,7 @@ public:
 
 	struct SMCreationData
 	{
+		PrimitiveInfo PrimInfo;
 		std::shared_ptr<CompoundMesh> Mesh;
 		SmallVector<MaterialID, 4> Materials;
 		PrimitiveId Id;
@@ -63,6 +70,7 @@ public:
 
 	struct CustomDrawableCreationData
 	{
+		PrimitiveInfo PrimInfo;
 		rnd::PerRenderDevice<RefPtr<rnd::IDrawable>> Drawable;
 		PrimitiveId Id;
 		ScreenObjectId ScreenId;

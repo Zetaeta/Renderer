@@ -96,6 +96,16 @@ private:
 
 }
 
+template<typename T>
+auto GetIndexWithResize(T& vec, size_t idx) -> decltype(vec[idx])&
+{
+	if (vec.size() <= idx)
+	{
+		vec.resize(idx + 1);
+	}
+	return vec[idx];
+}
+
 template<typename T, u32 Size>
 using SmallVector = std::vector<T>;
 

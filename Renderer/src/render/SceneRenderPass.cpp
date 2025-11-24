@@ -55,6 +55,11 @@ void SceneRenderPass::RenderScene(RendererScene const& scene)
 
 void SceneRenderPass::Accept(DrawData const& dd)
 {
+	if (mIsShadowPass && !mScene->GetPrimInfo(dd.primitive).CastShadows)
+	{
+		return;
+	}
+
 	if (IsDeferred())
 	{
 		mBuffer.emplace_back(dd);

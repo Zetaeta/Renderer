@@ -96,3 +96,5 @@ inline HeapString ToNarrowHeapString(std::wstring const& str, ECharEncoding enco
 {
 	return ToNarrowHeapString(str.c_str(), encoding);
 }
+
+using DebugName = String;

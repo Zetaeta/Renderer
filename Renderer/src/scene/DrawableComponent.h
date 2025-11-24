@@ -33,6 +33,8 @@ class DrawableComponent : public SceneComponent
 	virtual bool ShouldAddToScene() { return false; }
 	virtual RefPtr<rnd::IDrawable> CreateDrawable();
 
+	bool CastShadows = true;
+
 protected:
 	PrimitiveId mPrimId = InvalidPrimId();
 };

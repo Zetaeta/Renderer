@@ -57,9 +57,11 @@ void RendererScene::OnShutdownDevice(IRenderDevice* device)
 	}
 }
 
-RenderObject* RendererScene::AddPrimitive(SceneDataInterface::SMCreationData const& data)
+StaticMeshDrawable* RendererScene::AddPrimitive(SceneDataInterface::SMCreationData const& data)
 {
-	RenderObject* object = &mPrimitives[data.Id];
+	StaticMeshDrawable* object = &mPrimitives[data.Id];
+	GetIndexWithResize(mPrimInfos, data.Id) = data.PrimInfo;
+
 	for (u32 i = 0; i < data.Mesh->components.size(); ++i)
 	{
 		auto& meshPart = data.Mesh->components[i];
@@ -79,6 +81,7 @@ RenderObject* RendererScene::AddPrimitive(SceneDataInterface::SMCreationData con
 
 void RendererScene::AddCustomDrawable(SceneDataInterface::CustomDrawableCreationData const& data)
 {
+	GetIndexWithResize(mPrimInfos, data.Id) = data.PrimInfo;
 	RefPtr<IDrawable> drawable = std::move(data.Drawable[mDevice->GetRenderDeviceIndex()]);
 	drawable->InitResources(*mDevice);
 	mCustomPrimitives[data.Id] = std::move(drawable);

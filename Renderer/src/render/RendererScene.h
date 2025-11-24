@@ -9,7 +9,7 @@ namespace rnd
 class IRenderDevice;
 class IDeviceIndexedMesh;
 
-struct RenderObject
+struct StaticMeshDrawable
 {
 	SmallVector<RefPtr<IDeviceIndexedMesh>, 1> MeshData;
 	SmallVector<RefPtr<RenderMaterial>, 1> Materials;
@@ -61,7 +61,7 @@ public:
 	~RendererScene();
 	void Destroy();
 
-	RenderObject* AddPrimitive(SceneDataInterface::SMCreationData const& data);
+	StaticMeshDrawable* AddPrimitive(SceneDataInterface::SMCreationData const& data);
 
 	void AddCustomDrawable(SceneDataInterface::CustomDrawableCreationData const& data);
 	void RemoveCustomPrimitive(PrimitiveId primId);
@@ -101,6 +101,11 @@ public:
 	const Scene& GetScene() const
 	{
 		return *mScene;
+	}
+
+	const PrimitiveInfo& GetPrimInfo(PrimitiveId id) const
+	{
+		return mPrimInfos[id];
 	}
 
 	void UpdatePrimitives();
@@ -187,7 +192,9 @@ private:
 	SceneDataInterface* mDataInterface = nullptr;
 	bool mInitialized = false;
 
-	std::unordered_map<PrimitiveId, RenderObject> mPrimitives{}; // TODO optimize
+	Vector<PrimitiveInfo> mPrimInfos;
+
+	std::unordered_map<PrimitiveId, StaticMeshDrawable> mPrimitives{}; // TODO optimize
 	std::unordered_map<PrimitiveId, RefPtr<IDrawable>> mCustomPrimitives; // For non-trivial static meshes.
 
 	Scene const* mScene = nullptr;

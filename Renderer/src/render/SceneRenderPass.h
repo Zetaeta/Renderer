@@ -81,6 +81,7 @@ protected:
 	Camera::ConstRef mViewCam;
 	EShadingLayer mLayer;
 	bool mDepthOnly;
+	bool mIsShadowPass = false;
 
 private:
 };

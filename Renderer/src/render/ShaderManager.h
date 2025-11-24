@@ -36,6 +36,7 @@ public:
 		auto& shaderInfo = ShaderRegistry::Get().GetRegisteredShader(id);
 		OwningPtr<IDeviceShader> deviceShader;
 		ShaderType* shader = new ShaderType;
+		shader->mDebugName = shaderInfo.Name;
 		OwningPtr<IShaderReflector> reflector;
 		if constexpr (ShaderType::Type == EShaderType::Vertex)
 		{

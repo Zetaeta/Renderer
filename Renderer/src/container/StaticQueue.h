@@ -16,7 +16,7 @@ class StaticQueue
 {
 public:
 	template<typename... Args>
-	T& Emplace(Args... args)
+	T& Emplace(Args&&... args)
 	{
 		if constexpr (OverflowBehavior == EStaticQueueOverflowBehavior::Disallow)
 		{
@@ -110,11 +110,16 @@ public:
 		}
 		BaseIterator& operator++()
 		{
-			if (++mPosition > InCapacity)
+			if (++mPosition >= InCapacity)
 			{
 				mPosition = 0;
 			}
 			return *this;
+		}
+
+		operator bool() const
+		{
+			return mOwner.IsValidIndex(mPosition);
 		}
 
 		BaseIterator operator++(int)
@@ -163,7 +168,7 @@ public:
 
 	Iterator end()
 	{
-		return Iterator(*this, mStart + mSize % InCapacity);
+		return Iterator(*this, (mStart + mSize) % InCapacity);
 	}
 
 	ConstIterator begin() const
@@ -173,7 +178,7 @@ public:
 
 	ConstIterator end() const
 	{
-		return ConstIterator(*this, mStart + mSize % InCapacity);
+		return ConstIterator(*this, (mStart + mSize) % InCapacity);
 	}
 	
 private:
