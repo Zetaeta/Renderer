@@ -4,6 +4,8 @@
 namespace rnd::dx12
 {
 
+#define FIRB_DEBUG 1  
+
 bool FrameIndexedRingBuffer::TryReserve(u64 size, u64 alignment, u64& outStart)
 {
 //	ZE_ASSERT(IsInRenderThread());
@@ -11,6 +13,7 @@ bool FrameIndexedRingBuffer::TryReserve(u64 size, u64 alignment, u64& outStart)
 	{
 		return false;
 	}
+	ZE_ASSERT(size > 0);
 
 	u64 currFrame = GetRHI().GetCurrentFrame();
 	if (mFrames.empty())
@@ -22,36 +25,48 @@ bool FrameIndexedRingBuffer::TryReserve(u64 size, u64 alignment, u64& outStart)
 
 	FrameWindow& current = mFrames.Back();
 	u64 start = Align(current.End, alignment);
-	u64 completedFrame = GetRHI().GetCompletedFrame();
+	u64 completedFrame = GetRHI().GetCompletedFrame();// - 1;
+
+	while (!mFrames.empty() && mFrames.Front().Frame <= completedFrame)
+	{
+		mFrames.Pop();
+	}
+
 	if (start + size > mSize)
 	{
-		while (!mFrames.empty() && mFrames.Front().End > current.End)
-		{
-			if (completedFrame >= mFrames.Front().Frame)
-			{
-				mFrames.Pop();
-			}
-			else
-			{
-				return false;
-			}
-		}
 		start = 0;
 	}
-	while (!mFrames.empty() && !(mFrames.Front().Start >= start + size || mFrames.Front().End <= start))
+	u64 end = start + size;
+	if (!mFrames.empty())
 	{
-		if (completedFrame >= mFrames.Front().Frame)
+		u64 allocStart = mFrames.Front().Start, allocEnd = mFrames.Back().End;
+		bool bFull;
+		if (allocEnd >= allocStart)
 		{
-			mFrames.Pop();
+			bFull = end > allocStart && start < allocEnd;
 		}
 		else
 		{
-			return false;
+			bFull = end > allocStart || start < allocEnd;
+		}
+		if (bFull) return false;
+	}
+
+#if FIRB_DEBUG
+	
+	for (auto it = mFrames.begin(); it != mFrames.end(); it++)
+	{
+		if (end > it->Start && start < it->End)
+		{
+			ZE_ASSERT(false);
 		}
 	}
 
+#endif
+
 	if (mFrames.empty() || mFrames.Back().Frame != currFrame)
 	{
+		if (mFrames.Capacity() == mFrames.Size()) ZE_ASSERT(mFrames.Front().Frame <= completedFrame);
 		mFrames.Push({currFrame, start, start + size});
 	}
 	else

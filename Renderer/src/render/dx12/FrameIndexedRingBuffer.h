@@ -21,7 +21,7 @@ protected:
 		u64 Start;
 		u64 End;
 	};
-	StaticQueue<FrameWindow, 4, EStaticQueueOverflowBehavior::Evict> mFrames;
+	StaticQueue<FrameWindow, 4, EStaticQueueOverflowBehavior::Disallow> mFrames;
 	u64 mSize = 0;
 };
 
