@@ -34,7 +34,7 @@ public:
 		OWNING = 2
 	};
 
-	PointerTypeInfo(Name name, size_t size, size_t alignment, ETypeFlags typeFlags, EPtrFlags flags, TypeInfo const& target)
+	PointerTypeInfo(HashString name, size_t size, size_t alignment, ETypeFlags typeFlags, EPtrFlags flags, TypeInfo const& target)
 		: TypeInfo(name, size, alignment, ETypeCategory::POINTER, typeFlags), m_TargetType(target) {}
 
 	virtual bool		  IsNull(ConstReflectedValue ptr) const = 0;
@@ -70,7 +70,7 @@ class TPtrTypeInfo : public PointerTypeInfo
 	using T = std::remove_reference_t<decltype(*std::declval<TPtr>())>;
 	constexpr static bool s_ConstTarget = std::is_const_v<T>;
 public:
-	TPtrTypeInfo(Name name = TypeInfoHelper<TPtr>::NAME.str)
+	TPtrTypeInfo(HashString name = TypeInfoHelper<TPtr>::NAME.str)
 		: PointerTypeInfo(name, sizeof(TPtr), alignof(TPtr), ComputeFlags<TPtr>(), PointerTypeInfo::EPtrFlags((s_ConstTarget ? CONST_TARGET : NONE) | OWNING), GetTypeInfo<T>())
 	{
 	}

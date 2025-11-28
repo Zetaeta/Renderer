@@ -89,7 +89,7 @@ struct CompoundMesh : public Asset
 	RMOVE_DEFAULT(CompoundMesh);
 	CompoundMesh(AssetPath const& path);
 	CompoundMesh(AssetPath const& path, MeshPart&& mesh);
-	Name name;
+	HashString name;
 	std::vector<MeshPart> components;
 
 	using Ref = std::shared_ptr<CompoundMesh>;
@@ -116,7 +116,7 @@ struct Scenelet : public Asset
 		: Asset(path), m_Name(path.SubPath) {}
 	CompoundMesh::Ref FindMesh(String const& name);
 	SceneletPart m_Root;
-	Name m_Name;
+	HashString m_Name;
 	using Ref = s32;
 };
 

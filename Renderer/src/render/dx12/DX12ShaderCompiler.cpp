@@ -39,7 +39,7 @@ public:
 
 	SmallVector<CBDesc, 4> GetConstantBuffers() override;
 
-	void GetBindingInfo(_Out_ SmallVector<SRVDesc, 4>& srvs, _Out_ SmallVector<UAVDesc, 4>& uavs) override;
+	void GetBindingInfo(_Out_ SmallVector<SRVBindingDesc, 4>& srvs, _Out_ SmallVector<UAVBindingDesc, 4>& uavs) override;
 private:
 	ComPtr<ID3D12ShaderReflection> mReflection;
 };
@@ -235,7 +235,7 @@ SmallVector<rnd::IShaderReflector::CBDesc, 4> DX12ShaderReflector::GetConstantBu
 	return result;
 }
 
-void DX12ShaderReflector::GetBindingInfo(_Out_ SmallVector<SRVDesc, 4>& srvs, _Out_ SmallVector<UAVDesc, 4>& uavs)
+void DX12ShaderReflector::GetBindingInfo(_Out_ SmallVector<SRVBindingDesc, 4>& srvs, _Out_ SmallVector<UAVBindingDesc, 4>& uavs)
 {
 	
 	D3D12_SHADER_DESC desc;

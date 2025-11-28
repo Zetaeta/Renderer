@@ -7,24 +7,24 @@
 
 using String = std::string;
 
-class Name
+class HashString
 {
-	DECLARE_STI_EXT_NOBASE(Name);
+	DECLARE_STI_EXT_NOBASE(HashString);
 public:
 
-	Name(char const* str);
-	Name(std::string_view str);
-	Name(String const& str)
-	: Name(str.c_str())
+	HashString(char const* str);
+	HashString(std::string_view str);
+	HashString(String const& str)
+	: HashString(str.c_str())
 	{
 	}
-	Name(String&& str);
+	HashString(String&& str);
 
-	Name();
+	HashString();
 
 	String ToString() const;
 
-	std::strong_ordering operator<=>(const Name& other) const
+	std::strong_ordering operator<=>(const HashString& other) const
 	{
 		if (mHash < other.mHash)
 		{
@@ -40,7 +40,7 @@ public:
 		}
 	}
 
-	bool operator==(Name const& other) const
+	bool operator==(HashString const& other) const
 	{
 		return mHash == other.mHash && mIndex == other.mIndex;
 	}
@@ -62,10 +62,13 @@ public:
 private:
 	template<typename T>
 	void FinishConstructing(T&& str);
+
+	// For debugging : gets the string without locking
+	const char* GetDataUnsafe() const;
 };
 
 template<>
-struct TClassTypeTraits<Name> : public TClassTypeTraitsBase<Name>
+struct TClassTypeTraits<HashString> : public TClassTypeTraitsBase<HashString>
 {
 	enum
 	{

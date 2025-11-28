@@ -7,7 +7,7 @@
 namespace rnd
 {
 
-GBufferPass::GBufferPass(RenderContext* rctx, Name const& name, Camera::Ref camera, RGRenderTargetRef rt1, RGRenderTargetRef rt2, RGDepthStencilRef ds)
+GBufferPass::GBufferPass(RenderContext* rctx, HashString const& name, Camera::Ref camera, RGRenderTargetRef rt1, RGRenderTargetRef rt2, RGDepthStencilRef ds)
 	:SceneRenderPass(rctx, name, camera, nullptr, nullptr, E_MT_OPAQUE | E_MT_MASKED), mAlbedoRT(rt1), mNormalRT(rt2), mDSV(ds)
 {
 }

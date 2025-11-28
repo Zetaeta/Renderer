@@ -45,7 +45,7 @@ void Serializer::SerializeGeneralClass(ClassValuePtr value)
 		std::string_view key;
 		while (ReadNextMapKey(key))
 		{
-			Name keyName(key);
+			HashString keyName(key);
 			if (PropertyInfo const* prop = &actual.GetType().FindPropertyChecked(keyName); ZE_ENSURE(prop))
 			{
 				if (ShouldSerialize(*prop))

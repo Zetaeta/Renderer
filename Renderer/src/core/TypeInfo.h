@@ -3,13 +3,13 @@
 #include "TypeInfoBase.h"
 #include "common/Serializer.h"
 
-TypeInfo const* FindTypeInfo(Name name);
+TypeInfo const* FindTypeInfo(HashString name);
 
 template<typename T>
 class BasicTypeInfo : public TypeInfo
 {
 	friend TypeInfoHelper<T>;
-	BasicTypeInfo(Name name)
+	BasicTypeInfo(HashString name)
 		: TypeInfo(name, sizeof(T), alignof(T), ETypeCategory::BASIC)
 	{
 
@@ -116,7 +116,7 @@ inline TypeInfo const& NullTypeInfo()
 }
 
 template<typename T>
-Name GetTypeName()
+HashString GetTypeName()
 {
 	return GetTypeInfo<T>().GetName();
 }

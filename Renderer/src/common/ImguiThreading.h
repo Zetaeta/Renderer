@@ -48,10 +48,12 @@ struct ImguiDataForDrawing
 	ImDrawDataWrapper DrawData;
 	Vector<ImguiPlatformWindow> PlatformWindows;
 };
+
 class ImguiThreadInterface : public TBufferedRenderInterface<ImguiDataForDrawing>
 {
 public:
 	static void Init();
+	static void Shutdown();
 private:
 	//std::array<ImDrawDataWrapper, NumSceneDataBuffers> mDrawDatas;
 	//std::array<Vector<ImguiPlatformWindow>, NumSceneDataBuffers> mPlatformWindows;

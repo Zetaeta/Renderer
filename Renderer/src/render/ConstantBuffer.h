@@ -92,7 +92,7 @@ public:
 	u8* GetData(){ return Data.get(); }
 	DataLayout::Ref			  Layout;
 
-	CBAccessor operator[](Name const& name)
+	CBAccessor operator[](HashString const& name)
 	{
 		ZE_ASSERT(Layout != nullptr);
 		for (auto& entry: Layout->Entries)
@@ -120,13 +120,13 @@ public:
 	}
 
 	template<typename T>
-	inline void Set(Name const& name, T const& val)
+	inline void Set(HashString const& name, T const& val)
 	{
 		operator[](name) = val;
 	}
 
 	template<typename T>
-	inline void SetIfExists(Name const& name, T const& val)
+	inline void SetIfExists(HashString const& name, T const& val)
 	{
 		operator[](name) |= val;
 	}
@@ -206,7 +206,7 @@ public:
 		bool Enabled = true;
 	};
 
-	ConstReflectedValue Get(const Name& key) const
+	ConstReflectedValue Get(const HashString& key) const
 	{
 		auto const it = mEntries.find(key);
 		if (it == mEntries.end() || !it->second.Enabled)
@@ -218,7 +218,7 @@ public:
 	}
 
 	template<typename T>
-	void Set(const Name& key, const T& value)
+	void Set(const HashString& key, const T& value)
 		requires(std::is_trivially_copyable_v<T>)
 	{
 		Entry& entry = mEntries[key];
@@ -235,7 +235,7 @@ public:
 		*reinterpret_cast<T*>(mData[entry.Pos]) = value;
 	}
 
-	void Unset(const Name& key)
+	void Unset(const HashString& key)
 	{
 		if (auto const it = mEntries.find(key); it != mEntries.end())
 		{
@@ -244,7 +244,7 @@ public:
 	}
 
 private:
-	std::unordered_map<Name, Entry> mEntries;
+	std::unordered_map<HashString, Entry> mEntries;
 	MovableContiguousBumpAllocator mData;
 };
 

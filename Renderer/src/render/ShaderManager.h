@@ -50,6 +50,7 @@ public:
 		if (reflector)
 		{
 			shader->mRequirements = GetRequirements(reflector.get());
+			shader->mParameters = reflector->GetParamsInfo();
 		}
 		if (outReflector)
 		{

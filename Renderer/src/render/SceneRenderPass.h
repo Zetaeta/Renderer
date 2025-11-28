@@ -39,7 +39,7 @@ using RenderDeviceCtx = DX11Ctx;
 class SceneRenderPass : public RenderPass
 {
 public:
-	SceneRenderPass(RenderContext* ctx, Name passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil,
+	SceneRenderPass(RenderContext* ctx, HashString passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil,
 				EMatType accepts = E_MT_ALL, EShadingLayer layer = EShadingLayer::NONE, ERenderPassMode mode = ERenderPassMode::IMMEDIATE);
 
 	bool Accepts(SceneComponent const* sceneComp, MeshPart const* mesh) const;

@@ -8,7 +8,7 @@ namespace rnd
 class RenderScreenIds : public SceneRenderPass
 {
 public:
-	RenderScreenIds(RenderContext* ctx, Name passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil = nullptr)
+	RenderScreenIds(RenderContext* ctx, HashString passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil = nullptr)
 		: SceneRenderPass(ctx, passName, camera, renderTarget, depthStencil ? depthStencil : ctx->GetTempDepthStencilFor(renderTarget))
 	{
 		mMatOverride = mRCtx->GetMaterialManager()->GetDefaultMaterial(MAT_SCREEN_ID);

@@ -1,13 +1,13 @@
 #include "core/TypeInfo.h"
 #include "core/BaseObject.h"
 
-std::unordered_map<Name, TypeInfo*>& GetTypeDB()
+std::unordered_map<HashString, TypeInfo*>& GetTypeDB()
 {
-	static std::unordered_map<Name, TypeInfo*> db;
+	static std::unordered_map<HashString, TypeInfo*> db;
 	return db;
 }
 
-TypeInfo const* FindTypeInfo(Name name)
+TypeInfo const* FindTypeInfo(HashString name)
 {
 	auto const& db = GetTypeDB();
 	auto		it = db.find(name);
@@ -30,7 +30,7 @@ BASIC_TYPES
 
 VoidTypeInfo const TypeInfoHelper<void>::s_TypeInfo;
 
- TypeInfo::TypeInfo(Name name, size_t size, size_t alignment, ETypeCategory cat /*= ETypeCategory::BASIC*/, ETypeFlags flags)
+ TypeInfo::TypeInfo(HashString name, size_t size, size_t alignment, ETypeCategory cat /*= ETypeCategory::BASIC*/, ETypeFlags flags)
 	: m_Name(name), m_Category(cat), m_Size(NumCast<int>(size)), m_Alignment(NumCast<int>(alignment)), m_TypeFlags(flags)
 {
 	GetTypeDB()[name] = this;

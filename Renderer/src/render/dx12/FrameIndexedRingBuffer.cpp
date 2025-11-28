@@ -41,7 +41,7 @@ bool FrameIndexedRingBuffer::TryReserve(u64 size, u64 alignment, u64& outStart)
 	{
 		u64 allocStart = mFrames.Front().Start, allocEnd = mFrames.Back().End;
 		bool bFull;
-		if (allocEnd >= allocStart)
+		if (allocEnd > allocStart)
 		{
 			bFull = end > allocStart && start < allocEnd;
 		}

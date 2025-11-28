@@ -79,11 +79,11 @@ void MaterialArchetype::Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMat
 		{
 			for (auto& cb : reflector->GetConstantBuffers())
 			{
-				if (FindIgnoreCase(cb.Name, "instance"))
+				if (FindIgnoreCase(cb.Name.c_str(), "instance"))
 				{
 					CBData[ECBFrequency::VS_PerInstance].IsUsed = true;
 				}
-				else if (FindIgnoreCase(cb.Name, "frame"))
+				else if (FindIgnoreCase(cb.Name.c_str(), "frame"))
 				{
 					CBData[ECBFrequency::VS_PerFrame].IsUsed = true;
 				}
@@ -104,11 +104,11 @@ void MaterialArchetype::Bind(rnd::RenderContext& rctx, EShadingLayer layer, EMat
 		{
 			for (auto& cb : reflector->GetConstantBuffers())
 			{
-				if (FindIgnoreCase(cb.Name, "instance"))
+				if (FindIgnoreCase(cb.Name.c_str(), "instance"))
 				{
 					CBData[ECBFrequency::PS_PerInstance].IsUsed = true;
 				}
-				else if (FindIgnoreCase(cb.Name, "frame"))
+				else if (FindIgnoreCase(cb.Name.c_str(), "frame"))
 				{
 					CBData[ECBFrequency::PS_PerFrame].IsUsed = true;
 				}

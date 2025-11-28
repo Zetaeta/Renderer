@@ -14,7 +14,7 @@ ClassTypeInfo const& BaseObject::StaticClass()
 
 ClassTypeInfoImpl<BaseObject> const BaseObject::TypeInfoHelper::s_TypeInfo = BaseObject::TypeInfoHelper::MakeTypeInfo();
 ClassTypeInfoImpl<BaseObject> BaseObject::TypeInfoHelper::MakeTypeInfo() {
-	Name							  name = "BaseObject";
+	HashString							  name = "BaseObject";
 	ClassTypeInfo::Properties attrs;
 	ClassTypeInfo const* parent = nullptr;
 	return ClassTypeInfoImpl<BaseObject>(name, parent, {}, std::move(attrs));

@@ -21,13 +21,9 @@ namespace rnd
 
 class IDeviceShader;
 
-struct ShaderParamInfo
-{
-	PropertyInfo Property;
-};
-
 enum class EShaderParamObjectKind : u8
 {
+	Value,
 	ConstantBuffer,
 	SRV,
 	UAV
@@ -57,33 +53,76 @@ class ShaderParamObjectBase
 	}
 };
 
-template<typename ElementType = float4>
+template<typename EltType = float4>
 struct Texture2D : public ShaderParamObjectBase<ResourceView, EResourceType::Texture2D>
 {
+	constexpr static auto Kind = EShaderParamObjectKind::SRV;
+	using ElementType = EltType;
 };
 
 
-template<typename ElementType = float4>
+template<typename EltType = float4>
 struct RWTexture2D : public ShaderParamObjectBase<UnorderedAccessView, EResourceType::Texture2D>
 {
+	constexpr static auto Kind = EShaderParamObjectKind::UAV;
+	using ElementType = EltType;
 };
+
+struct ShaderParamStructEntryMeta
+{
+	HashString Name;
+	TypeInfo const* ValueType = nullptr;
+	int Offset = 0;
+	u16 Size = 0;
+	EShaderParamObjectKind Kind = EShaderParamObjectKind::Value;
+
+	ShaderParamStructEntryMeta(HashString name, size_t size, size_t offset)
+		:Name(Name), Size(NumCast<u16>(size)), Offset(static_cast<int>(offset))
+	{
+	}
+
+	template<typename T>
+	requires std::is_pod_v<T>
+	void SetType()
+	{
+		ValueType = GetTypeInfo<T>();
+	}
+
+	template<typename T>
+	void SetType()
+	{
+		Kind = T::Kind;
+		ValueType = GetTypeInfo<T::ElementType>();
+	}
+};
+struct ShaderParamStructMeta
+{
+	Vector<ShaderParamStructEntryMeta> Values;
+	Vector<ShaderParamStructEntryMeta> SRVs;
+	Vector<ShaderParamStructEntryMeta> UAVs;
+};
+
+void RegisterShaderParamStructMeta(ShaderParamStructMeta (*createFunc)(), ShaderParamStructMeta& outMeta);
+
+void RegisterAllShaderParamMeta();
 
 #define SHADER_PARAMETER_STRUCT_START(name)\
 	constexpr static int _sp_Start = __COUNTER__;\
 	using Self = name;\
 	template<int spIndex>\
-	constexpr static void _sp_GetParamInfo(Vector<ShaderParamInfo>& params);\
+	constexpr static void _sp_GetParamInfo(Vector<ShaderParamStructEntryMeta>& params);\
 	template<>\
-	constexpr static void _sp_GetParamInfo<_sp_Start>(Vector<ShaderParamInfo>& params) {}
+	constexpr static void _sp_GetParamInfo<_sp_Start>(Vector<ShaderParamStructEntryMeta>& params) {}
 
 #define SHADER_PARAMETER(Type, name, ...)\
 	Type name __VA_ARGS__;\
 	constexpr static int _sp_Param##name = __COUNTER__;\
 	template <>                                         \
-	constexpr static void _sp_GetParamInfo<_sp_Param##name>(Vector<ShaderParamInfo>& params)\
+	constexpr static void _sp_GetParamInfo<_sp_Param##name>(Vector<ShaderParamStructEntryMeta>& params)\
 	{\
 		_sp_GetParamInfo<_sp_Param##name - 1>(params);\
-		params.push_back({ PropertyInfo(#name, GetTypeInfo<Type>(), offsetof(Self, name)) });\
+		params.emplace_back(#name, sizeof(Type), offsetof(Self, name))\
+			  .SetType<Type>();\
 	}
 
 #define SHADER_PARAMETER_UAV()
@@ -91,21 +130,37 @@ struct RWTexture2D : public ShaderParamObjectBase<UnorderedAccessView, EResource
 #define SHADER_PARAMETER_STRUCT_END(name)\
 	constexpr static int _sp_End = __COUNTER__;\
 	constexpr static int _sp_Count = _sp_End - _sp_Start - 1;\
-	inline static ClassTypeInfoImpl<Self> _sp_MakeTypeInfo()\
+	static ShaderParamStructMeta _sp_MakeMetadata()\
 	{\
-		Vector<ShaderParamInfo> params;\
-		_sp_GetParamInfo<_sp_End - 1>(params);\
-		ClassTypeInfo::Properties attrs;\
-		for (const auto& param : params)\
-		{                                                     \
-			attrs.push_back(param.Property);\
+		ShaderParamStructMeta result;\
+		Vector<ShaderParamStructEntryMeta> AllEntries;\
+		_sp_GetParamInfo<_sp_End - 1>(AllEntries);\
+		for (u32 i=0; i<AllEntries.size(); ++i)\
+		{\
+			switch (AllEntries[i].Kind)\
+			{\
+			case EShaderParamObjectKind::Value:\
+				result.Values.push_back(std::move(AllEntries[i]));\
+				break;\
+			case EShaderParamObjectKind::SRV:\
+				result.SRVs.push_back(std::move(AllEntries[i]));\
+				break;\
+			case EShaderParamObjectKind::UAV:\
+				result.UAVs.push_back(std::move(AllEntries[i]));\
+				break;\
+			default:\
+				ZE_ASSERT(false);\
+				break;\
+			}\
 		}\
-		return ClassTypeInfoImpl<Self>{ #name, nullptr, EClassFlags::None, std::move(attrs) }; \
+		return result;\
 	}\
-	struct TypeInfoHelper                                         \
-	{                                                             \
-		inline static ClassTypeInfoImpl<Self> const s_TypeInfo = _sp_MakeTypeInfo();\
-	};
+	inline static ShaderParamStructMeta Metadata;\
+	inline static bool _startupDummy = []{ RegisterShaderParamStructMeta(_sp_MakeMetadata, Metadata); return true; }();
+	//struct TypeInfoHelper                                         \
+	//{                                                             \
+	//	inline static ClassTypeInfoImpl<Self> const s_TypeInfo = _sp_MakeTypeInfo();\
+	//};
 
 
 
@@ -203,6 +258,43 @@ struct ShaderRequirements
 	u32 NumCBs = 0;
 };
 
+struct ShaderVariableInfo
+{
+	HashString Name;
+	int Size = -1;
+};
+struct ShaderCBInfo
+{
+	HashString Name;
+	u32 Size = -1;
+	Vector<HashString> VariableNames; 
+};
+
+
+struct BindingDesc
+{
+	HashString Name;
+	EResourceType Type = EResourceType::Unknown;
+};
+using UAVBindingDesc = BindingDesc;
+using SRVBindingDesc = BindingDesc;
+
+struct ShaderResourcesInfo
+{
+	Vector<HashString> Names;
+	Vector<EResourceType> Types;
+};
+
+struct ShaderParamersInfo
+{
+	SmallVector<ShaderCBInfo, 4> ConstantBuffers;
+
+	//ShaderResourcesInfo SRVs;
+	//ShaderResourcesInfo UAV;
+	SmallVector<SRVBindingDesc, 4> SRVs;
+	SmallVector<UAVBindingDesc, 2> UAVs;
+};
+
 struct EmptyShaderParameters
 {
 	SHADER_PARAMETER_STRUCT_START(EmptyShaderParameters)
@@ -218,14 +310,20 @@ public:
 		return DeviceShader.get();
 	}
 
-	ShaderRequirements const& GetRequirements()
+	ShaderRequirements const& GetRequirements() const
 	{
 		return mRequirements;
+	}
+
+	ShaderParamersInfo const& GetParamsInfo() const
+	{
+		return mParameters;
 	}
 
 	DebugName mDebugName;
 protected:
 	ShaderRequirements mRequirements;
+	ShaderParamersInfo mParameters;
 	OwningPtr<IDeviceShader> DeviceShader;
 	friend ShaderManager;
 };

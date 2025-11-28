@@ -11,7 +11,7 @@ ConstReflectedValue PropertyInfo::Access(ConstClassValuePtr const& obj) const
 	return ConstReflectedValue{ reinterpret_cast<u8 const*>(obj.GetPtr()) + m_Offset, m_Type };
 }
 
-const PropertyInfo* ClassTypeInfo::FindProperty(Name name) const
+const PropertyInfo* ClassTypeInfo::FindProperty(HashString name) const
 {
 	const PropertyInfo* result = nullptr;
 	ForEachPropertyWithBreak([&name, &result](const PropertyInfo& prop)
@@ -39,7 +39,7 @@ ClassTypeInfo const& ClassTypeInfo::GetRuntimeType(ConstReflectedValue val) cons
 	}
 }
 
-const PropertyInfo& ClassTypeInfo::FindPropertyChecked(Name name) const
+const PropertyInfo& ClassTypeInfo::FindPropertyChecked(HashString name) const
 {
 	auto* result = FindProperty(name);
 	ZE_ASSERT(result);

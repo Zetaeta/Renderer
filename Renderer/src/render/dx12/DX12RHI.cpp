@@ -95,13 +95,14 @@ DX12RHI::DX12RHI(u32 width, u32 height, wchar_t const* name, ESwapchainBufferCou
 
 DX12RHI::~DX12RHI()
 {
+	WaitFence(mCurrentFrame - 1);
 	if (mImGuiMainWindow)
 	{
+		ThreadImgui::ImguiThreadInterface::Shutdown();
 		ImGui_ImplDX12_Shutdown();
 		ImGui_ImplWin32_Shutdown();
 	}
 	HR_ERR_CHECK(mQueues.Direct->Signal(mFrameFence.Get(), mCurrentFrame));
-	WaitFence(mCurrentFrame);
 	mSwapChains.clear();
 	mContext = nullptr;
 	ResourceMgr.Teardown();
@@ -112,7 +113,7 @@ DX12RHI::~DX12RHI()
 	RendererScene::OnShutdownDevice(this);
 	mCBPool.ReleaseResources();
 	DX12SyncPointPool::Destroy();
-//	WaitFence(mCurrentFrame);
+	WaitFence(mCurrentFrame);
 	mTest = nullptr;
 	mUploadBuffer = nullptr;
 	mReadbackBuffer = nullptr;

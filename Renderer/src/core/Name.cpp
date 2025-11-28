@@ -19,31 +19,31 @@ static std::mutex gNameTableMtx;
 // No point hashing the hashes
 static std::unordered_map<u32, NameHashList, IdentityHash<u32>> gNameTable;
 
-Name::Name()
-: Name("")
+HashString::HashString()
+: HashString("")
 {
 }
 
-Name::Name(char const* str)
+HashString::HashString(char const* str)
 {
 	mHash = crc32(str);
 	FinishConstructing(str);
 }
 
-Name::Name(std::string_view str)
+HashString::HashString(std::string_view str)
 {
 	mHash = crc32(str);
 	FinishConstructing(String(str));
 }
 
-Name::Name(String&& str)
+HashString::HashString(String&& str)
 {
 	mHash = crc32(str);
 	FinishConstructing(std::move(str));
 }
 
 template<typename T>
-void Name::FinishConstructing(T&& string)
+void HashString::FinishConstructing(T&& string)
 {
 	std::scoped_lock lock(gNameTableMtx);
 	NameHashList& entry = gNameTable[mHash];
@@ -59,14 +59,14 @@ void Name::FinishConstructing(T&& string)
 	mIndex = static_cast<u32>(entry.Strings.size() - 1);
 }
 
-String Name::ToString() const
+String HashString::ToString() const
 {
 	std::scoped_lock lock(gNameTableMtx);
 	NameHashList& entry = gNameTable[mHash];
 	return entry.Strings[mIndex];
 }
 
-char const* Name::c_str() const
+char const* HashString::c_str() const
 {
 	std::scoped_lock lock(gNameTableMtx);
 	NameHashList& entry = gNameTable[mHash];
@@ -74,13 +74,28 @@ char const* Name::c_str() const
 	// TODO : not thread safe with SSO due to SmallVector
 }
 
-void Name::Serialize(Serializer& serializer)
+
+const char* HashString::GetDataUnsafe() const
+{
+	auto it = gNameTable.find(mHash);
+	if (it == gNameTable.end())
+	{
+		return "invalid hash";
+	}
+	if (mIndex >= it->second.Strings.size())
+	{
+		return "invalid index";
+	}
+	return it->second.Strings[mIndex].c_str();
+}
+
+void HashString::Serialize(Serializer& serializer)
 {
 	if (serializer.IsLoading())
 	{
 		String str;
 		serializer.SerializeString(str);
-		*this = Name(str);
+		*this = HashString(str);
 	}
 	else
 	{
@@ -90,6 +105,6 @@ void Name::Serialize(Serializer& serializer)
 }
 
 
-DEFINE_CLASS_TYPEINFO_EXT(Name)
+DEFINE_CLASS_TYPEINFO_EXT(HashString)
 END_CLASS_TYPEINFO()
 

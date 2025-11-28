@@ -11,7 +11,7 @@ class SceneObject : public BaseSerialized, public std::enable_shared_from_this<S
 {
 	DECLARE_RTTI(SceneObject, BaseSerialized);
 	SceneObject();
-	SceneObject(Scene* scene, Name n //, std::vector<SceneComponent> ms = {}
+	SceneObject(Scene* scene, HashString n //, std::vector<SceneComponent> ms = {}
 		);
 
 	SceneObject(SceneObject&& other);
@@ -55,17 +55,17 @@ class SceneObject : public BaseSerialized, public std::enable_shared_from_this<S
 		return static_cast<TComp&>(*root);
 	}
 
-	Name const& GetName()
+	HashString const& GetName()
 	{
 		return m_Name;
 	}
-	void SetName(Name const& name)
+	void SetName(HashString const& name)
 	{
 		m_Name = name;
 	}
 
 	Scene*		m_Scene = nullptr;
-	Name m_Name;
+	HashString m_Name;
 	// std::vector<SceneComponent> components;
 	std::shared_ptr<SceneComponent> root;
 	private:

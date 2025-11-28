@@ -198,6 +198,11 @@ void ImguiThreadInterface::Init()
 	ImGui::GetPlatformIO().Renderer_DestroyWindow = ThreadImGui_DestroyWindow;
 }
 
+void ImguiThreadInterface::Shutdown()
+{
+	ImGui::GetPlatformIO().Renderer_DestroyWindow = sImGui_Platform_DestroyWindow;
+}
+
 void DeferredDestroyWindows()
 {
 	std::scoped_lock lock {gDeferredDestroyWindowsMtx};

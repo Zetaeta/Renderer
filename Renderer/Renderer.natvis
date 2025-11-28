@@ -3,7 +3,7 @@
 	<Type Name="UninitializedMemory&lt;*&gt;">
 		<DisplayString>{*($T1*)Data}</DisplayString>
 	</Type>
-	<Type Name="Name">
-		<DisplayString>{gNameTable.find(mHash)->Strings.operator[](mIndex)}</DisplayString>
+	<Type Name="HashString">
+		<DisplayString>{GetDataUnsafe()}</DisplayString>
 	</Type>
 </AutoVisualizer>

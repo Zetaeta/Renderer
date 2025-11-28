@@ -81,7 +81,7 @@ protected:
 
 	std::unordered_map<MeshPart const*, DX11IndexedMesh> m_MeshData;
 
-	SmallMap<Name, VertexAttributeMask> mSemanticsToMask;
+	SmallMap<HashString, VertexAttributeMask> mSemanticsToMask;
 
 	DX11Ctx* mCtx = nullptr;
 	ComPtr<IDXGIFactory2> mFactory;

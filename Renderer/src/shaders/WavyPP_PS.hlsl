@@ -1,9 +1,7 @@
 Texture2D sceneTexture;
 
-cbuffer CBTime
-{
-	float time;
-}
+float time;
+float Waviness;
 
 float4 main(float4 pos: SV_POSITION) : SV_TARGET
 {

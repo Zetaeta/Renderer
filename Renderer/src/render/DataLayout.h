@@ -7,12 +7,12 @@ namespace rnd
 struct DataLayoutEntry
 {
 	TypeInfo const* mType;
-	Name mName;
+	HashString mName;
 	size_t mOffset = 0;
 };
 
 template<typename T>
-DataLayoutEntry Entry(Name name)
+DataLayoutEntry Entry(HashString name)
 {
 	return DataLayoutEntry { &GetTypeInfo<T>(), name };
 }

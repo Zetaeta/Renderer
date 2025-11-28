@@ -151,9 +151,9 @@ constexpr auto Addr(std::vector<T>& v)
 }
 
 template<typename T>
-constexpr u32 Size(T const& t)
+constexpr i32 Size(T const& t)
 {
-	return static_cast<u32>(std::size(t));
+	return static_cast<i32>(std::size(t));
 }
 
 template<typename T>
@@ -354,6 +354,7 @@ bool SetWasChanged(T& out, T const& value)
 	out = value;
 	return wasChanged;
 }
+
 
 //template<typename... Args>
 //using Variant = std::Variant<Args...>;

@@ -32,7 +32,7 @@ public:
 			mRegistry.emplace_back(std::move(vertAtts));
 			return mRegistry.size() - 1;
 		}
-		SmallMap<Name, VertexAttributeMask> SemanticMap;
+		SmallMap<HashString, VertexAttributeMask> SemanticMap;
 
 		VertexAttributeDesc const& Get(Handle handle)
 		{
@@ -42,7 +42,7 @@ public:
 		std::vector<VertexAttributeDesc> mRegistry;
 	};
 
-	static SmallMap<Name, VertexAttributeMask> const& GetSemanticMap() { return GetRegistry().SemanticMap; }
+	static SmallMap<HashString, VertexAttributeMask> const& GetSemanticMap() { return GetRegistry().SemanticMap; }
 
 	static Registry& GetRegistry()
 	{

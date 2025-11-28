@@ -7,7 +7,7 @@ namespace rnd
 class GBufferPass : public SceneRenderPass
 {
 public:
-	GBufferPass(RenderContext* rctx, Name const& name, Camera::Ref camera, RGRenderTargetRef rt1, RGRenderTargetRef rt2, RGDepthStencilRef ds);
+	GBufferPass(RenderContext* rctx, HashString const& name, Camera::Ref camera, RGRenderTargetRef rt1, RGRenderTargetRef rt2, RGDepthStencilRef ds);
 	using Super = SceneRenderPass;
 	virtual void Accept(DrawData const& dd) override;
 	virtual void BeginRender() override;

@@ -14,7 +14,7 @@ class RGBuilder;
 class RenderPass
 {
 public:
-	RenderPass(RenderContext* rCtx, Name name = "");
+	RenderPass(RenderContext* rCtx, HashString name = "");
 	virtual ~RenderPass() {}
 
 	void ExecuteWithProfiling(IRenderDeviceCtx& deviceCtx)
@@ -57,7 +57,7 @@ public:
 #endif
 
 protected:
-	Name PassName;
+	HashString PassName;
 	RenderContext* mRCtx = nullptr;
 	IRenderDeviceCtx* mDeviceCtx = nullptr;
 	bool mEnabled = true;

@@ -4,6 +4,7 @@
 #include <windows.h>
 #include "common/Config.h"
 #include "render/DeviceSurface.h"
+#include "common/CommandLine.h"
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 
 #pragma pack(push, 8)
@@ -43,7 +44,8 @@ namespace  rnd::dx11
 RenderManagerDX11::RenderManagerDX11(Input* input, bool createDx12 /*= false*/)
 	: Super(input)
 {
-	if (!createDx12)
+	RegisterAllShaderParamMeta();
+	if (!createDx12 || CommandLine::Get().HasArg("-dx11"))
 	{
 		m_hardwareRenderer = std::make_unique<DX11Renderer>(&mScene, &m_Camera, 0, 0);
 		CreateIndependentViewport(m_hardwareRenderer.get(), L"DX11");

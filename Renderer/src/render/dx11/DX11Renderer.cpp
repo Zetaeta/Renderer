@@ -117,6 +117,7 @@ DX11Renderer::~DX11Renderer()
 {
 	if (mRenderingImgui)
 	{
+		ThreadImgui::ImguiThreadInterface::Shutdown();
 		ImGui_ImplDX11_Shutdown();
 		ImGui_ImplWin32_Shutdown();
 	}

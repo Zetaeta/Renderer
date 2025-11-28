@@ -29,4 +29,36 @@ u64 DynamicShaderPermutation::GetUniqueId() const
 	return hash;
 }
 
+
+struct ShaderMetaRegistration
+{
+	ShaderParamStructMeta (*CreateFunc)();
+	ShaderParamStructMeta* OutMeta;
+};
+
+static Vector<ShaderMetaRegistration> gRegistrationQueue;
+static bool gRegistrationStarted = false;
+
+void RegisterShaderParamStructMeta(ShaderParamStructMeta (*createFunc)(), ShaderParamStructMeta& outMeta)
+{
+	if (gRegistrationStarted)
+	{
+		outMeta = createFunc();
+	}
+	else
+	{
+		gRegistrationQueue.push_back({createFunc, &outMeta});
+	}
+}
+
+void RegisterAllShaderParamMeta()
+{
+	gRegistrationStarted = true;
+
+	for (const auto [createFunc, outMeta] : gRegistrationQueue)
+	{
+		*outMeta = createFunc();
+	}
+}
+
 }

@@ -14,7 +14,7 @@ public:
 	DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflection);
 	SmallVector<CBDesc, 4> GetConstantBuffers() override;
 
-	void GetBindingInfo(OUT SmallVector<SRVDesc, 4>& srvs, OUT SmallVector<UAVDesc, 4>& uavs) override;
+	void GetBindingInfo(OUT SmallVector<SRVBindingDesc, 4>& srvs, OUT SmallVector<UAVBindingDesc, 4>& uavs) override;
 
 private:
 	ComPtr<ID3D11ShaderReflection> mReflection;
@@ -156,7 +156,7 @@ SmallVector<IShaderReflector::CBDesc, 4> DX11ShaderReflector::GetConstantBuffers
 DX11ShaderReflector::DX11ShaderReflector(ComPtr<ID3D11ShaderReflection>&& reflection)
  :mReflection(std::move(reflection)) {}
 
-void DX11ShaderReflector::GetBindingInfo(_Out_ SmallVector<SRVDesc, 4>& srvs, _Out_ SmallVector<UAVDesc, 4>& uavs)
+void DX11ShaderReflector::GetBindingInfo(_Out_ SmallVector<SRVBindingDesc, 4>& srvs, _Out_ SmallVector<UAVBindingDesc, 4>& uavs)
 {
 	D3D11_SHADER_DESC desc;
 	mReflection->GetDesc(&desc);

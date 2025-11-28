@@ -3,7 +3,7 @@
 #include "scene/Scene.h"
 #include "scene/SceneComponent.h"
 
- SceneObject::SceneObject(Scene* scene, Name n /*, std::vector<SceneComponent> ms = {} */)
+ SceneObject::SceneObject(Scene* scene, HashString n /*, std::vector<SceneComponent> ms = {} */)
 	: m_Scene(scene), m_Name(n), root(make_unique<SceneComponent>(this, "DefaultRoot")) //, components(ms)
 {
 }

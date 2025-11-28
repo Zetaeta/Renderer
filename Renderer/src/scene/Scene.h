@@ -76,9 +76,9 @@ class Scene : public BaseSerialized
 	DECLARE_RTTI(Scene, BaseSerialized);
 	Scene(AssetManager* assMan);
 
-	Name MakeName(Name base);
+	HashString MakeName(HashString base);
 
-	bool IsObjNameTaken(Name name);
+	bool IsObjNameTaken(HashString name);
 
 	MeshInstanceRef AddMesh(MeshRef mesh, Transform trans = Transform{});
 

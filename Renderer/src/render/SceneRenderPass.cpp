@@ -8,7 +8,7 @@
 namespace rnd
 {
 
- SceneRenderPass::SceneRenderPass(RenderContext* ctx, Name passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil,
+ SceneRenderPass::SceneRenderPass(RenderContext* ctx, HashString passName, Camera::Ref camera, IRenderTarget::Ref renderTarget, IDepthStencil::Ref depthStencil,
 						EMatType accepts /*= E_MT_ALL*/, EShadingLayer layer /*= EShadingLayer::NONE*/,
 						ERenderPassMode mode /*= ERenderPassMode::IMMEDIATE*/)
 		: RenderPass(ctx, std::move(passName)), mAcceptedMatTypes(accepts), mLayer(layer), mRenderTarget(renderTarget), mDepthStencil(depthStencil)

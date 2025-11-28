@@ -49,7 +49,7 @@ public:
 	}
 
 	template<typename TComp>
-	TComp& AddChild(Name name)
+	TComp& AddChild(HashString name)
 	{
 		auto& child = m_Children.emplace_back(std::make_unique<TComp>(this));
 		child->SetName(name);
@@ -113,7 +113,7 @@ public:
 		}
 	}
 
-	void SetName(Name name)
+	void SetName(HashString name)
 	{
 		m_Name = name;
 	}
@@ -158,7 +158,7 @@ protected:
 	}
 
 	RefPtr<ScreenObject> mScreenObj;
-	Name			   m_Name;
+	HashString			   m_Name;
 	RotTransform			   m_Transform;
 	std::vector<SceneComponent::Owner> m_Children;
 	SceneComponent*		   m_Parent = nullptr;

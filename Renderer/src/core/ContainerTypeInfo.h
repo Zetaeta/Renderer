@@ -30,7 +30,7 @@ public:
 		CONST_CONTENT = 2
 	};
 
-	ContainerTypeInfo(Name name, size_t size, size_t alignment, ETypeFlags typeFlags, EContainerFlag flags, TypeInfo const& contained,
+	ContainerTypeInfo(HashString name, size_t size, size_t alignment, ETypeFlags typeFlags, EContainerFlag flags, TypeInfo const& contained,
 						MemberMetadata&& containedMeta)
 		: TypeInfo(name, size, alignment, ETypeCategory::CONTAINER, typeFlags), m_Flags(flags)
 		, m_ContainedType(contained), m_ContainedMeta(std::move(containedMeta)) {}
@@ -70,7 +70,7 @@ template<typename T, typename TContained, typename TAccessor, typename TConstAcc
 class ContainerTypeInfoImpl : public ContainerTypeInfo
 {
 public:
-	ContainerTypeInfoImpl(Name name, EContainerFlag flags, MemberMetadata&& containedMeta = {})
+	ContainerTypeInfoImpl(HashString name, EContainerFlag flags, MemberMetadata&& containedMeta = {})
 		: ContainerTypeInfo(name, sizeof(T), alignof(T), ComputeFlags<T>(), flags, GetTypeInfo<TContained>(), std::move(containedMeta))
 	{ }
 

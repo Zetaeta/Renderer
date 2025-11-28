@@ -19,7 +19,7 @@ public:
 };
 }
 
-using ShaderFileId = Name;
+using ShaderFileId = HashString;
 
 struct ShaderFileDesc
 {

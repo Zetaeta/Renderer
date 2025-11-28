@@ -258,7 +258,7 @@ private:
 class PropertyInfo
 {
 protected:
-	Name m_Name;
+	HashString m_Name;
 	TypeInfo const* m_Type;
 	bool m_Const;
 	ptrdiff_t m_Offset;
@@ -266,13 +266,13 @@ protected:
 	MemberFunction* m_Setter = nullptr;
 
 public:
-	PropertyInfo(Name name, TypeInfo const& type, ptrdiff_t offset, bool isConst = false, MemberMetadata&& meta = {})
+	PropertyInfo(HashString name, TypeInfo const& type, ptrdiff_t offset, bool isConst = false, MemberMetadata&& meta = {})
 		: m_Name(name), m_Type(&type), m_Const(isConst), m_Meta(std::move(meta)), m_Offset(offset) {}
 
-	PropertyInfo(Name name, TypeInfo const& type, ptrdiff_t offset, MemberFunction* setter, bool isConst = false, MemberMetadata&& meta = {})
+	PropertyInfo(HashString name, TypeInfo const& type, ptrdiff_t offset, MemberFunction* setter, bool isConst = false, MemberMetadata&& meta = {})
 		: m_Name(name), m_Type(&type), m_Const(isConst), m_Meta(std::move(meta)), m_Offset(offset), m_Setter(setter) {}
 
-	Name GetName() const { return m_Name; }
+	HashString GetName() const { return m_Name; }
 	String GetNameStr() const
 	{
 		return m_Name.ToString();
@@ -300,7 +300,7 @@ FLAG_ENUM(EClassFlags)
 class ClassTypeInfo : public TypeInfo
 {
 public:
-	ClassTypeInfo(Name name, size_t size, size_t alignment, ClassTypeInfo const* parent, ETypeFlags typeFlags, EClassFlags classFlags, Vector<PropertyInfo>&& attrs)
+	ClassTypeInfo(HashString name, size_t size, size_t alignment, ClassTypeInfo const* parent, ETypeFlags typeFlags, EClassFlags classFlags, Vector<PropertyInfo>&& attrs)
 		: TypeInfo(name, size, alignment, ETypeCategory::CLASS, typeFlags), m_Parent(parent), m_Properties(std::move(attrs)), mClassFlags(classFlags) {}
 
 	virtual bool Contains(TypeInfo const& cls) const override {
@@ -359,8 +359,8 @@ public:
 		return false;
 	}
 
-	const PropertyInfo* FindProperty(Name name) const;
-	const PropertyInfo& FindPropertyChecked(Name name) const;
+	const PropertyInfo* FindProperty(HashString name) const;
+	const PropertyInfo& FindPropertyChecked(HashString name) const;
 
 
 	Vector<ClassTypeInfo const*> const& GetAllChildren() const;
@@ -403,7 +403,7 @@ template<typename TClass>
 class ClassTypeInfoImpl : public ClassTypeInfo
 {
 public:
-	ClassTypeInfoImpl(Name name, ClassTypeInfo const* parent, EClassFlags classFlags, Properties&& attrs)
+	ClassTypeInfoImpl(HashString name, ClassTypeInfo const* parent, EClassFlags classFlags, Properties&& attrs)
 		: ClassTypeInfo(name, sizeof(TClass), alignof(TClass), parent, ComputeFlags<TClass>(), classFlags, std::move(attrs)) {}
 
 	ReflectedValue Construct(void* location) const override
@@ -582,7 +582,7 @@ public:\
 	ClassTypeInfoImpl<Class> const Class::TypeInfoHelper::s_TypeInfo = Class::TypeInfoHelper::MakeTypeInfo();\
 	temp\
 	ClassTypeInfoImpl<Class> Class::TypeInfoHelper::MakeTypeInfo() {\
-		Name name = #Class;\
+		HashString name = #Class;\
 		ClassTypeInfo::Properties attrs;\
 		auto const* parent = MaybeGetClassTypeInfo<Class::Super>();\
 		EClassFlags classFlags {__VA_ARGS__};
@@ -603,7 +603,7 @@ public:\
 	}\
 	ClassTypeInfoImpl<Class> const Helper::s_TypeInfo = Helper::MakeTypeInfo();\
 	ClassTypeInfoImpl<Class> Helper::MakeTypeInfo() {\
-		Name name = #Class;\
+		HashString name = #Class;\
 		ClassTypeInfo::Properties attrs;\
 		auto const* parent = MaybeGetClassTypeInfo<Class::Super>();\
 		EClassFlags classFlags {__VA_ARGS__};

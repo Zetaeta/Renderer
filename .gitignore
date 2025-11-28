@@ -3,6 +3,7 @@
 bin/
 bin-int/
 packages/
+Intel® VTune™ Profiler Results/
 
 # Files
 #*.vcxproj
@@ -17,6 +18,7 @@ saves/
 imgui.ini
 *.aps
 *.rc
+debug.log
 
 # Exclude
 !vendor/bin

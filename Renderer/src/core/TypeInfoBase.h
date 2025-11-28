@@ -191,9 +191,9 @@ public:
 
 	RCOPY_MOVE_PROTECT(TypeInfo);
 
-	TypeInfo(Name name, size_t size, size_t alignment, ETypeCategory cat = ETypeCategory::BASIC, ETypeFlags flags = ETypeFlags(COPYABLE | MOVABLE | DEFAULT_CONSTRUCTIBLE));
+	TypeInfo(HashString name, size_t size, size_t alignment, ETypeCategory cat = ETypeCategory::BASIC, ETypeFlags flags = ETypeFlags(COPYABLE | MOVABLE | DEFAULT_CONSTRUCTIBLE));
 
-	Name const& GetName() const { return m_Name; }
+	HashString const& GetName() const { return m_Name; }
 	String GetNameStr() const { return m_Name.ToString(); }
 
 	ETypeCategory GetTypeCategory() const
@@ -248,7 +248,7 @@ public:
 	virtual ReflectedValue Construct(void* location) const = 0;
 
 private:
-	Name m_Name;
+	HashString m_Name;
 	ETypeCategory m_Category;
 	int m_Size;
 	int m_Alignment;

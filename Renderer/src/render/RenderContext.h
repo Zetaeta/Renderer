@@ -54,7 +54,7 @@ struct PixelDebuggingSwitch : SHADER_PERM_BOOL("PIXEL_DEBUGGING");
 namespace CB
 {
 #define CBENTRY(name)\
-	static Name name = #name;
+	static HashString name = #name;
 	CBENTRY(colour);
 	CBENTRY(emissiveColour);
 	CBENTRY(roughness);
@@ -312,7 +312,7 @@ class ScopedCBOverride
 	RCOPY_MOVE_PROTECT(ScopedCBOverride);
 public:
 	template<typename T>
-	ScopedCBOverride(RenderContext& rCtx, const Name& name, const T& value)
+	ScopedCBOverride(RenderContext& rCtx, const HashString& name, const T& value)
 		: mName(name), mCbOverrides(rCtx.GetCBOverrides())
 	{
 		mCbOverrides.Set(name, value);
@@ -323,7 +323,7 @@ public:
 		mCbOverrides.Unset(mName);
 	}
 private:
-	Name mName;
+	HashString mName;
 	CBDataSource& mCbOverrides;
 };
 

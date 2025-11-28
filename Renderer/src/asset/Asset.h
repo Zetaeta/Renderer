@@ -51,7 +51,7 @@ struct std::hash<AssetPath>
 {
 	size_t operator()(const AssetPath& assetPath) const
 	{
-		std::hash<Name> hasher;
+		std::hash<HashString> hasher;
 		return CombineHash(hasher(assetPath.PrimaryPath), assetPath.SubPath);
 	}
 };

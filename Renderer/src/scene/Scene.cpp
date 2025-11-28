@@ -86,7 +86,7 @@ Scene::Scene(AssetManager* assMan) : m_AssetManager(assMan), mDataInterface(std:
 //
 //}
 
-Name Scene::MakeName(Name base)
+HashString Scene::MakeName(HashString base)
 {
 	if (!IsObjNameTaken(base))
 	{
@@ -101,7 +101,7 @@ Name Scene::MakeName(Name base)
 	return outName;
 }
 
-bool Scene::IsObjNameTaken(Name name)
+bool Scene::IsObjNameTaken(HashString name)
 {
 	for (auto const& so : m_Objects)
 	{

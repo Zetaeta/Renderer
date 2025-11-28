@@ -37,7 +37,7 @@ fs::path ShaderCompilerData::ResolveShaderPath(fs::path const& inPath, Span<fs::
 ShaderFileId ShaderCompilerData::GetFileId(fs::path const& shaderPath) const
 {
 	auto relPath = shaderPath.lexically_relative(mSrcDir);
-	return Name(relPath.string());
+	return HashString(relPath.string());
 }
 
 class StringParser
