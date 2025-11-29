@@ -231,7 +231,7 @@ public:
 
 	OwningPtr<LiveObjectReporter> GetLiveObjectReporter();
 
-	ID3D12PipelineState* GetPSO(GraphicsPSODesc const& PSODesc);
+	ID3D12PipelineState* GetPSO(GraphicsPSODesc& PSODesc);
 	ID3D12PipelineState* GetPSO(ComputePSODesc const& PSODesc);
 
 	void FreeDirectMesh(DX12DirectMesh* mesh);

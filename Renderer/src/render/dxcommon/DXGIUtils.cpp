@@ -1,6 +1,7 @@
 #include "DXGIUtils.h"
 #include "core/ContainerTypeInfo.h"
 #include "common/CommonEnums.h"
+#include "render/Shader.h"
 
 namespace rnd::dx
 {
@@ -75,6 +76,24 @@ DXGI_FORMAT GetDxgiFormat(ETextureFormat textureFormat, ETextureFormatContext co
 		fprintf(stderr, "Invalid format\n");
 	}
 	return DXGI_FORMAT_R8G8B8A8_UNORM;
+}
+
+ESystemValue TranslateSV(D3D_NAME d3dSystemVal)
+{
+	switch (d3dSystemVal)
+	{
+		case D3D_NAME_UNDEFINED:
+			return ESystemValue::None;
+		case D3D_NAME_POSITION:
+			return ESystemValue::Position;
+		case D3D_NAME_DEPTH:
+			return ESystemValue::Depth;
+		case D3D_NAME_TARGET:
+			return ESystemValue::Target;
+		default:
+			ZE_ENSURE(false);
+			return ESystemValue::None;
+	}
 }
 
 }

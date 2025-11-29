@@ -127,7 +127,7 @@ void RegisterAllShaderParamMeta();
 
 #define SHADER_PARAMETER_UAV()
 
-#define SHADER_PARAMETER_STRUCT_END(name)\
+#define SHADER_PARAMETER_STRUCT_END()\
 	constexpr static int _sp_End = __COUNTER__;\
 	constexpr static int _sp_Count = _sp_End - _sp_Start - 1;\
 	static ShaderParamStructMeta _sp_MakeMetadata()\
@@ -279,6 +279,29 @@ struct BindingDesc
 using UAVBindingDesc = BindingDesc;
 using SRVBindingDesc = BindingDesc;
 
+enum class ESystemValue : u32
+{
+	None = 0,
+	Position = 1,
+	Target = 1 << 2,
+	Depth = 1 << 1
+};
+
+FLAG_ENUM(ESystemValue)
+
+struct ShaderSignatureParam
+{
+	String SemanticName;
+	u32 SemanticIdx = 0;
+	ESystemValue SV = ESystemValue::None;
+};
+
+struct ShaderSignature
+{
+	Vector<ShaderSignatureParam> Params;
+	ESystemValue SVMask = ESystemValue::None;
+};
+
 struct ShaderResourcesInfo
 {
 	Vector<HashString> Names;
@@ -293,12 +316,15 @@ struct ShaderParamersInfo
 	//ShaderResourcesInfo UAV;
 	SmallVector<SRVBindingDesc, 4> SRVs;
 	SmallVector<UAVBindingDesc, 2> UAVs;
+
+	ShaderSignature Inputs;
+	ShaderSignature Outputs;
 };
 
 struct EmptyShaderParameters
 {
 	SHADER_PARAMETER_STRUCT_START(EmptyShaderParameters)
-	SHADER_PARAMETER_STRUCT_END(EmptyShaderParameters)
+	SHADER_PARAMETER_STRUCT_END()
 };
 
 class Shader : public RefCountedObject

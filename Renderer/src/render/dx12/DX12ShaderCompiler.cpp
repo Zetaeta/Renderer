@@ -2,6 +2,7 @@
 #include "core/Types.h"
 #include "core/String.h"
 #include "../../../../packages/Microsoft.Direct3D.D3D12.1.614.1/build/native/include/d3d12shader.h"
+#include "render/dxcommon/DXGIUtils.h"
 
 #pragma comment(lib, "dxcompiler.lib")
 //#pragma comment(lib, "dxil.lib")
@@ -40,6 +41,10 @@ public:
 	SmallVector<CBDesc, 4> GetConstantBuffers() override;
 
 	void GetBindingInfo(_Out_ SmallVector<SRVBindingDesc, 4>& srvs, _Out_ SmallVector<UAVBindingDesc, 4>& uavs) override;
+
+	ShaderParamersInfo GetParamsInfo() override;
+
+	ShaderSignatureParam TranslateSignature(const D3D12_SIGNATURE_PARAMETER_DESC& desc);
 private:
 	ComPtr<ID3D12ShaderReflection> mReflection;
 };
@@ -286,5 +291,38 @@ void DX12ShaderReflector::GetBindingInfo(_Out_ SmallVector<SRVBindingDesc, 4>& s
 	}
 }
 
+rnd::ShaderParamersInfo DX12ShaderReflector::GetParamsInfo()
+{
+	ShaderParamersInfo result = IShaderReflector::GetParamsInfo();
+
+	D3D12_SHADER_DESC shaderDesc;
+	DXCALL(mReflection->GetDesc(&shaderDesc));
+	for (u32 i = 0; i < shaderDesc.InputParameters; ++i)
+	{
+		D3D12_SIGNATURE_PARAMETER_DESC signature;
+		DXCALL(mReflection->GetInputParameterDesc(i, &signature));
+		auto const& newInput = result.Inputs.Params.emplace_back(TranslateSignature(signature));
+		result.Inputs.SVMask |= newInput.SV;
+	}
+	for (u32 i = 0; i < shaderDesc.OutputParameters; ++i)
+	{
+		D3D12_SIGNATURE_PARAMETER_DESC signature;
+		DXCALL(mReflection->GetOutputParameterDesc(i, &signature));
+		auto const& newOutput = result.Outputs.Params.emplace_back(TranslateSignature(signature));
+		result.Outputs.SVMask |= newOutput.SV;
+	}
+
+	return result;
+}
+
+rnd::ShaderSignatureParam DX12ShaderReflector::TranslateSignature(D3D12_SIGNATURE_PARAMETER_DESC const& desc)
+{
+	ShaderSignatureParam result;
+	result.SemanticName = desc.SemanticName;
+	result.SemanticIdx = desc.SemanticIndex;
+	result.SV = TranslateSV(desc.SystemValueType);
+
+	return result;
+}
 
 }

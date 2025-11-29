@@ -291,6 +291,10 @@ void DX12RHI::CreateDeviceAndCmdQueue()
 	if (SUCCEEDED(mDevice.As<ID3D12InfoQueue>(&infoQueue)))
 	{
 		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+		if (CommandLine::Get().HasArg("-breakwarn"))
+		{
+			infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+		}
 	}
 
 	mQueues.Direct = DX12CommandQueue(mDevice.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
@@ -698,12 +702,21 @@ static void ApplyStencilMode(EStencilMode mode, D3D12_DEPTH_STENCIL_DESC& outDes
 	}
 }
 
-ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc const& PSODesc)
+ID3D12PipelineState* DX12RHI::GetPSO(GraphicsPSODesc& PSODesc)
 {
 	auto& pso = mPSOs[PSODesc];
 	if (pso == nullptr)
 	{
-//		CD3DX12_GRAPHICS_PIPELINE_STATE_DESC
+		// Cleanup unused pixel shaders
+		if (PSODesc.NumRTs == 0 && PSODesc.Shaders[EShaderType::Pixel])
+		{
+			if (!(PSODesc.Shaders[EShaderType::Pixel]->GetParamsInfo().Outputs.SVMask & ESystemValue::Depth))
+			{
+				PSODesc.Shaders[EShaderType::Pixel] = nullptr;
+			}
+		}
+
+
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC desc{};
 		desc.pRootSignature = PSODesc.RootSig.Get();
 		desc.VS = GetBytecode(PSODesc.Shaders[EShaderType::Vertex]);
