@@ -4,7 +4,7 @@
     <ShowAllFiles>true</ShowAllFiles>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>-dx12</LocalDebuggerCommandArguments>
-    <RemoteDebuggerCommandArguments>-dx12</RemoteDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-dx11</LocalDebuggerCommandArguments>
+    <RemoteDebuggerCommandArguments>-dx11</RemoteDebuggerCommandArguments>
   </PropertyGroup>
 </Project>

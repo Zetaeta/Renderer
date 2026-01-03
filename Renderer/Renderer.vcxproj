@@ -155,6 +155,7 @@
     <ClInclude Include="src\core\TypeInfo.h" />
     <ClInclude Include="src\procedural\ProceduralMeshes.h" />
     <ClInclude Include="src\render\dx12\DX12State.h" />
+    <ClInclude Include="src\render\RenderConstants.h" />
     <ClInclude Include="src\render\RenderEnums.h" />
     <ClInclude Include="src\render\RenderHelpers.h" />
     <ClInclude Include="src\render\RenderState.h" />
@@ -360,6 +361,7 @@
     <ClCompile Include="src\core\String.cpp" />
     <ClCompile Include="src\procedural\PerlinNoise.cpp" />
     <ClCompile Include="src\procedural\ProceduralMeshes.cpp" />
+    <ClCompile Include="src\render\dx11\DX11CBPool.cpp" />
     <ClCompile Include="src\render\dx11\DX11TextureBase.cpp" />
     <ClCompile Include="src\render\RenderHelpers.cpp" />
     <ClCompile Include="src\render\shaders\ShaderCompiler.cpp" />

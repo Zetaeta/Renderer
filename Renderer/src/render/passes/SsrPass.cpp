@@ -75,6 +75,7 @@ void SsrPass::Execute(IRenderDeviceCtx& deviceCtx)
 
 	context->SetRTAndDS(mRT.ResolvedRT, nullptr);
 	context->SetUAVs(EShaderType::Pixel, Single<UnorderedAccessView const>(renderCtx.GetPixelDebugUav()), 1);
+	context->FinalizePipeline(EGpuPipeline::Graphics);
 	context->DrawMesh(tri);
 	context->ClearResourceBindings();
 

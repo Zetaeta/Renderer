@@ -1,5 +1,6 @@
 #pragma once
 #include "core/TypeInfo.h"
+#include "core/Types.h"
 
 namespace rnd
 {

@@ -3,6 +3,12 @@
 
 #define DXCALL(expr) HR_ERR_CHECK(expr)
 
+#ifdef _DEBUG
+#define DXPARANOID(expr) DXCALL(expr)
+#else
+#define DXPARANOID(expr) expr
+#endif
+
 namespace rnd::dx
 {
 

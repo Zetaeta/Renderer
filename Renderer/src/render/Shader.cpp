@@ -36,7 +36,11 @@ struct ShaderMetaRegistration
 	ShaderParamStructMeta* OutMeta;
 };
 
-static Vector<ShaderMetaRegistration> gRegistrationQueue;
+static Vector<ShaderMetaRegistration>& GetRegistrationQueue()
+{
+	static Vector<ShaderMetaRegistration> sRegistrationQueue;
+	return sRegistrationQueue;
+}
 static bool gRegistrationStarted = false;
 
 void RegisterShaderParamStructMeta(ShaderParamStructMeta (*createFunc)(), ShaderParamStructMeta& outMeta)
@@ -47,7 +51,7 @@ void RegisterShaderParamStructMeta(ShaderParamStructMeta (*createFunc)(), Shader
 	}
 	else
 	{
-		gRegistrationQueue.push_back({createFunc, &outMeta});
+		GetRegistrationQueue().push_back({ createFunc, &outMeta });
 	}
 }
 
@@ -55,7 +59,7 @@ void RegisterAllShaderParamMeta()
 {
 	gRegistrationStarted = true;
 
-	for (const auto [createFunc, outMeta] : gRegistrationQueue)
+	for (const auto [createFunc, outMeta] : GetRegistrationQueue())
 	{
 		*outMeta = createFunc();
 	}

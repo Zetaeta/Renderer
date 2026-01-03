@@ -6,7 +6,7 @@
 Texture2D inTex;
 RWTexture2D<float4> outTex;
 
-cbuffer BlurData
+cbuffer blurData
 {
     uint2 direction;
     uint radius;

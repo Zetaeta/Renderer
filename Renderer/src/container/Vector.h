@@ -157,3 +157,10 @@ void RemoveSwapIndex(Range& range, SizeType index)
 	std::swap(range.back(), range[index]);
 	range.erase(range.end() - 1);
 }
+
+template<typename T>
+void ClearToSize(T& vec, size_t newSize)
+{
+	vec.clear();
+	vec.resize(newSize);
+}

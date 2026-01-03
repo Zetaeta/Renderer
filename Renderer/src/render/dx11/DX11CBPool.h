@@ -36,6 +36,7 @@ public:
 
 	PooledCBHandle AcquireConstantBuffer(ECBLifetime lifetime, u32 size, std::span<const byte> initialData) override
 	{
+		ZE_ASSERT(lifetime == ECBLifetime::Dynamic);
 		static u8 dummy[4096];
 
 		u32 log2Size = RoundUpLog2(size);
@@ -85,10 +86,13 @@ public:
 		u32 objIdx = u32(handle.Id & bits::Mask32);
 		mPools[poolIdx].Release(objIdx);
 	}
+
+	void OnEndFrame(); // Release all dynamic CB claims
 private:
-	Vector<GrowingImmobileObjectPool<SimpleCB>> mPools;
+	Vector<GrowingImmobileObjectPool<SimpleCB, 256, true>> mPools;
 	ID3D11Device* mDevice;
 	IRenderDeviceCtx* mContext;
 };
+
 }
 }

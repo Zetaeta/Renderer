@@ -35,12 +35,11 @@ inline EResourceType GetResourceDimension(IDeviceResource* resource)
 }
 
 template<typename ObjRefType, EResourceType InDimension>
-class ShaderParamObjectBase
+struct ShaderParamObjectBase
 {
-	ShaderParamObjectBase(EResourceType dimension)
+	ShaderParamObjectBase()
 	{}
 
-	ObjRefType mObject;
 	constexpr static EResourceType Dimension = InDimension;
 
 	ShaderParamObjectBase& operator=(ObjRefType const& obj)
@@ -51,11 +50,14 @@ class ShaderParamObjectBase
 		mObject = obj;
 		return *this;
 	}
+private:
+	ObjRefType mObject;
 };
 
 template<typename EltType = float4>
 struct Texture2D : public ShaderParamObjectBase<ResourceView, EResourceType::Texture2D>
 {
+	using ShaderParamObjectBase::operator=;
 	constexpr static auto Kind = EShaderParamObjectKind::SRV;
 	using ElementType = EltType;
 };
@@ -64,6 +66,7 @@ struct Texture2D : public ShaderParamObjectBase<ResourceView, EResourceType::Tex
 template<typename EltType = float4>
 struct RWTexture2D : public ShaderParamObjectBase<UnorderedAccessView, EResourceType::Texture2D>
 {
+	using ShaderParamObjectBase::operator=;
 	constexpr static auto Kind = EShaderParamObjectKind::UAV;
 	using ElementType = EltType;
 };
@@ -77,22 +80,36 @@ struct ShaderParamStructEntryMeta
 	EShaderParamObjectKind Kind = EShaderParamObjectKind::Value;
 
 	ShaderParamStructEntryMeta(HashString name, size_t size, size_t offset)
-		:Name(Name), Size(NumCast<u16>(size)), Offset(static_cast<int>(offset))
+		:Name(name), Size(NumCast<u16>(size)), Offset(static_cast<int>(offset))
 	{
+	}
+
+	template<typename T>
+	T const& Get(void const* paramStruct) const
+	{
+	
+		return *reinterpret_cast<T const*>(static_cast<u8 const*>(paramStruct) + Offset);
 	}
 
 	template<typename T>
 	requires std::is_pod_v<T>
 	void SetType()
 	{
-		ValueType = GetTypeInfo<T>();
+		if constexpr (HasTypeInfo<T>)
+		{
+			ValueType = &GetTypeInfo<T>();
+		}
+		else
+		{
+			ValueType = nullptr;
+		}
 	}
 
 	template<typename T>
 	void SetType()
 	{
 		Kind = T::Kind;
-		ValueType = GetTypeInfo<T::ElementType>();
+		ValueType = &GetTypeInfo<typename T::ElementType>();
 	}
 };
 struct ShaderParamStructMeta
@@ -100,13 +117,30 @@ struct ShaderParamStructMeta
 	Vector<ShaderParamStructEntryMeta> Values;
 	Vector<ShaderParamStructEntryMeta> SRVs;
 	Vector<ShaderParamStructEntryMeta> UAVs;
+	Vector<ShaderParamStructEntryMeta> CBVs;
 };
+
+template<typename TRange>
+inline ShaderParamStructEntryMeta const* FindByName(TRange const& range, HashString name)
+{
+	for (auto const& entry : range)
+	{
+		if (entry.Name == name)
+		{
+			return &entry;
+		}
+	}
+
+	return nullptr;
+}
 
 void RegisterShaderParamStructMeta(ShaderParamStructMeta (*createFunc)(), ShaderParamStructMeta& outMeta);
 
 void RegisterAllShaderParamMeta();
 
 #define SHADER_PARAMETER_STRUCT_START(name)\
+struct name                             \
+	{                                       \
 	constexpr static int _sp_Start = __COUNTER__;\
 	using Self = name;\
 	template<int spIndex>\
@@ -114,18 +148,33 @@ void RegisterAllShaderParamMeta();
 	template<>\
 	constexpr static void _sp_GetParamInfo<_sp_Start>(Vector<ShaderParamStructEntryMeta>& params) {}
 
+#define SHADER_PARAMETER_IMPL(Type, name, impl, ...)\
+	Type name __VA_ARGS__;\
+	constexpr static int _sp_Param##name = __COUNTER__;\
+	template <>                                         \
+	static void _sp_GetParamInfo<_sp_Param##name>(Vector<ShaderParamStructEntryMeta>& params)\
+	{\
+		_sp_GetParamInfo<_sp_Param##name - 1>(params);\
+		impl\
+	}\
+
 #define SHADER_PARAMETER(Type, name, ...)\
 	Type name __VA_ARGS__;\
 	constexpr static int _sp_Param##name = __COUNTER__;\
 	template <>                                         \
-	constexpr static void _sp_GetParamInfo<_sp_Param##name>(Vector<ShaderParamStructEntryMeta>& params)\
+	static void _sp_GetParamInfo<_sp_Param##name>(Vector<ShaderParamStructEntryMeta>& params)\
 	{\
 		_sp_GetParamInfo<_sp_Param##name - 1>(params);\
 		params.emplace_back(#name, sizeof(Type), offsetof(Self, name))\
 			  .SetType<Type>();\
-	}
+	}\
 
-#define SHADER_PARAMETER_UAV()
+#define SHADER_PARAMETER_UAV(Type, name) SHADER_PARAMETER(Type, name)
+#define SHADER_PARAMETER_SRV(Type, name) SHADER_PARAMETER(Type, name)
+
+#define SHADER_PARAMETER_CBV(Type, name) SHADER_PARAMETER_IMPL(Type, name, {\
+		params.emplace_back(#name, sizeof(Type), offsetof(Self, name)).Kind = EShaderParamObjectKind::ConstantBuffer;\
+	})
 
 #define SHADER_PARAMETER_STRUCT_END()\
 	constexpr static int _sp_End = __COUNTER__;\
@@ -148,6 +197,9 @@ void RegisterAllShaderParamMeta();
 			case EShaderParamObjectKind::UAV:\
 				result.UAVs.push_back(std::move(AllEntries[i]));\
 				break;\
+			case EShaderParamObjectKind::ConstantBuffer:\
+				result.CBVs.push_back(std::move(AllEntries[i]));\
+				break;\
 			default:\
 				ZE_ASSERT(false);\
 				break;\
@@ -155,8 +207,11 @@ void RegisterAllShaderParamMeta();
 		}\
 		return result;\
 	}\
+	static ShaderParamStructMeta const& GetMeta() { return Metadata; }\
+private:\
 	inline static ShaderParamStructMeta Metadata;\
-	inline static bool _startupDummy = []{ RegisterShaderParamStructMeta(_sp_MakeMetadata, Metadata); return true; }();
+	inline static bool _startupDummy = []{ RegisterShaderParamStructMeta(_sp_MakeMetadata, Metadata); return true; }();\
+};
 	//struct TypeInfoHelper                                         \
 	//{                                                             \
 	//	inline static ClassTypeInfoImpl<Self> const s_TypeInfo = _sp_MakeTypeInfo();\
@@ -268,6 +323,8 @@ struct ShaderCBInfo
 	HashString Name;
 	u32 Size = -1;
 	Vector<HashString> VariableNames; 
+	Vector<u16> VariableSizes;
+	Vector<u16> VariableOffsets;
 };
 
 
@@ -321,11 +378,11 @@ struct ShaderParamersInfo
 	ShaderSignature Outputs;
 };
 
-struct EmptyShaderParameters
-{
-	SHADER_PARAMETER_STRUCT_START(EmptyShaderParameters)
-	SHADER_PARAMETER_STRUCT_END()
-};
+//struct EmptyShaderParameters
+//{
+//	SHADER_PARAMETER_STRUCT_START(EmptyShaderParameters)
+//	SHADER_PARAMETER_STRUCT_END()
+//};
 
 class Shader : public RefCountedObject
 {
@@ -345,6 +402,8 @@ public:
 	{
 		return mParameters;
 	}
+
+	char const* GetDebugName() const { return mDebugName.c_str(); }
 
 	DebugName mDebugName;
 protected:

@@ -2,6 +2,7 @@
 #include "d3dcompiler.h"
 #include "d3d11shader.h"
 #include "SharedD3D.h"
+#include "DXGIUtils.h"
 
 DEFINE_LOG_CATEGORY(LogShaderCompiler);
 
@@ -15,6 +16,8 @@ public:
 	SmallVector<CBDesc, 4> GetConstantBuffers() override;
 
 	void GetBindingInfo(OUT SmallVector<SRVBindingDesc, 4>& srvs, OUT SmallVector<UAVBindingDesc, 4>& uavs) override;
+	ShaderParamersInfo GetParamsInfo() override;
+	ShaderSignatureParam TranslateSignature(const D3D11_SIGNATURE_PARAMETER_DESC& desc);
 
 private:
 	ComPtr<ID3D11ShaderReflection> mReflection;
@@ -147,8 +150,19 @@ SmallVector<IShaderReflector::CBDesc, 4> DX11ShaderReflector::GetConstantBuffers
 	{
 		ID3D11ShaderReflectionConstantBuffer* cBuffer = mReflection->GetConstantBufferByIndex(i);
 		D3D11_SHADER_BUFFER_DESC			  cbDesc;
-		cBuffer->GetDesc(&cbDesc);
+		DXPARANOID(cBuffer->GetDesc(&cbDesc));
 		result.push_back({cbDesc.Name, cbDesc.Size});
+		for (u32 i=0; i<cbDesc.Variables; ++i)
+		{
+			auto* variable = cBuffer->GetVariableByIndex(i);
+			ZE_ASSERT(variable);
+			D3D11_SHADER_VARIABLE_DESC varDesc;
+			DXPARANOID(variable->GetDesc(&varDesc));
+//			ZE_ASSERT(varDesc.uFlags & D3D_SVF_USED);
+			result.back().VariableNames.push_back(varDesc.Name);
+			result.back().VariableSizes.push_back(varDesc.Size);
+			result.back().VariableOffsets.push_back(varDesc.StartOffset);
+		}
 	}
 	return result;
 }
@@ -205,4 +219,39 @@ void DX11ShaderReflector::GetBindingInfo(_Out_ SmallVector<SRVBindingDesc, 4>& s
 		}
 	}
 }
+
+rnd::ShaderParamersInfo DX11ShaderReflector::GetParamsInfo()
+{
+	ShaderParamersInfo result = IShaderReflector::GetParamsInfo();
+
+	D3D11_SHADER_DESC shaderDesc;
+	DXCALL(mReflection->GetDesc(&shaderDesc));
+	for (u32 i = 0; i < shaderDesc.InputParameters; ++i)
+	{
+		D3D11_SIGNATURE_PARAMETER_DESC signature;
+		DXCALL(mReflection->GetInputParameterDesc(i, &signature));
+		auto const& newInput = result.Inputs.Params.emplace_back(TranslateSignature(signature));
+		result.Inputs.SVMask |= newInput.SV;
+	}
+	for (u32 i = 0; i < shaderDesc.OutputParameters; ++i)
+	{
+		D3D11_SIGNATURE_PARAMETER_DESC signature;
+		DXCALL(mReflection->GetOutputParameterDesc(i, &signature));
+		auto const& newOutput = result.Outputs.Params.emplace_back(TranslateSignature(signature));
+		result.Outputs.SVMask |= newOutput.SV;
+	}
+
+	return result;
+}
+
+rnd::ShaderSignatureParam DX11ShaderReflector::TranslateSignature(D3D11_SIGNATURE_PARAMETER_DESC const& desc)
+{
+	ShaderSignatureParam result;
+	result.SemanticName = desc.SemanticName;
+	result.SemanticIdx = desc.SemanticIndex;
+	result.SV = TranslateSV(desc.SystemValueType);
+
+	return result;
+}
+
 }

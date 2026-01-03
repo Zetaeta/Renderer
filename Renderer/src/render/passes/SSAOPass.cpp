@@ -53,6 +53,13 @@ struct GaussianBlurCS : public ComputeShader
 		uint _pad;
 		float4 coeffs[MaxRadius];
 	};
+	
+	SHADER_PARAMETER_STRUCT_START(Parameters)
+		SHADER_PARAMETER_CBV(BlurData, blurData)
+		SHADER_PARAMETER_SRV(RWTexture2D<float4>, outTex)
+		SHADER_PARAMETER_UAV(Texture2D<float4>, inTex)
+	SHADER_PARAMETER_STRUCT_END()
+
 	DECLARE_SHADER(GaussianBlurCS)
 };
 
@@ -135,28 +142,31 @@ void SSAOPass::Execute(IRenderDeviceCtx& deviceCtx)
 
 		if (blur)
 		{
+			GaussianBlurCS::Parameters params;
 			CalcGaussian();
-			context->SetComputeShader(mDownsampler);
-			context->SetShaderResources(EShaderType::Compute, Single<ResourceView const>({}));
-			context->SetUAVs(EShaderType::Compute, Single(mSecondaryTextureUav));
-			context->SetShaderResources(EShaderType::Compute, Single(mAOTextureIn));
+			//context->SetComputeShader(mDownsampler);
+			//context->SetShaderResources(EShaderType::Compute, Single<ResourceView const>({}));
+			//context->SetUAVs(EShaderType::Compute, Single(mSecondaryTextureUav));
+			//context->SetShaderResources(EShaderType::Compute, Single(mAOTextureIn));
 			blurData.direction = {0, 1};
-			{
-				ScopedCBClaim blurCB1(renderCtx.GetCBPool(), blurData);
-				context->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(blurCB1));
-				context->DispatchCompute(threadGroups);
-			}
+			params.blurData = blurData;
+			params.inTex = mAOTextureIn;
+			params.outTex = mSecondaryTextureUav;
+			mRCtx->Dispatch(mDownsampler, params, threadGroups);
+			//{
+			//	ScopedCBClaim blurCB1(renderCtx.GetCBPool(), blurData);
+			//	context->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(blurCB1));
+			//	context->DispatchCompute(threadGroups);
+			//}
 //			mCB = renderCtx.GetCBPool()->AcquireConstantBuffer(ECBLifetime::Dynamic, blurData);
 
-			context->SetShaderResources(EShaderType::Compute, Single<ResourceView const>({}));
-			context->SetUAVs(EShaderType::Compute, Single(mAOTextureUav));
-			context->SetShaderResources(EShaderType::Compute, Single(mSecondaryTextureIn));
-			blurData.direction = {1, 0};
-			{
-				ScopedCBClaim blurCB(renderCtx.GetCBPool(), blurData);
-				context->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(blurCB));
-				context->DispatchCompute(threadGroups);
-			}
+			//context->SetShaderResources(EShaderType::Compute, Single<ResourceView const>({}));
+			//context->SetUAVs(EShaderType::Compute, Single(mAOTextureUav));
+			//context->SetShaderResources(EShaderType::Compute, Single(mSecondaryTextureIn));
+			params.inTex = mSecondaryTextureIn;
+			params.outTex = mAOTextureUav;
+			params.blurData.direction = {1, 0};
+			mRCtx->Dispatch(mDownsampler, params, threadGroups);
 
 		}
 

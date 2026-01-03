@@ -24,6 +24,12 @@ class Window;
 namespace rnd
 {
 
+enum class EGpuPipeline : u8
+{
+	Graphics,
+	Compute
+};
+
 class IDeviceSurface;
 class RenderingThread;
 class ShaderManager;

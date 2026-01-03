@@ -56,6 +56,7 @@ public:
 	virtual void ClearUAV(UnorderedAccessView uav, uint4 clearValues) = 0;
 	virtual void ClearUAV(UnorderedAccessView uav, vec4 clearValues) = 0;
 //	virtual void DrawMesh(Primitive const& primitive) = 0;
+	virtual void FinalizePipeline(EGpuPipeline Pipeline) {}
 	virtual void DrawMesh(IDeviceMesh const* mesh) = 0;
 	virtual void DispatchCompute(ComputeDispatch args) = 0;
 	virtual IConstantBuffer* GetConstantBuffer(ECBFrequency freq, size_t size = 0) = 0; 

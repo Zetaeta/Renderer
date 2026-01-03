@@ -63,8 +63,17 @@ public:
 	}
 
 
-
-
+	void FinalizePipeline(EGpuPipeline pipeline) override
+	{
+		if (pipeline == EGpuPipeline::Graphics)
+		{
+			FinalizeGraphicsState();
+		}
+		else
+		{
+			FinalizeComputeState();
+		}
+	}
 	void DrawMesh(IDeviceMesh const* mesh) override;
 
 

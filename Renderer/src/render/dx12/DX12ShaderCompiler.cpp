@@ -1,7 +1,7 @@
 #include "DX12ShaderCompiler.h"
 #include "core/Types.h"
 #include "core/String.h"
-#include "../../../../packages/Microsoft.Direct3D.D3D12.1.614.1/build/native/include/d3d12shader.h"
+#include "d3d12shader.h"
 #include "render/dxcommon/DXGIUtils.h"
 
 #pragma comment(lib, "dxcompiler.lib")
@@ -227,6 +227,7 @@ DX12ShaderCompiler::~DX12ShaderCompiler()
 
 SmallVector<rnd::IShaderReflector::CBDesc, 4> DX12ShaderReflector::GetConstantBuffers()
 {
+	// Effectively duplicated in DX11ShaderReflector
 	SmallVector<IShaderReflector::CBDesc, 4> result;
 	D3D12_SHADER_DESC desc;
 	mReflection->GetDesc(&desc);
@@ -236,6 +237,17 @@ SmallVector<rnd::IShaderReflector::CBDesc, 4> DX12ShaderReflector::GetConstantBu
 		D3D12_SHADER_BUFFER_DESC			  cbDesc;
 		cBuffer->GetDesc(&cbDesc);
 		result.push_back({cbDesc.Name, cbDesc.Size});
+		for (u32 i=0; i<cbDesc.Variables; ++i)
+		{
+			auto* variable = cBuffer->GetVariableByIndex(i);
+			ZE_ASSERT(variable);
+			D3D12_SHADER_VARIABLE_DESC varDesc;
+			DXPARANOID(variable->GetDesc(&varDesc));
+//			ZE_ASSERT(varDesc.uFlags & D3D_SVF_USED);
+			result.back().VariableNames.push_back(varDesc.Name);
+			result.back().VariableSizes.push_back(varDesc.Size);
+			result.back().VariableOffsets.push_back(varDesc.StartOffset);
+		}
 	}
 	return result;
 }
@@ -256,6 +268,7 @@ void DX12ShaderReflector::GetBindingInfo(_Out_ SmallVector<SRVBindingDesc, 4>& s
 		{
 		case D3D_SRV_DIMENSION_UNKNOWN:
 			result.Type = EResourceType::Unknown;
+			break;
 		case D3D_SRV_DIMENSION_BUFFER:
 			result.Type = EResourceType::Buffer;
 			break;

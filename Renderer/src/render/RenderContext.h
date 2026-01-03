@@ -253,6 +253,18 @@ public:
 		return mPixDebugUav;
 	}
 
+	void SetShaderParameters(EShaderType shaderStage, const ShaderParamersInfo& shaderParams,
+		ShaderParamStructMeta const& paramStructMeta, void const* paramStruct, char const* debugShaderName);
+
+	void DispatchInternal(ComputeShader const* shader, ShaderParamStructMeta const& paramStructMeta,
+		void const* paramStruct, ComputeDispatch const& threadGroups);
+
+	template<typename ParamsType>
+	void Dispatch(ComputeShader const* shader, ParamsType const& params, ComputeDispatch const& threadGroups)
+	{
+		DispatchInternal(shader, ParamsType::GetMeta(), &params, threadGroups);
+	}
+
 	void ShowPixelDebug(rnd::IRenderDeviceCtx& ctx);
 
 	RenderTextureManager TextureManager;

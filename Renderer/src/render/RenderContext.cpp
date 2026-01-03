@@ -21,6 +21,7 @@
 #include "common/ImguiThreading.h"
 #include "RenderHelpers.h"
 #include "VertexTypes.h"
+#include "RenderConstants.h"
 
 namespace rnd
 {
@@ -630,6 +631,87 @@ IDepthStencil::Ref RenderContext::GetTempDepthStencilFor(IRenderTarget::Ref rt)
 		tempDS = mDevice->CreateTexture2D(desc)->GetDS();
 	}
 	return tempDS;
+}
+
+void RenderContext::SetShaderParameters(EShaderType shaderStage, const ShaderParamersInfo& shaderParams,
+	ShaderParamStructMeta const& paramStructMeta, void const* paramStruct, char const* debugShaderName)
+{
+	static Vector<ResourceView> SRVs;
+	static Vector<UnorderedAccessView> UAVs;
+	auto const numSrvSlots = shaderParams.SRVs.size();
+	auto const numUavSlots = shaderParams.UAVs.size();
+	ClearToSize(SRVs, numSrvSlots);
+	ClearToSize(UAVs, numUavSlots);
+
+	if (numSrvSlots > 0)
+	{
+		for (u32 i = 0; i<numSrvSlots; ++i)
+		{
+			HashString name = shaderParams.SRVs[i].Name;
+			if (ShaderParamStructEntryMeta const* param = FindByName(paramStructMeta.SRVs, name))
+			{
+				DeviceCtx()->SetShaderResources(shaderStage, Single<ResourceView const>(param->Get<ResourceView>(paramStruct)), i);
+			}
+			else
+			{
+				ZE_Ensuref(false, "SRV parameter %s on %s not set", name.c_str(), debugShaderName);
+			}
+		}
+	}
+
+	if (numUavSlots > 0)
+	{
+		for (u32 i = 0; i<numUavSlots; ++i)
+		{
+			HashString name = shaderParams.UAVs[i].Name;
+			if (ShaderParamStructEntryMeta const* param = FindByName(paramStructMeta.UAVs, name))
+			{
+				DeviceCtx()->SetUAVs(shaderStage, Single(param->Get<UnorderedAccessView>(paramStruct)), i);
+			}
+			else
+			{
+				ZE_Ensuref(false, "UAV parameter %s on %s not set", name.c_str(), debugShaderName);
+			}
+		}
+	}
+
+	for (u32 cbIdx = 0; cbIdx < shaderParams.ConstantBuffers.size(); ++cbIdx)
+	{
+		const auto& cbuffer = shaderParams.ConstantBuffers[cbIdx];
+		static HashString GlobalsName = "$Globals";
+
+		if (ShaderParamStructEntryMeta const* param = FindByName(paramStructMeta.CBVs, cbuffer.Name))
+		{
+			if (ZE_ENSURE(param->Size >= cbuffer.Size))
+			{
+				SetConstantBuffer(*DeviceCtx(), shaderStage, &param->Get<u8 const>(paramStruct), cbuffer.Size, cbIdx);
+			}
+		}
+		else if (cbuffer.Name == GlobalsName || shaderParams.ConstantBuffers.size() == 1)
+		{
+			// Should we zero it?
+			alignas(16) u8 buffer[MAX_CONSTANT_BUFFER_SIZE];
+			for (int i = 0; i < cbuffer.VariableNames.size(); ++i)
+			{
+				if (ShaderParamStructEntryMeta const* param = FindByName(paramStructMeta.Values, cbuffer.VariableNames[i]))
+				{
+					memcpy(buffer + cbuffer.VariableOffsets[i], static_cast<u8 const*>(paramStruct) + param->Offset, param->Size);
+					SetConstantBuffer(*DeviceCtx(), shaderStage, buffer, cbuffer.Size, cbIdx);
+				}
+			}
+		}
+	}
+
+	
+}
+
+void RenderContext::DispatchInternal(ComputeShader const* shader, ShaderParamStructMeta const& paramStructMeta, void const* paramStruct, ComputeDispatch const& threadGroups)
+{
+	auto* ctx = DeviceCtx();
+	ctx->SetComputeShader(shader);
+	SetShaderParameters(EShaderType::Compute, shader->GetParamsInfo(), paramStructMeta,
+			paramStruct, shader->GetDebugName());
+	ctx->DispatchCompute(threadGroups);
 }
 
 void RenderContext::ShowPixelDebug(rnd::IRenderDeviceCtx& ctx)

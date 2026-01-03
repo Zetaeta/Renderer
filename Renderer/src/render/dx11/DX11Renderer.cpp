@@ -405,7 +405,10 @@ void DX11Renderer::DrawTexture(DX11Texture* tex, ivec2 pos, ivec2 size )
 void DX11Renderer::DrawMesh(IDeviceMesh const* mesh)
 {
 	pContext->IASetPrimitiveTopology(GetD3D11Topology(mesh->Topology));
-//	UpdateInputLayout();
+	if (mInputLayoutDirty)
+	{
+		UpdateInputLayout();
+	}
 
 	ID3D11SamplerState* samplers[] = { m_Sampler.Get(), m_ShadowSampler.Get() };
 	pContext->PSSetSamplers(0, 2, samplers );
@@ -837,6 +840,7 @@ void DX11Renderer::EndFrame()
 	{
 		swapChain->Present();
 	}
+//	mCBPool.OnEndFrame();
 }
 
 void DX11Renderer::SetShaderResources(EShaderType shader, Span<ResourceView const> srvs, u32 startIdx)
@@ -947,18 +951,11 @@ void DX11Renderer::SetPixelShader(PixelShader const* shader)
 
 void DX11Renderer::SetVertexShader(VertexShader const* shader)
 {
-	pContext->IASetInputLayout(nullptr);
+	//pContext->IASetInputLayout(nullptr);
 	mCurrVertexShader = shader;
 	DX11VertexShader* dx11Shader = shader ? static_cast<DX11VertexShader*>(shader->GetDeviceShader()) : nullptr;
 	pContext->VSSetShader(dx11Shader ? dx11Shader->GetShader() : nullptr, nullptr, 0);
-	if (shader && mCurrVertexLayoutHdl >= 0)
-	{
-		UpdateInputLayout();
-	}
-	else
-	{
-		pContext->IASetInputLayout(nullptr);
-	}
+	mInputLayoutDirty = true;
 }
 
 void DX11Renderer::SetComputeShader(ComputeShader const* shader)
@@ -974,27 +971,19 @@ void DX11Renderer::SetVertexLayout(VertAttDescHandle attDescHandle)
 		return;
 	}
 	mCurrVertexLayoutHdl = attDescHandle;
+	mInputLayoutDirty = true;
 	if (mCurrVertexLayoutHdl >= 0)
-	{
 		mCurrVertexLayout = &VertexAttributeDesc::GetRegistry().Get(attDescHandle);
-		if (mCurrVertexShader)
-		{
-			UpdateInputLayout();
-		}
-		else
-		{
-
-			pContext->IASetInputLayout(nullptr);
-		}
-	}
-	else
-	{
-		pContext->IASetInputLayout(nullptr);
-	}
 }
 
 void DX11Renderer::UpdateInputLayout()
 {
+	mInputLayoutDirty = false;
+	if (!ZE_ENSURE(mCurrVertexShader && mCurrVertexLayoutHdl >= 0))
+	{
+		pContext->IASetInputLayout(nullptr);
+		return;
+	}
 	ID3D11InputLayout* inputLayout = GetOrCreateInputLayout(mCurrVertexLayoutHdl, mCurrVertexShader->GetInputSignature());
 	pContext->IASetInputLayout(inputLayout);
 }

@@ -237,6 +237,7 @@ protected:
 	u32 m_Height;
 	std::vector<u32> m_PixelWidth;
 	bool m_Dirty = false;
+	bool mInputLayoutDirty = true;
 
 	u32 m_PixelScale = 500;
 	float xoffset;
