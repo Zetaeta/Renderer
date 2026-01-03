@@ -643,22 +643,6 @@ void RenderContext::SetShaderParameters(EShaderType shaderStage, const ShaderPar
 	ClearToSize(SRVs, numSrvSlots);
 	ClearToSize(UAVs, numUavSlots);
 
-	if (numSrvSlots > 0)
-	{
-		for (u32 i = 0; i<numSrvSlots; ++i)
-		{
-			HashString name = shaderParams.SRVs[i].Name;
-			if (ShaderParamStructEntryMeta const* param = FindByName(paramStructMeta.SRVs, name))
-			{
-				DeviceCtx()->SetShaderResources(shaderStage, Single<ResourceView const>(param->Get<ResourceView>(paramStruct)), i);
-			}
-			else
-			{
-				ZE_Ensuref(false, "SRV parameter %s on %s not set", name.c_str(), debugShaderName);
-			}
-		}
-	}
-
 	if (numUavSlots > 0)
 	{
 		for (u32 i = 0; i<numUavSlots; ++i)
@@ -671,6 +655,22 @@ void RenderContext::SetShaderParameters(EShaderType shaderStage, const ShaderPar
 			else
 			{
 				ZE_Ensuref(false, "UAV parameter %s on %s not set", name.c_str(), debugShaderName);
+			}
+		}
+	}
+
+	if (numSrvSlots > 0)
+	{
+		for (u32 i = 0; i<numSrvSlots; ++i)
+		{
+			HashString name = shaderParams.SRVs[i].Name;
+			if (ShaderParamStructEntryMeta const* param = FindByName(paramStructMeta.SRVs, name))
+			{
+				DeviceCtx()->SetShaderResources(shaderStage, Single<ResourceView const>(param->Get<ResourceView>(paramStruct)), i);
+			}
+			else
+			{
+				ZE_Ensuref(false, "SRV parameter %s on %s not set", name.c_str(), debugShaderName);
 			}
 		}
 	}
@@ -708,6 +708,7 @@ void RenderContext::SetShaderParameters(EShaderType shaderStage, const ShaderPar
 void RenderContext::DispatchInternal(ComputeShader const* shader, ShaderParamStructMeta const& paramStructMeta, void const* paramStruct, ComputeDispatch const& threadGroups)
 {
 	auto* ctx = DeviceCtx();
+	ctx->ClearResourceBindings(EShaderType::Compute);
 	ctx->SetComputeShader(shader);
 	SetShaderParameters(EShaderType::Compute, shader->GetParamsInfo(), paramStructMeta,
 			paramStruct, shader->GetDebugName());

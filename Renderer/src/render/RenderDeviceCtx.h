@@ -74,6 +74,7 @@ public:
 		UpdateConstantBuffer(handle, bytes);
 	}
 
+	virtual void ClearResourceBindings(EShaderType ShaderStage) = 0;
 	virtual void ClearResourceBindings() = 0;
 
 	virtual void ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src) = 0;

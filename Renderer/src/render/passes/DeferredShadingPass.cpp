@@ -67,6 +67,7 @@ void DeferredShadingPass::Execute(IRenderDeviceCtx& deviceCtx)
 {
 
 	auto context = &deviceCtx;
+	context->ClearResourceBindings();
 	context->SetRTAndDS(mRenderTarget, nullptr);
 //	context->ClearRenderTarget(mRenderTarget, )
 	context->SetBlendMode(EBlendState::COL_OVERWRITE);

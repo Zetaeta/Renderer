@@ -20,7 +20,7 @@ SamplerState splr : register(s0);
 SamplerComparisonState shadowSampler : register(s1);
 
 #if AMBIENT_OCCLUSION
-Texture2D ambientOcclusion : register(t4);
+Texture2D<float> ambientOcclusion : register(t4);
 #endif
 
 SHADOWMAP_DECLARATION( : register(t5));

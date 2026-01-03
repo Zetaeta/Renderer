@@ -41,7 +41,7 @@ struct PixelLightingInput
 PixelLightingInput UnpackGBuffer(float2 uv, uint2 screenSize)
 {
     PixelLightingInput result;
-    int3 texel = int3(screenSize * uv, 0.5);
+    int3 texel = int3(screenSize * uv, 0);
     float4 colRough = baseColourRough.Load(texel);
     float4 normMet = sceneNormalMetal.Load(texel);
     result.colour = colRough.xyz;

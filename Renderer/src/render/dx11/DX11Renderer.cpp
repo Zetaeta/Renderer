@@ -931,16 +931,33 @@ void DX11Renderer::DispatchCompute(ComputeDispatch args)
 
 void DX11Renderer::ClearResourceBindings()
 {
-//	mRCtx->TextureManager.UnBind(this);
+#define X(shader) ClearResourceBindings(EShaderType::shader);
+	FOR_EACH_SHADER_FREQ(X)
+#undef X
+}
+
+void DX11Renderer::ClearResourceBindings(EShaderType ShaderStage)
+{
 	ID3D11ShaderResourceView* const* dummyViews = reinterpret_cast<ID3D11ShaderResourceView* const*>(ZerosArray);
-	pContext->PSSetShaderResources(0, mMaxShaderResources[EShaderType::Pixel], dummyViews);
-	pContext->VSSetShaderResources(0, mMaxShaderResources[EShaderType::Vertex], dummyViews);
-	pContext->CSSetShaderResources(0, mMaxShaderResources[EShaderType::Compute], dummyViews);
-	if (mMaxUAVs[EShaderType::Compute] > 0)
+	switch (ShaderStage)
 	{
-		pContext->CSSetUnorderedAccessViews(0, mMaxUAVs[EShaderType::Compute], reinterpret_cast<ID3D11UnorderedAccessView* const*>(ZerosArray), nullptr);
+	case EShaderType::Vertex:
+		pContext->VSSetShaderResources(0, mMaxShaderResources[EShaderType::Vertex], dummyViews);
+		break;
+	case rnd::EShaderType::Pixel:
+		pContext->PSSetShaderResources(0, mMaxShaderResources[EShaderType::Pixel], dummyViews);
+		pContext->OMSetRenderTargets(0, nullptr, nullptr);
+		break;
+	case rnd::EShaderType::Compute:
+		pContext->CSSetShaderResources(0, mMaxShaderResources[EShaderType::Compute], dummyViews);
+		if (mMaxUAVs[EShaderType::Compute] > 0)
+		{
+			pContext->CSSetUnorderedAccessViews(0, mMaxUAVs[EShaderType::Compute], reinterpret_cast<ID3D11UnorderedAccessView* const*>(ZerosArray), nullptr);
+		}
+		break;
+	default:
+		break;
 	}
-	pContext->OMSetRenderTargets(0, nullptr, nullptr);
 }
 
 void DX11Renderer::SetPixelShader(PixelShader const* shader)

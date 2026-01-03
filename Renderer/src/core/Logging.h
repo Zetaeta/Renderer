@@ -67,7 +67,7 @@ void FlushLog();
 
 DECLARE_LOG_CATEGORY(LogGlobal);
 
-#define RLOG(category, verb, ...) RLog(category, ELogVerbosity::verb, __VA_ARGS__)
+#define RLOG(category, verbosity, ...) RLog(category, ELogVerbosity::verbosity, __VA_ARGS__)
 //#define RLOGVA(category, verb, format, val) RLogVa(category, ELogVerbosity::verb, format, val)
 
 class LogConsumerThread : public WorkerThread

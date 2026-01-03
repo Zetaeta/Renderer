@@ -77,6 +77,7 @@ public:
 	void SetSamplers(EShaderType shader, Span<SamplerHandle const> samplers, u32 startSlot = 0) override;
 	void DispatchCompute(ComputeDispatch args) override;
 	void ClearResourceBindings() override;
+	void ClearResourceBindings(EShaderType ShaderStage) override;
 
 	virtual void SetShaderResources(EShaderType shader, Span<ResourceView const> const srvs, u32 startIdx = 0) override;
 	void SetPixelShader(PixelShader const* shader) override;

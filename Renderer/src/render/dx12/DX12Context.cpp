@@ -406,10 +406,24 @@ void DX12Context::SetUAVs(EShaderType shader, Span<UnorderedAccessView const> ua
 	}
 }
 
+template<typename OutRange, typename InRange>
+void SetRange(OutRange& out, InRange const& in, size_t startIdx)
+{
+
+	auto end = in.size() + startIdx;
+	if (out.size() < end)
+	{
+		out.resize(end);
+	}
+	for (u64 i = 0; i < in.size(); ++i)
+	{
+		out[i + startIdx] = in[i];
+	}
+}
+
 void DX12Context::BindAndTransition(Vector<UnorderedAccessView>& outBindings, Span<UnorderedAccessView const> inUAVs, u32 startIdx)
 {
-	outBindings.clear();
-	Append(outBindings, inUAVs);
+	SetRange(outBindings, inUAVs, startIdx);
 	if (!mManualTransitioning)
 	{
 		for (auto const& uav : inUAVs)
@@ -424,13 +438,7 @@ void DX12Context::BindAndTransition(Vector<UnorderedAccessView>& outBindings, Sp
 
 void DX12Context::BindAndTransition(Vector<ResourceView>& outBindings, Span<ResourceView const> inSRVs, D3D12_RESOURCE_STATES targetState, u32 startIdx /*= 0*/)
 {
-	outBindings.clear();
-	outBindings.resize(max(outBindings.size(), startIdx + inSRVs.size()));
-
-	for (u32 i = 0; i < inSRVs.size(); ++i)
-	{
-		outBindings[startIdx + i] = inSRVs[i];
-	}
+	SetRange(outBindings, inSRVs, startIdx);
 	if (!mManualTransitioning)
 	{
 		for (auto const& srv : inSRVs)
@@ -556,6 +564,33 @@ void DX12Context::StopTimer(GPUTimer* timer)
 	auto myTimer = static_cast<DX12Timer*>(timer);
 	MarkTimer(mCmdList.Get(), myTimer->PerFrameData[GetRHI().GetCurrentFrameIndex()].End);
 	PIXEndEvent(mCmdList.Get());
+}
+
+void DX12Context::ClearResourceBindings(EShaderType shaderStage)
+{
+	if (shaderStage < EShaderType::GraphicsCount)
+	{
+		mGraphicsState.ShaderStates[shaderStage].SRVs.clear();
+		mGraphicsState.ShaderStates[shaderStage].UAVs.clear();
+		mGraphicsState.mBindingsDirty = true;
+	}
+	else if (shaderStage == EShaderType::Compute)
+	{
+		mComputeState.Bindings.SRVs.clear();
+		mComputeState.Bindings.UAVs.clear();
+		mComputeState.BindingsDirty = true;
+	}
+	else
+	{
+		ZE_ASSERT(false);
+	}
+}
+
+void DX12Context::ClearResourceBindings()
+{
+#define X(shader) ClearResourceBindings(EShaderType::shader);
+	FOR_EACH_SHADER_FREQ(X)
+#undef X
 }
 
 //void DX12Context::ReleaseReadback(MappedResource resource)

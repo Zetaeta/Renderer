@@ -14,6 +14,7 @@ DescriptorTableLoc DX12DescriptorTableAllocator::Reserve(u32 tableSize)
 	u64 offset;
 	if (!TryReserve(tableSize, 1, offset))
 	{
+		RLOG(LogDX12, Info, "Resized descriptor table allocator");
 		mHeap.Resize(max(NumCast<u32>(mHeap.Length * 1.5f), tableSize), /*copyLength = */ 0);
 		FrameIndexedRingBuffer::Reset(mHeap.Length);
 		CHECK_SUCCEEDED(TryReserve(tableSize, 1, offset));

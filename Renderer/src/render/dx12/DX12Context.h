@@ -102,10 +102,9 @@ public:
 	}
 
 
-	void ClearResourceBindings() override
-	{
-//		throw std::logic_error("The method or operation is not implemented.");
-	}
+	void ClearResourceBindings() override;
+
+	virtual void ClearResourceBindings(EShaderType shaderStage) override;
 
 
 	void ResolveMultisampled(DeviceSubresource const& Dest, DeviceSubresource const& Src) override
