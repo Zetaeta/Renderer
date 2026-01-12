@@ -31,6 +31,10 @@ struct SSAO_CS : public ComputeShader
 		int _pad;
 		int2 debugPixel;
 	};
+
+	SHADER_PARAMETER_STRUCT_START(Parameters)
+		SHADER_PARAMETER_CBV(FrameData, FrameInfo)
+	SHADER_PARAMETER_STRUCT_END()
 };
 
 DEFINE_SHADER(SSAO_CS, "SSAO_CS", "main");
