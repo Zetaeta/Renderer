@@ -4,6 +4,7 @@ bin/
 bin-int/
 packages/
 Intel® VTune™ Profiler Results/
+vcpkg_installed/
 
 # Files
 #*.vcxproj

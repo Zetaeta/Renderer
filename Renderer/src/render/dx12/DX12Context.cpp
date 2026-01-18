@@ -1,6 +1,7 @@
+#include <d3dx12.h>
+
 #include "DX12Context.h"
 #include "DX12RHI.h"
-#include <d3dx12.h>
 #include "DX12DescriptorTableAllocator.h"
 #include "DX12Texture.h"
 #include "render/dxcommon/DXGIUtils.h"

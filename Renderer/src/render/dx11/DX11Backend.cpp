@@ -19,7 +19,6 @@
 #include <editor/Editor.h>
 #include "render/dx11/DX11Texture.h"
 #include "core/Logging.h"
-#include "render/dx12/DX12Window.h"
 #include "common/ImguiThreading.h"
 #include "common/Application.h"
 #include "core/StringView.h"

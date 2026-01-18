@@ -1,5 +1,5 @@
-#include "DX12RootSignature.h"
 #include <d3dx12.h>
+#include "DX12RootSignature.h"
 #include "DX12RHI.h"
 #include "core/Logging.h"
 

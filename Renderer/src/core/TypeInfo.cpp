@@ -1,5 +1,6 @@
 #include "core/TypeInfo.h"
 #include "core/BaseObject.h"
+#include "NameBase.h"
 
 std::unordered_map<HashString, TypeInfo*>& GetTypeDB()
 {

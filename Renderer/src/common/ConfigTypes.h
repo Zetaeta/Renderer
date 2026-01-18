@@ -3,6 +3,9 @@
 #include "core/CoreTypes.h"
 #include "core/StringView.h"
 
+template <class>
+inline constexpr bool always_false_v = false;
+
 enum class EConfigVarFlags : u8
 {
 	Default = 0
@@ -19,7 +22,7 @@ enum class EConfigVarType : u8
 template<typename T>
 constexpr EConfigVarType GetCVType()
 {
-	static_assert(false, "Invalid config var type");
+	static_assert(always_false_v<T>, "Invalid config var type");
 }
 
 template<>

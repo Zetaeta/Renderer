@@ -2,6 +2,7 @@
 #include "RenderTextureManager.h"
 #include "RenderContext.h"
 #include "shaders/ShaderReflection.h"
+#include "asset/Mesh.h"
 
 namespace rnd
 {

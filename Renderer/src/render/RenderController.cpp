@@ -2,6 +2,7 @@
 #include "RenderDevice.h"
 #include "RenderingThread.h"
 #include "execution"
+#include "common/BufferedRenderInterface.h"
 
 namespace rnd
 {

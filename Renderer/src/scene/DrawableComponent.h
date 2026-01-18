@@ -2,6 +2,8 @@
 
 #include "SceneComponent.h"
 
+using PrimitiveId = u32;
+
 namespace rnd
 {
 class IPrimitiveDrawer;
@@ -15,7 +17,6 @@ public:
 	virtual void InitResources(IRenderDevice& device) {}
 };
 }
-
 
 class DrawableComponent : public SceneComponent
 {

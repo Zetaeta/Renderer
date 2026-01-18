@@ -1,7 +1,8 @@
+#include <d3dx12.h>
+
 #include "DX12CBPool.h"
 
 #include "DX12RHI.h"
-#include <d3dx12.h>
 
 namespace rnd::dx12
 {

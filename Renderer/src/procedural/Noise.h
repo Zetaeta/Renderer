@@ -1,4 +1,5 @@
 #pragma once
+#include "core/Types.h"
 
 #define IMPLEMENT_CLONE(Base, Type) \
 	OwningPtr<Base> Clone() const override         \

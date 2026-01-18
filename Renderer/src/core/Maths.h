@@ -11,6 +11,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <bit>
+#include <limits>
 
 
 #define ASSERT(...) assert(__VA_ARGS__)
@@ -95,12 +96,12 @@ struct pos3 : public vec3
 
 	constexpr static pos3 Max()
 	{
-		return pos3(std::numeric_limits<value_type>::max());
+		return pos3(std::numeric_limits<float>::max());
 	}
 
 	constexpr static pos3 Min()
 	{
-		return pos3(std::numeric_limits<value_type>::max());
+		return pos3(std::numeric_limits<float>::max());
 	}
 };
 

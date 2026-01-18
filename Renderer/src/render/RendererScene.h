@@ -3,6 +3,7 @@
 #include "asset/Mesh.h"
 #include "RenderMaterial.h"
 #include "MaterialManager.h"
+#include "scene/Scene.h"
 
 namespace rnd
 {

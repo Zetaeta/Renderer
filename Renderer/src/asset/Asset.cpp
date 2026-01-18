@@ -1,6 +1,7 @@
 #include "Asset.h"
 
 #include <filesystem>
+#include "core/Utils.h"
 
 namespace fs = std::filesystem;
 

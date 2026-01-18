@@ -18,14 +18,6 @@ namespace rnd
 class IDrawable;
 }
 
-using PrimitiveId = u32;
-
-constexpr PrimitiveId INVALID_PRIMITIVE = -1;
-constexpr PrimitiveId InvalidPrimId()
-{
-	return (PrimitiveId) -1;
-}
-
 struct PrimitiveInfo
 {
 	void Init(DrawableComponent* component);

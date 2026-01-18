@@ -1,5 +1,6 @@
 #include "RenderingThread.h"
 #include "RenderDevice.h"
+#include <semaphore>
 
 namespace rnd
 {

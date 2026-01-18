@@ -1,5 +1,6 @@
-#include "DX12DescriptorTableAllocator.h"
 #include <d3dx12.h>
+
+#include "DX12DescriptorTableAllocator.h"
 
 namespace rnd::dx12
 {
@@ -14,8 +15,9 @@ DescriptorTableLoc DX12DescriptorTableAllocator::Reserve(u32 tableSize)
 	u64 offset;
 	if (!TryReserve(tableSize, 1, offset))
 	{
-		RLOG(LogDX12, Info, "Resized descriptor table allocator");
-		mHeap.Resize(max(NumCast<u32>(mHeap.Length * 1.5f), tableSize), /*copyLength = */ 0);
+		auto newSize = max(NumCast<u32>(mHeap.Length * 1.5f), tableSize);
+		RLOG(LogDX12, Info, "Resized descriptor table allocator from %d to %d", mHeap.Length, newSize);
+		mHeap.Resize(newSize, /*copyLength = */ 0);
 		FrameIndexedRingBuffer::Reset(mHeap.Length);
 		CHECK_SUCCEEDED(TryReserve(tableSize, 1, offset));
 	}

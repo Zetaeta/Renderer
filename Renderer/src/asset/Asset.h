@@ -1,6 +1,7 @@
 #pragma once
 #include "core/BaseObject.h"
 #include "core/Hash.h"
+#include "core/NameBase.h"
 
 enum class EAssetSource : u8
 {

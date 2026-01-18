@@ -2,10 +2,18 @@
 
 #include <memory>
 #include "core/RefCounted.h"
-using MaterialID = int;
 #ifndef PROFILING
 #define PROFILING 1
 #endif
+
+using MaterialID = int;
+using PrimitiveId = u32;
+
+constexpr PrimitiveId INVALID_PRIMITIVE = -1;
+constexpr PrimitiveId InvalidPrimId()
+{
+	return (PrimitiveId) -1;
+}
 
 namespace rnd
 {

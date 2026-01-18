@@ -1,10 +1,14 @@
 #pragma once
 #include "ImageRenderMgrDX11.h"
-#include "render/dx12/DX12RHI.h"
 #include "render/RenderController.h"
 
 namespace rnd
 {
+namespace dx12
+{
+	 class LiveObjectReporter;
+	 class DX12RHI;
+}
 namespace dx11
 {
 
@@ -39,7 +43,7 @@ public:
 protected:
 	Timer m_HwTimer;
 	float m_HwFrame = 0;
-	OwningPtr<dx12::DX12RHI::LiveObjectReporter> dx12LOR;
+	OwningPtr<dx12::LiveObjectReporter> dx12LOR;
 	OwningPtr<dx12::DX12RHI> dx12Win = nullptr;
 	std::thread mRenderThread;
 	std::atomic<bool> mExitRequested = false;

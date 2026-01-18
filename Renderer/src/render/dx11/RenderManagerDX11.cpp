@@ -1,3 +1,4 @@
+#include "../dx12/DX12RHI.h"
 #include "RenderManagerDX11.h"
 #include "editor/Viewport.h"
 #include "render/RendererScene.h"

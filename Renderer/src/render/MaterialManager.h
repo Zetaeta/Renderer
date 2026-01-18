@@ -1,6 +1,5 @@
 #pragma once
 #include "common/Material.h"
-#include "scene/Scene.h"
 #include "RenderMaterial.h"
 
 namespace rnd

@@ -1,9 +1,9 @@
+#include <d3dx12.h>
 #include "DX12Window.h"
 
 #include "core/WinUtils.h"
 #include <d3d12sdklayers.h>
 #include "dxgi1_6.h"
-#include <d3dx12.h>
 #include "core/Utils.h"
 #include "DX12DescriptorHeap.h"
 #include "DX12Test.h"
@@ -573,7 +573,7 @@ DX12CommandAllocatorPool* DX12RHI::GetCommandAllocatorPool(D3D12_COMMAND_LIST_TY
 }
 
 
-OwningPtr<rnd::dx12::DX12RHI::LiveObjectReporter> DX12RHI::GetLiveObjectReporter()
+OwningPtr<rnd::dx12::LiveObjectReporter> DX12RHI::GetLiveObjectReporter()
 {
 	auto result = MakeOwning<LiveObjectReporter>();
 	HR_ERR_CHECK(mDevice.As<ID3D12DebugDevice1>(&result->DebugDevice));

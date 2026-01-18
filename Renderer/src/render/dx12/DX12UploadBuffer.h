@@ -1,7 +1,7 @@
 #pragma once
 
-#include "SharedD3D12.h"
 #include <d3dx12.h>
+#include "SharedD3D12.h"
 #include <queue>
 #include "FrameIndexedRingBuffer.h"
 

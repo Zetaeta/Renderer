@@ -1,5 +1,6 @@
 #pragma once
 
+#include <d3dx12.h>
 #include <d3d12.h>
 #include "core/CoreTypes.h"
 #include "core/Maths.h"
@@ -11,6 +12,9 @@
 using ID3D12Device_ = ID3D12Device6;
 using ID3D12GraphicsCommandList_ = ID3D12GraphicsCommandList4;
 using ID3D12Resource_ = ID3D12Resource;
+
+
+DECLARE_LOG_CATEGORY(LogDX12);
 
 namespace rnd::dx12
 {

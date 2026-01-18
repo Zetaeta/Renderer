@@ -3,6 +3,7 @@
 #include <string>
 #include "core/CoreTypes.h"
 #include "core/ClassTypeInfoFwd.h"
+#include "core/Hash.h"
 #include "TypeTraits.h"
 
 using String = std::string;
@@ -65,6 +66,16 @@ private:
 
 	// For debugging : gets the string without locking
 	const char* GetDataUnsafe() const;
+};
+
+
+template<>
+struct std::hash<HashString>
+{
+	size_t operator()(const HashString& name) const
+	{
+		return CombineHash(name.GetHash(), name.GetIndex());
+	}
 };
 
 template<>

@@ -1,4 +1,5 @@
 #pragma once
+#include "core/BaseDefines.h"
 #include <dxgiformat.h>
 #include "core/CoreTypes.h"
 #include <d3dcommon.h>
@@ -17,7 +18,10 @@ enum class ETextureFormatContext : u8
 enum class ETextureFormat: u8;
 
 
+namespace rnd
+{
 enum class ESystemValue : u32;
+}
 
 namespace rnd::dx
 {

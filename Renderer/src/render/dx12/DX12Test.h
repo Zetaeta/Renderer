@@ -1,7 +1,6 @@
 #pragma once
 
 #include "SharedD3D12.h"
-#include <d3dx12.h>
 #include "render/dx11/DX11ShaderCompiler.h"
 #include "d3dcompiler.h"
 #include "DX12Window.h"

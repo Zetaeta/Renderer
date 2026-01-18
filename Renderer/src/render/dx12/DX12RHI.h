@@ -25,8 +25,6 @@
 #include "DX12State.h"
 
 
-DECLARE_LOG_CATEGORY(LogDX12);
-
 namespace rnd::dx12
 {
 class DX12Test;
@@ -98,6 +96,24 @@ struct DX12ReadbackBufferEntry
 	void const* Data;
 	u64 Size;
 };
+
+	class LiveObjectReporter
+	{
+	public:
+		~LiveObjectReporter()
+		{
+			Execute();
+		}
+		ComPtr<ID3D12DebugDevice1> DebugDevice;
+		void Execute()
+		{
+			if (DebugDevice)
+			{
+				DebugDevice->ReportLiveDeviceObjects(D3D12_RLDO_IGNORE_INTERNAL | D3D12_RLDO_DETAIL);
+				DebugDevice = nullptr;
+			}
+		}
+	};
 
 class DX12RHI : //public wnd::Window,
 public IRenderDevice
@@ -211,23 +227,6 @@ public:
 	}
 
 
-	class LiveObjectReporter
-	{
-	public:
-		~LiveObjectReporter()
-		{
-			Execute();
-		}
-		ComPtr<ID3D12DebugDevice1> DebugDevice;
-		void Execute()
-		{
-			if (DebugDevice)
-			{
-				DebugDevice->ReportLiveDeviceObjects(D3D12_RLDO_IGNORE_INTERNAL | D3D12_RLDO_DETAIL);
-				DebugDevice = nullptr;
-			}
-		}
-	};
 
 	OwningPtr<LiveObjectReporter> GetLiveObjectReporter();
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "core/TypeInfo.h"
 #include <nlohmann/json.hpp>
+#include "core/Types.h"
 
 using json = nlohmann::json;
 

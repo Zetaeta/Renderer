@@ -20,6 +20,7 @@ DX12DescriptorHeap::DX12DescriptorHeap(ID3D12Device_* pDevice, D3D12_DESCRIPTOR_
 
 void DX12DescriptorHeap::Resize(u32 newLength, u32 copyLength, bool immediateRelease /*= false*/)
 {
+	Length = newLength;
 	D3D12_DESCRIPTOR_HEAP_DESC desc{};
 	desc.Type = Type;
 	desc.NumDescriptors = newLength;
