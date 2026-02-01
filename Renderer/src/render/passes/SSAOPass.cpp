@@ -34,6 +34,10 @@ struct SSAO_CS : public ComputeShader
 
 	SHADER_PARAMETER_STRUCT_START(Parameters)
 		SHADER_PARAMETER_CBV(FrameData, FrameInfo)
+		SHADER_PARAMETER_SRV(Texture2D<float>, sceneDepth)
+		SHADER_PARAMETER_SRV(Texture2D<float4>, sceneNormals)
+		SHADER_PARAMETER_UAV(RWTexture2D<float>, ambientOcclusion)
+		SHADER_PARAMETER_UAV(RWTexture2D<float>, debugPixel)
 	SHADER_PARAMETER_STRUCT_END()
 };
 
@@ -60,8 +64,8 @@ struct GaussianBlurCS : public ComputeShader
 	
 	SHADER_PARAMETER_STRUCT_START(Parameters)
 		SHADER_PARAMETER_CBV(BlurData, blurData)
-		SHADER_PARAMETER_SRV(RWTexture2D<float4>, outTex)
-		SHADER_PARAMETER_UAV(Texture2D<float4>, inTex)
+		SHADER_PARAMETER_UAV(RWTexture2D<float4>, outTex)
+		SHADER_PARAMETER_SRV(Texture2D<float4>, inTex)
 	SHADER_PARAMETER_STRUCT_END()
 
 	DECLARE_SHADER(GaussianBlurCS)
@@ -118,6 +122,11 @@ void SSAOPass::Execute(IRenderDeviceCtx& deviceCtx)
 	}
 	if (renderCtx.Settings.AmbientOcclusion)
 	{
+		SSAO_CS::Parameters params;
+		params.FrameInfo = cb;
+		params.ambientOcclusion = mAOTextureUav;
+		params.debugPixel = renderCtx.GetPixelDebugUav();
+//		params.sceneDepth = 
 //		Rerandomize();
 		context->SetShaderResources(EShaderType::Compute, mSRVs.ResolvedViews);
 		if (IDeviceResource* resource = mSRVs.ResolvedViews[0].Resource.get())
@@ -133,7 +142,7 @@ void SSAOPass::Execute(IRenderDeviceCtx& deviceCtx)
 		cb.inverseProjection = renderCtx.GetCamera().GetInverseProjection();
 
 		constexpr uint2 numThreads = {8, 8};
-		const ComputeDispatch threadGroups = {DivideRoundUp(cb.screenSize.x, numThreads.x), DivideRoundUp(cb.screenSize.y, numThreads.y), 1};
+		const ComputeDispatch threadGroups(DivideRoundUp(cb.screenSize, numThreads));
 		{
 			ScopedCBClaim ssaoCB(mRCtx->GetCBPool(), cb);
 			context->SetConstantBuffers(EShaderType::Compute, Single<CBHandle const>(ssaoCB));

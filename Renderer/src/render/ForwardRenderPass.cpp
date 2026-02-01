@@ -6,8 +6,8 @@
 namespace rnd
 {
 
-ForwardRenderPass::ForwardRenderPass(RenderContext* rctx, HashString const& name, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds)
-	: SceneRenderPass(rctx, name, camera, rt, ds)
+ForwardRenderPass::ForwardRenderPass(RenderContext* rctx, Camera::Ref camera, IRenderTarget::Ref rt, IDepthStencil::Ref ds)
+	: SceneRenderPass(rctx, "ForwardRender", camera, rt, ds)
 {
 }
 

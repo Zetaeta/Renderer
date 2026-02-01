@@ -14,7 +14,7 @@ class DeferredShadingPass : public RenderPass
 {
 public:
 	DeferredShadingPass(RenderContext* rCtx, Camera::Ref camera, IRenderTarget::Ref dest, SRVType sceneColour,
-						SRVType sceneNormal, SRVType sceneEmissive, SRVType sceneDepth, SRVType ambientOcclusion);
+		SRVType sceneNormal, SRVType sceneEmissive, SRVType sceneDepth, SRVType ambientOcclusion, HashString name = "DeferredShading");
 
 	void Execute(IRenderDeviceCtx& deviceCtx) override;
 	void Build(RGBuilder& builder) override;

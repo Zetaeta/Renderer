@@ -28,8 +28,8 @@ struct DeferredShadingPS : public PixelShader
 
 DEFINE_SHADER(DeferredShadingPS, "DeferredShading_PS", "main");
 
-DeferredShadingPass::DeferredShadingPass(RenderContext* rCtx, Camera::Ref camera, IRenderTarget::Ref dest, SRVType sceneColour, SRVType sceneNormal, SRVType sceneEmissive, SRVType sceneDepth, SRVType ambientOcclusion)
-:RenderPass(rCtx, "DeferredShading"), mSRVs({sceneColour, sceneNormal, sceneEmissive, sceneDepth, ambientOcclusion}),
+DeferredShadingPass::DeferredShadingPass(RenderContext* rCtx, Camera::Ref camera, IRenderTarget::Ref dest, SRVType sceneColour, SRVType sceneNormal, SRVType sceneEmissive, SRVType sceneDepth, SRVType ambientOcclusion, HashString name)
+:RenderPass(rCtx, name), mSRVs({sceneColour, sceneNormal, sceneEmissive, sceneDepth, ambientOcclusion}),
 	mRenderTarget(dest), mCamera(camera)
 {
 	{

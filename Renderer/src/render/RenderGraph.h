@@ -2,6 +2,8 @@
 #include "DeviceResource.h"
 #include "DeviceTexture.h"
 
+namespace rnd { class RenderContext; }
+
 namespace rnd
 {
 class IRenderDevice;
@@ -106,8 +108,8 @@ private:
 class RGBuilder
 {
 public:
-	RGBuilder(IRenderDevice* device)
-	:mDevice(device) { }
+	RGBuilder(IRenderDevice* device);
+	~RGBuilder();
 	RGResourceHandle AddFixedSRV(ResourceView view);
 	RGResourceHandle MakeFlipFlop(DeviceTextureRef tex1, DeviceTextureRef tex2);
 
@@ -143,12 +145,29 @@ public:
 		return this->operator[](handle)->GetUAV(handle);
 	}
 
+	template<typename T>
+	RenderPass* AddPass(OwningPtr<T>&& pass)
+	{
+		return mPasses.emplace_back(std::move(pass)).get();
+	}
+
+	void Compile();
+	void Execute(RenderContext& rctx);
+
 	void Reset();
+
+	auto const& GetPasses() const
+	{
+		return mPasses;
+	}
 private:
 	Vector<RGFlipFlop> mFlipFlops;
 	Vector<RGFixedSRV> mFixedSRVs;
 	Vector<RGTexture> mTextures;
+	Vector<OwningPtr<RenderPass>> mPasses;
 	IRenderDevice* mDevice = nullptr;
+
+
 };
 
 struct RGResourceRef

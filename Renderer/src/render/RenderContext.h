@@ -10,6 +10,7 @@
 #include "RenderGraph.h"
 #include "core/Async.h"
 #include "container/HandledVector.h"
+#include "container/Map.h"
 
 template<>
 struct std::hash<u32vec2>
@@ -19,6 +20,8 @@ struct std::hash<u32vec2>
 		return std::hash<u64>()(u64(vec.x) << 32 | u64(vec.y));
 	}
 };
+
+using PassName = HashString;
 
 #define DEBUG_MODE_ALBEDO 1
 #define DEBUG_MODE_NORMAL 2
@@ -112,6 +115,18 @@ struct RenderSettings
 };
 extern RenderSettings  GSettings;
 
+template<typename T>
+struct TSceneTextures
+{
+	T SceneColor {};
+	T GBuffer{};
+	T GBufferNormal{};
+	T SceneDepth{};
+	T AmbientOcclusion{};
+};
+
+using SceneTextures = TSceneTextures<DeviceTextureRef>;
+
 class RenderContext
 {
 public:
@@ -180,9 +195,49 @@ public:
 	}
 
 	template<typename TPass, typename... Args>
-	void AddPass(Args&&... args)
+	TPass* AddPass(RGBuilder& builder, Args&&... args)
 	{
-		mPasses.emplace_back(MakeOwning<TPass>(this, std::forward<Args>(args)...));
+		return static_cast<TPass*>(builder.AddPass(MakeOwning<TPass>(this, std::forward<Args>(args)...)));
+	}
+
+	template<typename TPass, typename... Args>
+	TPass* AddPassDefaultOff(RGBuilder& builder, DebugName&& passName, Args&&... args)
+	{
+		auto const& result = mPassSwitches.insert_or_assign(passName, true);
+		if (result.second)
+		{
+			TPass* pass = static_cast<TPass*>(builder.AddPass(MakeOwning<TPass>(this, std::forward<Args>(args)...)));
+			pass->SetName(passName);
+			return pass;
+		}
+		return nullptr;
+	}
+
+	template<typename TPass, typename... Args>
+	TPass* AddPassOpt(RGBuilder& builder, DebugName&& passName, Args&&... args)
+	{
+		if (IsEnabled(passName))
+		{
+			TPass* result = static_cast<TPass*>(builder.AddPass(MakeOwning<TPass>(this, std::forward<Args>(args)...)));
+			result->SetName(passName);
+		}
+		return nullptr;
+	}
+
+	template<typename TPass, typename... Args>
+	TPass* AddDisabledPass(RGBuilder& builder, DebugName&& passName, Args&&... args)
+	{
+		if (mPassSwitches.insert_or_assign(passName, true).second == false)
+		{
+			TPass* result = static_cast<TPass*>(builder.AddPass(MakeOwning<TPass>(this, std::forward<Args>(args)...)));
+			result->SetName(passName);
+		}
+		return nullptr;
+	}
+
+	bool IsEnabled(PassName const& passName)
+	{
+		return !mPassSwitches[passName];
 	}
 
 	const RendererScene& GetScene() const { return *mScene; }
@@ -289,6 +344,7 @@ private:
 	IRenderDeviceCtx* mDeviceCtx = nullptr;
 	RendererScene* mScene = nullptr;
 	Vector<OwningPtr<RenderPass>> mPasses;
+	Map<PassName, bool> mPassSwitches;
 	RenderCubemap* mDebugCubePass;
 	Vector<OwningPtr<RenderPass>> mPPPasses;
 	Camera::Ref mCamera = nullptr;
@@ -297,6 +353,7 @@ private:
 	Vector<LightRenderData> mLightData[Denum(ELightType::COUNT)];
 	ScreenObjectId mCurrentId = SO_NONE;
 	CBDataSource mCBOverrides;
+	Vector<HashString> mSwitchablePassOrder;
 	std::unordered_map<u32vec2, IDepthStencil::Ref> mTempDepthStencils;
 
 	RGBuilder mRGBuilder;

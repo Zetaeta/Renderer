@@ -42,6 +42,11 @@ public:
 		return PassName.ToString();
 	}
 
+	void SetName(HashString name)
+	{
+		PassName = name;
+	}
+
 	IRenderDeviceCtx* DeviceCtx();
 	IRenderDevice* Device();
 
@@ -64,6 +69,22 @@ protected:
 #if PROFILING
 	RefPtr<GPUTimer> mTimer;
 #endif
+};
+
+class LambdaPass : public RenderPass
+{
+public:
+	LambdaPass(RenderContext* rCtx, std::function<void(IRenderDeviceCtx&)>&& lambda, HashString name = "")
+		:RenderPass(rCtx, name), mLambda(lambda)
+	{
+	}
+	void Execute(IRenderDeviceCtx& ctx) override
+	{
+		mLambda(ctx);
+	}
+
+private:
+	std::function<void(IRenderDeviceCtx&)> mLambda;
 };
 
 

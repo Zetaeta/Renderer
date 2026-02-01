@@ -1,5 +1,7 @@
 #include "RenderGraph.h"
 #include "RenderDevice.h"
+#include "RenderPass.h"
+#include "RenderContext.h"
 
 namespace rnd
 {
@@ -13,6 +15,15 @@ IRenderTarget::Ref RGFlipFlop::GetRenderTarget(RGResourceHandle instanceHandle)
 ResourceView RGFlipFlop::GetResourceView(RGResourceHandle instanceHandle)
 {
 	return {Textures[CurrentRead], SRV_Texture};
+}
+
+ RGBuilder::RGBuilder(IRenderDevice* device)
+	: mDevice(device)
+{
+}
+
+RGBuilder::~RGBuilder()
+{
 }
 
 RGResourceHandle RGBuilder::AddFixedSRV(ResourceView view)
@@ -38,6 +49,22 @@ RGResourceHandle RGBuilder::MakeTexture2D(DeviceTextureDesc const& desc)
 {
 	mTextures.emplace_back(mDevice->CreateTexture2D(desc));
 	return RGResourceHandle{NumCast<u32>(mTextures.size() - 1), ERGResourceBevhiour::Texture};
+}
+
+void RGBuilder::Compile()
+{
+	for (auto& pass : mPasses)
+	{
+		pass->Build(*this);
+	}
+}
+
+void RGBuilder::Execute(RenderContext& rctx)
+{
+	for (auto& pass : mPasses)
+	{
+		pass->ExecuteWithProfiling(*rctx.DeviceCtx());
+	}
 }
 
 void RGBuilder::Reset()

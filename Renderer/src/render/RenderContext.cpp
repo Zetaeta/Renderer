@@ -119,9 +119,6 @@ void RenderContext::SetupRenderTarget()
 	tempRemember.clear();
 	mPasses.clear();
 	mPPPasses.clear();
-	mPasses.emplace_back(std::make_unique<ShadowmapsPass>(this));
-	mPasses.emplace_back(std::make_unique<ForwardRenderPass>(this, "ForwardRender", mCamera, mMainRT, mMainDS));
-	mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::BACK, "Background", mBGCube.get()));
 
 	DeviceTextureDesc gbAlbedoDesc = mTarget->Desc;
 	gbAlbedoDesc.DebugName = "GBuffer";
@@ -152,27 +149,40 @@ void RenderContext::SetupRenderTarget()
 	aoDesc.Flags = TF_SRV | TF_UAV;
 	aoDesc.DebugName = "Pixel debug";
 	mPixelDebugTex = mRGBuilder.MakeTexture2D(aoDesc);
+	auto& builder = mRGBuilder;
 
-	mPasses.emplace_back(std::make_unique<GBufferPass>(this, "GBuffer", mCamera, gbAlbedo, gbNormal, gbDS));
+	AddPassOpt<ShadowmapsPass>(builder, "Shadowmaps");
+	AddPassOpt<ForwardRenderPass>(builder, "ForwardRender", mCamera, mMainRT, mMainDS);
+	AddPassOpt<RenderCubemap>(builder, "Background", EFlatRenderMode::BACK, mBGCube.get());
+	AddPassOpt<GBufferPass>(builder, "GBuffer", mCamera, gbAlbedo, gbNormal, gbDS);
 
 	if (Settings.AmbientOcclusion)
 	{
-		AddPass<SSAOPass>(RGShaderResources({gbDS, gbNormal}), RGUnorderedAccessViews({aoTex}));
+		AddPassOpt<SSAOPass>(mRGBuilder, "SSAO", RGShaderResources({ gbDS, gbNormal }), RGUnorderedAccessViews({ aoTex }));
 	}
 
-	mPasses.emplace_back(std::make_unique<DeferredShadingPass>(this, mCamera, mMainRT, gbAlbedo, gbNormal, nullptr, gbDS, aoTex));
+	AddPassOpt<DeferredShadingPass>(builder, "Deferred Shading", mCamera, mMainRT, gbAlbedo, gbNormal, nullptr, gbDS, aoTex);
 #if ZE_BUILD_EDITOR
 //	mPasses.emplace_back(MakeOwning<HighlightSelectedPass>(this));
 #endif
-	mDebugCubePass = static_cast<RenderCubemap*>(mPasses.emplace_back(std::make_unique<RenderCubemap>(this, EFlatRenderMode::FRONT, "DebugCube")).get());
+
+	if (mUseMSAA)
+	{
+		AddPass<LambdaPass>(mRGBuilder, [&](IRenderDeviceCtx& ctx)
+		{
+			ctx.ResolveMultisampled({ mPrimaryTarget }, {mMsaaTarget});
+		});
+	}
+
+	mDebugCubePass = AddPassOpt<RenderCubemap>(builder, "DebugCube", EFlatRenderMode::FRONT);
 	memset(Settings.LayersEnabled, 1, Denum(EShadingLayer::Count));
 
 
 	mPingPongHandle = mRGBuilder.MakeFlipFlop(mPrimaryTarget, mPPTarget);
 	auto stencilHdl = mRGBuilder.AddFixedSRV({mDSTex, SRV_StencilBuffer});
-	mPPPasses.push_back(MakeOwning<SsrPass>(this, RGShaderResources({gbAlbedo, gbNormal, gbDS, mPingPongHandle}), mPingPongHandle));
-	mPPPasses.push_back(MakeOwning<PostProcessPass>(this, GetShader<OutlinePPPS>(), mPingPongHandle, RGShaderResources({mPingPongHandle, stencilHdl}), "Outline"));
-	mPPPasses.emplace_back(MakeOwning<WavyEffectPPPass>(this, mPingPongHandle, RGShaderResources({mPingPongHandle})))->SetEnabled(false);
+	AddPassOpt<SsrPass>(builder, "SSR", RGShaderResources({gbAlbedo, gbNormal, gbDS, mPingPongHandle}), mPingPongHandle);
+	AddPassOpt<PostProcessPass>(builder, "Outline", GetShader<OutlinePPPS>(), mPingPongHandle, RGShaderResources({ mPingPongHandle, stencilHdl }));
+	AddDisabledPass<WavyEffectPPPass>(builder, "Wavy", mPingPongHandle, RGShaderResources({ mPingPongHandle }));
 
 	BuildGraph();
  }
@@ -189,19 +199,20 @@ void RenderContext::SetupPostProcess()
 	ctx.ClearRenderTarget(mMainRT, { 0.f, 0.f, 0.f, 0.00f });
 	ctx.ClearDepthStencil(mMainDS, EDSClearMode::DEPTH_STENCIL, 1.f);
 	ctx.ClearUAV(mPixDebugUav, vec4{0.f});
-	for (auto& pass : mPasses)
-	{
-		if (pass->IsEnabled())
-		{
-			pass->ExecuteWithProfiling(ctx);
-		}
-	}
+	//for (auto& pass : mPasses)
+	//{
+	//	if (pass->IsEnabled())
+	//	{
+	//		pass->ExecuteWithProfiling(ctx);
+	//	}
+	//}
 
-	if (mUseMSAA)
-	{
-		ctx.ResolveMultisampled({ mPrimaryTarget }, {mMsaaTarget});
-	}
+	//if (mUseMSAA)
+	//{
+	//	ctx.ResolveMultisampled({ mPrimaryTarget }, {mMsaaTarget});
+	//}
 
+	mRGBuilder.Execute(*this);
 	Postprocessing(ctx);
 	ctx.ClearResourceBindings();
 
@@ -215,8 +226,7 @@ void RenderContext::SetupPostProcess()
 
 void RenderContext::BuildGraph()
 {
-	mRGBuilder.Reset();
-
+	mRGBuilder.Compile();
 	mPixDebugUav = mRGBuilder.GetUAV(mPixelDebugTex);
 
 	for (auto& pass : mPasses)
@@ -460,15 +470,15 @@ void RenderContext::DrawControls()
 		ImGui::PopID();
 	};
 
-	for (auto& pass : mPasses)
+	for (auto& pass : mRGBuilder.GetPasses())
 	{
 		passBox(*pass);
 	}
 
-	for (auto& pass : mPPPasses)
-	{
-		passBox(*pass);
-	}
+	//for (auto& pass : mPPPasses)
+	//{
+	//	passBox(*pass);
+	//}
 
 	bool needsFullRebuild = false;
 	if (ImGui::Checkbox("MSAA", &mUseMSAA))
