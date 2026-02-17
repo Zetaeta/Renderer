@@ -173,6 +173,12 @@ constexpr Unsigned Pow2(Unsigned value)
 }
 
 template<typename T>
+constexpr bool IsPowerOf2(T v)
+{
+	return v && ((v & (v - 1)) == 0);
+}
+
+template<typename T>
 	requires(std::is_integral_v<T>)
 inline T DivideRoundUp(T x, T y)
 {

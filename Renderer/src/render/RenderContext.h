@@ -33,13 +33,12 @@ using PassName = HashString;
 class Scene;
 struct DX11Ctx;
 class StaticMeshComponent;
-namespace rnd { class RendererScene; }
-namespace rnd { class RenderCubemap; }
-
-namespace rnd { class IRenderDevice; }
 
 namespace rnd
 {
+class RendererScene;
+class RenderCubemap;
+class IRenderDevice;
 
 __declspec(align(16))
 struct PerFrameVertexData
@@ -100,6 +99,11 @@ enum class EShadingDebugMode : u32
 	COUNT
 };
 
+struct PersistentPassData
+{
+	RenderPass* Pass = nullptr;
+	bool Enabled = true;
+};
 
 struct RenderSettings
 {
@@ -125,7 +129,9 @@ struct TSceneTextures
 	T AmbientOcclusion{};
 };
 
-using SceneTextures = TSceneTextures<DeviceTextureRef>;
+using SceneTexturesRHI = TSceneTextures<DeviceTextureRef>;
+
+using RGSceneTextures = TSceneTextures<RGResourceRef>;
 
 class RenderContext
 {
@@ -201,43 +207,45 @@ public:
 	}
 
 	template<typename TPass, typename... Args>
-	TPass* AddPassDefaultOff(RGBuilder& builder, DebugName&& passName, Args&&... args)
-	{
-		auto const& result = mPassSwitches.insert_or_assign(passName, true);
-		if (result.second)
-		{
-			TPass* pass = static_cast<TPass*>(builder.AddPass(MakeOwning<TPass>(this, std::forward<Args>(args)...)));
-			pass->SetName(passName);
-			return pass;
-		}
-		return nullptr;
-	}
-
-	template<typename TPass, typename... Args>
 	TPass* AddPassOpt(RGBuilder& builder, DebugName&& passName, Args&&... args)
 	{
-		if (IsEnabled(passName))
+		auto& data = AddPassSwitchAndGetState(passName, true);
+		if (data.Enabled)
 		{
 			TPass* result = static_cast<TPass*>(builder.AddPass(MakeOwning<TPass>(this, std::forward<Args>(args)...)));
 			result->SetName(passName);
+			data.Pass = result;
+			return result;
 		}
+		data.Pass = nullptr;
 		return nullptr;
 	}
 
 	template<typename TPass, typename... Args>
 	TPass* AddDisabledPass(RGBuilder& builder, DebugName&& passName, Args&&... args)
 	{
-		if (mPassSwitches.insert_or_assign(passName, true).second == false)
+		auto& data = AddPassSwitchAndGetState(passName, false);
+		if (data.Enabled)
 		{
 			TPass* result = static_cast<TPass*>(builder.AddPass(MakeOwning<TPass>(this, std::forward<Args>(args)...)));
 			result->SetName(passName);
+			data.Pass = result;
+			return result;
 		}
+		data.Pass = nullptr;
 		return nullptr;
 	}
-
-	bool IsEnabled(PassName const& passName)
+	
+	PersistentPassData& AddPassSwitchAndGetState(PassName const& passName, bool defaultValue)
 	{
-		return !mPassSwitches[passName];
+		if (auto it = mPassSwitches.find(passName); it != mPassSwitches.end())
+		{
+			return it->second;
+		}
+		auto& data = mPassSwitches[passName];
+		data.Enabled = defaultValue;
+		mSwitchablePassOrder.push_back(passName);
+		return data;
 	}
 
 	const RendererScene& GetScene() const { return *mScene; }
@@ -344,12 +352,10 @@ private:
 	IRenderDeviceCtx* mDeviceCtx = nullptr;
 	RendererScene* mScene = nullptr;
 	Vector<OwningPtr<RenderPass>> mPasses;
-	Map<PassName, bool> mPassSwitches;
+	Map<PassName, PersistentPassData> mPassSwitches;
 	RenderCubemap* mDebugCubePass;
 	Vector<OwningPtr<RenderPass>> mPPPasses;
 	Camera::Ref mCamera = nullptr;
-	// Vector<LightRenderData> mSpotLightData;
-	// Vector<LightRenderData> mDirLightData;
 	Vector<LightRenderData> mLightData[Denum(ELightType::COUNT)];
 	ScreenObjectId mCurrentId = SO_NONE;
 	CBDataSource mCBOverrides;

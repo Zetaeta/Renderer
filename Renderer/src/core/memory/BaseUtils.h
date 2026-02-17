@@ -110,3 +110,13 @@ struct DefaultConstruct
 		return *(new (location) T);
 	}
 };
+
+inline void* AlignedAllocate(size_t size, size_t alignment)
+{
+	return ::operator new(size, (std::align_val_t)alignment);
+}
+
+inline void AlignedFree(void* ptr, size_t size, size_t alignment)
+{
+	::operator delete(ptr, (std::align_val_t) alignment);
+}

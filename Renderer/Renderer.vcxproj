@@ -152,6 +152,7 @@
     <ClInclude Include="src\core\ClassTypeInfoFwd.h" />
     <ClInclude Include="src\core\Concepts.h" />
     <ClInclude Include="src\core\Core.h" />
+    <ClInclude Include="src\core\memory\ChunkedLinearAllocator.h" />
     <ClInclude Include="src\core\NameBase.h" />
     <ClInclude Include="src\core\StaticString.h" />
     <ClInclude Include="src\core\String.h" />

@@ -521,6 +521,7 @@
     <ClInclude Include="src\container\Span.h" />
     <ClInclude Include="src\core\Concepts.h" />
     <ClInclude Include="src\render\RenderConstants.h" />
+    <ClInclude Include="src\core\memory\ChunkedLinearAllocator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\3rd\stb_image.cpp">

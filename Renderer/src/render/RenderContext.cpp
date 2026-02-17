@@ -334,33 +334,6 @@ LightRenderData RenderContext::CreateLightRenderData(ELightType lightType, u32 l
 	}, light);
 
 	return lrd;
-	//switch (lightType)
-	//{
-	//case ELightType::DIR_LIGHT:
-	//{
-	//	auto& light = mScene->m_DirLights[lightIdx];
-	//	lrd.mCamera = std::make_unique<Camera>(lightType, vec3{0});
-	//	DeviceTextureDesc desc;
-	//	desc.flags = TF_DEPTH;
-	//	desc.height = desc.width = 1024;
-	//	lrd.mShadowMap = mDevice->CreateTexture2D(desc);
-	//	break;
-	//}
-	//case ELightType::POINT_LIGHT:
-	//case ELightType::SPOTLIGHT:
-	//{
-	//	auto& light = mScene->m_PointLights[lightIdx];
-	//	lrd.mCamera = std::make_unique<Camera>(lightType, light.pos);
-	//	break;
-	//}
-	//{
-	//	auto& light = mScene->m_SpotLights[lightIdx];
-	//	lrd.mCamera = std::make_unique<Camera>(lightType, light.pos);
-	//	break;
-	//}
-	//default:
-	//	break;
-	//}
 }
 
 void RenderContext::SetupLightData()
@@ -453,16 +426,16 @@ void RenderContext::DrawControls()
 	}
 
 	bool needsRebuild = false;
-	auto passBox = [&needsRebuild, this](RenderPass& pass)
+	auto passBox = [&needsRebuild, this](PassName passName, PersistentPassData& passData)
 	{
-		bool enabled = pass.IsEnabled();
-		ImGui::PushID(&pass);
-		if (ImGui::Checkbox(pass.GetName().c_str(), &enabled))
+		bool& enabled = passData.Enabled;
+		auto& pass = *passData.Pass;
+		ImGui::PushID(&passData);
+		if (ImGui::Checkbox(passName.c_str(), &enabled))
 		{
 			needsRebuild = true;
-			pass.SetEnabled(enabled);
 		}
-		if (enabled && pass.GetTimer())
+		if (enabled && ZE_ENSURE(passData.Pass) && pass.GetTimer())
 		{
 			ImGui::Text("GPU Time: %f", pass.GetTimer()->GPUTimeMs);
 			pass.AddControls();
@@ -471,14 +444,10 @@ void RenderContext::DrawControls()
 	};
 
 	for (auto& pass : mRGBuilder.GetPasses())
+	for (PassName passName : mSwitchablePassOrder)
 	{
-		passBox(*pass);
+		passBox(passName, mPassSwitches[passName]);
 	}
-
-	//for (auto& pass : mPPPasses)
-	//{
-	//	passBox(*pass);
-	//}
 
 	bool needsFullRebuild = false;
 	if (ImGui::Checkbox("MSAA", &mUseMSAA))
@@ -504,7 +473,6 @@ void RenderContext::DrawPrimitive(const IDeviceIndexedMesh* mesh, const mat4& tr
 {
 	MaterialArchetype* matArch = nullptr;
 
-//	Material const& material = AssetManager::Get()->GetMaterial(primitive->material);
 	StandardMatProperties const& mat = matOverride->Props();
 	TexturedRenderMaterial const* texMat = dynamic_cast<TexturedRenderMaterial const*>(matOverride);
 	if (matOverride)

@@ -166,8 +166,6 @@ private:
 	Vector<RGTexture> mTextures;
 	Vector<OwningPtr<RenderPass>> mPasses;
 	IRenderDevice* mDevice = nullptr;
-
-
 };
 
 struct RGResourceRef
